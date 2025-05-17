@@ -1,0 +1,23 @@
+# Ignorar dependencias
+**/node_modules/
+**/package-lock.json
+**/yarn.lock
+
+# Ignorar archivos de entorno
+*.env
+*.env.*
+
+# Ignorar builds
+**/build/
+**/dist/
+**/.next/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Sistema y editor
+.DS_Store
+Thumbs.db
+.vscode/
