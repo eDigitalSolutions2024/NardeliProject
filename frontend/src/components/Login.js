@@ -41,13 +41,16 @@ const Login = () => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-left">
+          <div className='ilustration'>
+            <h2>Hola</h2>
+          </div>
         </div>
         
         <div className="login-right">
           <div className="login-form-container">
             <h1 className="welcome-text">Bienvenido a</h1>
-            <h2 className="brand-name">Honeywell</h2>
-            <p className="tagline">THE POWER OF <span className="connected">CONNECTED</span></p>
+            <h2 className="brand-name">Nardeli</h2>
+            <p className="tagline">salon de  <span className="connected">eventos</span></p>
             
             <form onSubmit={handleSubmit} className="login-form">
               <div className="form-group">
@@ -56,7 +59,7 @@ const Login = () => {
                   <input
                     type="email"
                     name="email"
-                    placeholder="eolivas@edigitalsolutions.com.mx"
+                    placeholder="example@gmail.com"
                     value={formData.email}
                     onChange={handleChange}
                     className="form-input"
@@ -71,7 +74,7 @@ const Login = () => {
                   <input
                     type="password"
                     name="password"
-                    placeholder="••••••"
+                    placeholder=""
                     value={formData.password}
                     onChange={handleChange}
                     className="form-input"
@@ -82,6 +85,9 @@ const Login = () => {
               
               <button type="submit" className="login-button">
                 Ingresar
+              </button>
+               <button type="submit" className="login-button">
+                Registrarse
               </button>
             </form>
           </div>

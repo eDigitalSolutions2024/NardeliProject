@@ -1,14 +1,32 @@
 
-.login-left::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: 
-      radial-gradient(circle at 30% 30%, rgba(199, 163, 76, 0.2) 0%, transparent 50%),
-      radial-gradient(circle at 70% 70%, rgba(247, 224, 165, 0.1) 0%, transparent 50%);
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 1000vh;
+  background: linear-gradient(to right, #d94f70, #a855f7);
+}
+
+.login-card{
+  display: flex;
+  width: 800px;
+  height: 500px;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 15px 30px rgba(0, 0, 0,0.2);
+}
+.login-left {
+  background-color: #f7e0a5;
+  flex: 1;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  padding: 2rem;
+  flex-direction: column;
+  text-align: center;
   }
   
   .login-right {
