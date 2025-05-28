@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import './Login.css';
+import salon from '../assets/salon.jpg';
 
 const Login = () => {
   const [formData, setFormData] = useState({
+    fullname: '',
     email: '',
     password: ''
   });
+
+  const [isLogin, setIsLogin] = useState(true);
 
   const handleChange = (e) => {
     setFormData({
@@ -38,11 +42,15 @@ const Login = () => {
   };
 
   return (
-    <div className="login-container">
+    <div className="login-container" style = {{
+      backgroundImage: `url(${salon})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat'
+    }}>
       <div className="login-card">
         <div className="login-left">
           <div className='ilustration'>
-            <h2>Hola</h2>
           </div>
         </div>
         
@@ -53,42 +61,59 @@ const Login = () => {
             <p className="tagline">salon de  <span className="connected">eventos</span></p>
             
             <form onSubmit={handleSubmit} className="login-form">
-              <div className="form-group">
-                <div className="input-container">
-                  <span className="input-icon">👤</span> 
+              {!isLogin && (
+                <div className='form-group'>
+                  <div className='input-container'>
+                    <span className='input-icon'>📝</span>
+                    <input
+                      type="text"
+                      name="fullname"
+                      placeholder='Nombre Completo'
+                      value={formData.fullname || ''}
+                      onChange={handleChange}
+                      className='form-input'
+                      required/>
+                  </div>
+                </div>
+              )} 
+
+              <div className='form-group'>
+                <div className='input-container'>
+                  <span className='input-icon'>👤</span>
                   <input
                     type="email"
                     name="email"
-                    placeholder="example@gmail.com"
+                    placeholder='example@gmail.com'
                     value={formData.email}
                     onChange={handleChange}
-                    className="form-input"
-                    required
-                  />
+                    className='form-input'
+                    required/>
                 </div>
               </div>
-              
-              <div className="form-group">
-                <div className="input-container">
-                  <span className="input-icon">🔒</span>
+
+              <div className='form-group'>
+                <div className='input-container'>
+                  <span className='input-icon'>🔒</span>
                   <input
                     type="password"
                     name="password"
-                    placeholder=""
+                    placeholder=''
                     value={formData.password}
                     onChange={handleChange}
-                    className="form-input"
+                    className='form-input'
                     required
-                  />
+                    />
                 </div>
               </div>
-              
-              <button type="submit" className="login-button">
-                Ingresar
-              </button>
-               <button type="submit" className="login-button">
-                Registrarse
-              </button>
+
+              <div className='form-toggle'>
+                <button type="button" className={isLogin ? 'toggle-btn active' : 'toggle-btn'}
+                  onClick={() => setIsLogin(true)}>Iniciar sesion</button>
+
+                <button type="buttton" className={!isLogin ? 'toggle-btn active' : 'toggle-btn'}
+                onClick={() => setIsLogin(false)}>Registrarse</button>
+              </div>
+
             </form>
           </div>
         </div>

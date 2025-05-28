@@ -1,10 +1,12 @@
 
 .login-container {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 1000vh;
-  background: linear-gradient(to right, #d94f70, #a855f7);
+  height: 100vh;
 }
 
 .login-card{
@@ -79,6 +81,30 @@
   
   .form-group {
     margin-bottom: 20px;
+  }
+
+  .form-toggle {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .toggle-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    color: #999;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 10px;
+    border-bottom: 2px solid transparent;
+    transition: 0.3s;
+  }
+
+  .toggle-btn.active {
+    color: #491656;
+    border-bottom: 2px solid #491656;
   }
   
   .input-container {
