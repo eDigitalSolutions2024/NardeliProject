@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './Login.css';
 import salon from '../assets/salon.jpg';
 
-const Login = () => {
+const Login = ({ onLoginSuccess }) => {
   const [formData, setFormData] = useState({
     fullname: '',
     email: '',
@@ -10,19 +10,26 @@ const Login = () => {
   });
 
   const [isLogin, setIsLogin] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+    // Limpiar error cuando el usuario empiece a escribir
+    if (error) setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError('');
     
     try {
-      const response = await fetch('http://localhost:8010/api/login', {
+      const endpoint = isLogin ? '/api/login' : '/api/register';
+      const response = await fetch(`http://localhost:8010${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -32,17 +39,30 @@ const Login = () => {
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Login exitoso:', data);
+        console.log('Operación exitosa:', data);
+        
+        // Simular datos del usuario si el backend no los devuelve
+        const userData = {
+          fullname: formData.fullname || data.user?.fullname || 'Usuario',
+          email: formData.email || data.user?.email,
+          ...data.user
+        };
+        
+        onLoginSuccess(userData);
       } else {
-        console.error('Error en login');
+        const errorData = await response.json();
+        setError(errorData.message || 'Error en la operación');
       }
     } catch (error) {
       console.error('Error:', error);
+      setError('Error de conexión. Por favor intenta nuevamente.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="login-container" style = {{
+    <div className="login-container" style={{
       backgroundImage: `url(${salon})`,
       backgroundSize: 'cover',
       backgroundPosition: 'center',
@@ -58,9 +78,39 @@ const Login = () => {
           <div className="login-form-container">
             <h1 className="welcome-text">Bienvenido a</h1>
             <h2 className="brand-name">Nardeli</h2>
-            <p className="tagline">salon de  <span className="connected">eventos</span></p>
+            <p className="tagline">salon de <span className="connected">eventos</span></p>
+            
+            {error && (
+              <div className="error-message">
+                {error}
+              </div>
+            )}
             
             <form onSubmit={handleSubmit} className="login-form">
+              <div className='form-toggle'>
+                <button 
+                  type="button" 
+                  className={isLogin ? 'toggle-btn active' : 'toggle-btn'}
+                  onClick={() => {
+                    setIsLogin(true);
+                    setError('');
+                  }}
+                >
+                  Iniciar sesión
+                </button>
+
+                <button 
+                  type="button" 
+                  className={!isLogin ? 'toggle-btn active' : 'toggle-btn'}
+                  onClick={() => {
+                    setIsLogin(false);
+                    setError('');
+                  }}
+                >
+                  Registrarse
+                </button>
+              </div>
+
               {!isLogin && (
                 <div className='form-group'>
                   <div className='input-container'>
@@ -72,7 +122,8 @@ const Login = () => {
                       value={formData.fullname || ''}
                       onChange={handleChange}
                       className='form-input'
-                      required/>
+                      required
+                    />
                   </div>
                 </div>
               )} 
@@ -87,7 +138,8 @@ const Login = () => {
                     value={formData.email}
                     onChange={handleChange}
                     className='form-input'
-                    required/>
+                    required
+                  />
                 </div>
               </div>
 
@@ -97,23 +149,22 @@ const Login = () => {
                   <input
                     type="password"
                     name="password"
-                    placeholder=''
+                    placeholder='Contraseña'
                     value={formData.password}
                     onChange={handleChange}
                     className='form-input'
                     required
-                    />
+                  />
                 </div>
               </div>
 
-              <div className='form-toggle'>
-                <button type="button" className={isLogin ? 'toggle-btn active' : 'toggle-btn'}
-                  onClick={() => setIsLogin(true)}>Iniciar sesion</button>
-
-                <button type="buttton" className={!isLogin ? 'toggle-btn active' : 'toggle-btn'}
-                onClick={() => setIsLogin(false)}>Registrarse</button>
-              </div>
-
+              <button 
+                type="submit" 
+                className={`login-button ${isLoading ? 'loading' : ''}`}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Procesando...' : (isLogin ? 'Iniciar Sesión' : 'Registrarse')}
+              </button>
             </form>
           </div>
         </div>

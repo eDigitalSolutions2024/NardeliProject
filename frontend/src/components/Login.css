@@ -1,4 +1,3 @@
-
 .login-container {
   background-size: cover;
   background-position: center;
@@ -186,6 +185,27 @@
   
   .login-button:active {
     transform: translateY(0);
+  }
+
+  .login-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .login-button.loading {
+    background: linear-gradient(135deg, #666 0%, #999 100%);
+  }
+
+  .error-message {
+    background: #fee;
+    color: #c33;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    font-size: 14px;
+    border: 1px solid #fcc;
+    text-align: center;
   }
   
   /* Responsive */
