@@ -3,6 +3,8 @@ import './Dashboard.css';
 
 const Dashboard = ({ user, onLogout }) => {
   const [activeSection, setActiveSection] = useState('dashboard');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
@@ -130,12 +132,18 @@ const Dashboard = ({ user, onLogout }) => {
   return (
     <div className="dashboard-container">
       {/* Sidebar */}
-      <div className="sidebar">
+      <div className={`sidebar ${sidebarOpen ? '' : 'collapsed'}`}>
+
+        <div className='hamburger-wrapper'>
+          <button className='hamburger-icon' onClick={() => setSidebarOpen(!sidebarOpen)}>☰</button>
+        </div>
+
+
         <div className="sidebar-header">
           <h2 className="sidebar-brand">Nardeli</h2>
           <p className="sidebar-subtitle">Salón de Eventos</p>
         </div>
-        
+
         <nav className="sidebar-nav">
           {menuItems.map(item => (
             <button
@@ -166,9 +174,16 @@ const Dashboard = ({ user, onLogout }) => {
             </h1>
           </div>
           <div className="header-right">
-            <div className="user-info">
+            <div className="user-info" onClick={() => setShowDropdown(!showDropdown)} style={{position: 'relative', cursor: 'pointer'}}>
               <span className="user-avatar">👤</span>
               <span className="user-name">{user?.fullname || user?.email}</span>
+
+              {showDropdown && (
+                <div className='dropdown-menu'>
+                  <button className='dropdown-item'>Ver perfil</button>
+                  <button className='dropdown-item' onClick={onLogout}>Cerrar sesion</button>
+                </div>
+              )}
             </div>
           </div>
         </header>

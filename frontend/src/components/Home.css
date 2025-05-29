@@ -1,0 +1,60 @@
+.home-container {
+  padding: 2rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
+
+.home-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.home-header h1 {
+  font-size: 2.8rem;
+  color: #491656;
+  margin-bottom: 0.5rem;
+}
+
+.home-header p {
+  font-size: 1.2rem;
+  color: #6b2c5e;
+}
+
+.home-section {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  margin-bottom: 1.5rem;
+}
+
+.home-section h2 {
+  color: #491656;
+  margin-bottom: 1rem;
+}
+
+.home-section ul {
+  padding-left: 1.2rem;
+}
+
+.home-section li {
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.home-button {
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  background-color: #6b2c5e;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.home-button:hover {
+  background-color: #491656;
+}

@@ -12,12 +12,15 @@
   display: flex;
   flex-direction: column;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  padding-top: 1rem;
+  overflow: visible;
 }
 
 .sidebar-header {
   padding: 2rem 1.5rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   text-align: center;
+  position: relative;
 }
 
 .sidebar-brand {
@@ -344,4 +347,71 @@
   .dashboard-header h1 {
     font-size: 2rem;
   }
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 60px;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 180px;
+  overflow: hidden;
+}
+
+.dropdown-item {
+  padding: 0.75rem 1rem;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  color: #333;
+  font-size: 0.95rem;
+  transition: background-color 0.2 ease;
+}
+
+.dropdown-item:hover {
+  background-color: #f1f1f1;
+}
+
+.hamburger-wrapper{
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 0.5rem 1rem;
+}
+
+.hamburger-icon {
+  background: none;
+  border: none;
+  font-size: 1.6rem;
+  cursor: pointer;
+  color: #f7e0a5
+}
+
+@media (max-width: 1024px) {
+  .hamburger-icon {
+    display: block;
+  }
+}
+
+.sidebar.collapsed {
+  width: 70px;
+}
+
+.sidebar.collapsed .nav-label,
+.sidebar.collapsed .sidebar-subtitle,
+.sidebar.collapsed .sidebar-brand,
+.sidebar.collapsed .logout-btn .nav-label {
+  display: none;
+}
+
+.sidebar.collapsed .nav-icon {
+  margin-right: 0;
+}
+
+.hamburger-icon:hover {
+  transform: scale(1.1);
 }
