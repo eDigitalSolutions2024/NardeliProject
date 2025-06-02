@@ -5,14 +5,16 @@ const app = express();
 const PORT = process.env.PORT || 8010;
 
 // Middlewares
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:3000'
+}));
 app.use(express.json());
 
 // Usuarios de ejemplo (en un proyecto real usarías una base de datos)
 const users = [
   {
     id: 1,
-    email: 'eolivas@edigitalsolutions.com.mx',
+    email: 'admin1@gmail.com',
     password: '123456', // En producción, siempre hashear contraseñas
     name: 'Eduardo Olivas'
   },
@@ -31,6 +33,8 @@ app.get('/api/ping', (req, res) => {
 
 // Ruta de login
 app.post('/api/login', (req, res) => {
+  console.log('Se recibió POST a /api/login');
+  console.log('BODY recibido:', req.body); 
   const { email, password } = req.body;
   
   // Validar que se envíen email y password

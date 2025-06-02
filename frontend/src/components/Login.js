@@ -43,8 +43,8 @@ const Login = ({ onLoginSuccess }) => {
         
         // Simular datos del usuario si el backend no los devuelve
         const userData = {
-          fullname: formData.fullname || data.user?.fullname || 'Usuario',
-          email: formData.email || data.user?.email,
+          fullname: data.user?.fullname || 'Usuario',
+          email: data.user?.email,
           ...data.user
         };
         
