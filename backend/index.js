@@ -5,8 +5,21 @@ const app = express();
 const PORT = process.env.PORT || 8010;
 
 // Middlewares
+const allowedOrigins = [
+  'http://localhost:3000',               // Para desarrollo local
+  'https://centrodeeventosnardeli.com',
+  'http://centrodeeventosnardeli.com'    // Producción (ajusta si usas HTTP o dominio diferente)
+];
+
 app.use(cors({
-  origin: 'http://localhost:3000'
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por CORS'));
+    }
+  },
+  credentials: true
 }));
 app.use(express.json());
 

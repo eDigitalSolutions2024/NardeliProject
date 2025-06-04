@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import './Login.css';
 import salon from '../assets/salon.jpg';
+import API_BASE_URL from '../api';
+
+
 
 const Login = ({ onLoginSuccess }) => {
   const [formData, setFormData] = useState({
@@ -28,14 +31,15 @@ const Login = ({ onLoginSuccess }) => {
     setError('');
     
     try {
-      const endpoint = isLogin ? '/api/login' : '/api/register';
-      const response = await fetch(`http://localhost:8010${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+      const endpoint = isLogin ? `${API_BASE_URL}/login` : `${API_BASE_URL}/register`;
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+        });
+
       
       if (response.ok) {
         const data = await response.json();
