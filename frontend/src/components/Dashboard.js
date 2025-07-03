@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './Dashboard.css';
+import Calendario from './Calendario';
 
 const Dashboard = ({ user, onLogout }) => {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -106,8 +107,7 @@ const Dashboard = ({ user, onLogout }) => {
       case 'calendario':
         return (
           <div className="dashboard-content">
-            <h1>Calendario de Eventos</h1>
-            <p>Vista de calendario con todos los eventos programados.</p>
+            <Calendario />
           </div>
         );
       case 'reportes':
