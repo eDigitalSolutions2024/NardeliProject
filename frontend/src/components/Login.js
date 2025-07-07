@@ -21,7 +21,6 @@ const Login = ({ onLoginSuccess }) => {
       ...formData,
       [e.target.name]: e.target.value
     });
-    // Limpiar error cuando el usuario empiece a escribir
     if (error) setError('');
   };
 
@@ -29,29 +28,38 @@ const Login = ({ onLoginSuccess }) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    
-    try {
-      const endpoint = isLogin ? `${API_BASE_URL}/login` : `${API_BASE_URL}/register`;
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(formData),
-        });
 
-      
+    try {
+      const endpoint = isLogin 
+        ? `${API_BASE_URL}/login` 
+        : `${API_BASE_URL}/usuarios/registro`;
+
+      const payload = isLogin 
+        ? formData 
+        : {
+            name: formData.fullname,
+            email: formData.email,
+            password: formData.password
+          };
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
       if (response.ok) {
         const data = await response.json();
         console.log('Operación exitosa:', data);
-        
-        // Simular datos del usuario si el backend no los devuelve
+
         const userData = {
-          fullname: data.user?.fullname || 'Usuario',
+          fullname: data.user?.name || 'Usuario',
           email: data.user?.email,
           ...data.user
         };
-        
+
         onLoginSuccess(userData);
       } else {
         const errorData = await response.json();
@@ -65,6 +73,7 @@ const Login = ({ onLoginSuccess }) => {
     }
   };
 
+  // ⬇️ Aquí seguiría tu return (...)
   return (
     <div className="login-container" style={{
       backgroundImage: `url(${salon})`,
@@ -177,4 +186,6 @@ const Login = ({ onLoginSuccess }) => {
   );
 };
 
+
+  
 export default Login;

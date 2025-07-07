@@ -1,4 +1,5 @@
 const express = require('express');
+const connectDB = require('./config/db');
 const cors = require('cors');
 
 const app = express();
@@ -22,6 +23,9 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+const usuariosRoutes = require('./routes/usuarios');
+app.use('/api/usuarios', usuariosRoutes);
 
 // Usuarios de ejemplo (en un proyecto real usarías una base de datos)
 const users = [

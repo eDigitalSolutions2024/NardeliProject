@@ -13,6 +13,7 @@ const Dashboard = ({ user, onLogout }) => {
     { id: 'clientes', label: 'Clientes', icon: '👥' },
     { id: 'calendario', label: 'Calendario', icon: '📅' },
     { id: 'reportes', label: 'Reportes', icon: '📈' },
+    { id: 'inventario', label: 'Inventario', icon: '🏬'},
     { id: 'configuracion', label: 'Configuración', icon: '⚙️' }
   ];
 
@@ -115,6 +116,13 @@ const Dashboard = ({ user, onLogout }) => {
           <div className="dashboard-content">
             <h1>Reportes y Estadísticas</h1>
             <p>Visualiza reportes detallados del negocio.</p>
+          </div>
+        );
+      case 'inventario':
+        return (
+          <div className='dashboard-content'>
+            <h1>hola</h1>
+            <p>Aqui ira el inventario</p>
           </div>
         );
       case 'configuracion':
