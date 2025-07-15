@@ -6,6 +6,9 @@ const Dashboard = ({ user, onLogout }) => {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [showDropdown, setShowDropdown] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isAdmin = user?.role === 'admin';
+
+
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
@@ -16,6 +19,12 @@ const Dashboard = ({ user, onLogout }) => {
     { id: 'inventario', label: 'Inventario', icon: '🏬'},
     { id: 'configuracion', label: 'Configuración', icon: '⚙️' }
   ];
+
+
+  const visibleMenuItems = isAdmin
+  ? menuItems // todos
+  : menuItems.filter(item => ['dashboard', 'calendario'].includes(item.id));
+
 
   const renderContent = () => {
     switch (activeSection) {
@@ -153,7 +162,7 @@ const Dashboard = ({ user, onLogout }) => {
         </div>
 
         <nav className="sidebar-nav">
-          {menuItems.map(item => (
+          {visibleMenuItems.map(item => (
             <button
               key={item.id}
               className={`nav-item ${activeSection === item.id ? 'active' : ''}`}

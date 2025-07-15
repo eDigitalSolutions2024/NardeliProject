@@ -54,17 +54,21 @@ const Login = ({ onLoginSuccess }) => {
         const data = await response.json();
         console.log('Operación exitosa:', data);
 
-        const userData = {
-          fullname: data.user?.name || 'Usuario',
-          email: data.user?.email,
-          ...data.user
-        };
-
-        onLoginSuccess(userData);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Error en la operación');
+        if (isLogin) {
+          const userData = {
+            fullname: data.user?.name || 'Usuario',
+            email: data.user?.email,
+            ...data.user
+          };
+          onLoginSuccess(userData);
+        } else {
+          // Modo registro: mostrar mensaje y volver a login
+          alert('🎉 Usuario registrado correctamente');
+          setIsLogin(true); // Cambia a vista de inicio de sesión
+          setFormData({ fullname: '', email: '', password: '' }); // Limpia campos
+        }
       }
+
     } catch (error) {
       console.error('Error:', error);
       setError('Error de conexión. Por favor intenta nuevamente.');

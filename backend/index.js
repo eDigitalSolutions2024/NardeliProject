@@ -1,6 +1,7 @@
 const express = require('express');
 const connectDB = require('./config/db');
 const cors = require('cors');
+connectDB();
 
 const app = express();
 const PORT = process.env.PORT || 8010;
@@ -28,7 +29,7 @@ const usuariosRoutes = require('./routes/usuarios');
 app.use('/api/usuarios', usuariosRoutes);
 
 // Usuarios de ejemplo (en un proyecto real usarías una base de datos)
-const users = [
+/*const users = [
   {
     id: 1,
     email: 'admin1@gmail.com',
@@ -41,7 +42,7 @@ const users = [
     password: 'admin123',
     name: 'Administrador'
   }
-];
+];*/
 
 // Ruta de prueba
 app.get('/api/ping', (req, res) => {
@@ -49,41 +50,48 @@ app.get('/api/ping', (req, res) => {
 });
 
 // Ruta de login
-app.post('/api/login', (req, res) => {
+const Usuario = require('./models/Usuario'); // importa el modelo real
+
+app.post('/api/login', async (req, res) => {
   console.log('Se recibió POST a /api/login');
-  console.log('BODY recibido:', req.body); 
+  console.log('BODY recibido:', req.body);
+
   const { email, password } = req.body;
-  
-  // Validar que se envíen email y password
+
   if (!email || !password) {
     return res.status(400).json({
       success: false,
       message: 'Email y contraseña son requeridos'
     });
   }
-  
-  // Buscar usuario
-  const user = users.find(u => u.email === email && u.password === password);
-  
-  if (user) {
-    // Login exitoso
+
+  try {
+    const usuario = await Usuario.findOne({ email });
+
+    if (!usuario) {
+      return res.status(401).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    if (usuario.password !== password) {
+      return res.status(401).json({ success: false, message: 'Contraseña incorrecta' });
+    }
+
     res.json({
       success: true,
       message: 'Login exitoso',
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name
+        id: usuario._id,
+        email: usuario.email,
+        name: usuario.fullname,
+        role: usuario.role
       }
     });
-  } else {
-    // Credenciales incorrectas
-    res.status(401).json({
-      success: false,
-      message: 'Credenciales incorrectas'
-    });
+  } catch (error) {
+    console.error('Error en login:', error.message);
+    res.status(500).json({ success: false, message: 'Error del servidor' });
   }
 });
+
 
 // Iniciar servidor
 app.listen(PORT, () => {

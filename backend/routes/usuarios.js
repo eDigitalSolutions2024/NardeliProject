@@ -19,7 +19,7 @@ router.post('/registro', async (req, res) => {
     }
 
     // Crear y guardar el nuevo usuario
-    const nuevoUsuario = new Usuario({ name, email, password }); // Más adelante agregaremos hash
+    const nuevoUsuario = new Usuario({ fullname: name, email, password }); // Más adelante agregaremos hash
     await nuevoUsuario.save();
 
     res.status(201).json({ success: true, message: 'Usuario registrado correctamente' });
