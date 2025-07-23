@@ -1,14 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { jwtDecode } from 'jwt-decode';
 import './Dashboard.css';
 import Calendario from './Calendario';
 
-const Dashboard = ({ user, onLogout }) => {
+const Dashboard = ({ onLogout }) => {
+  const [user, setUser] = useState(null);
   const [activeSection, setActiveSection] = useState('dashboard');
   const [showDropdown, setShowDropdown] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setUser(decoded);
+      } catch (error) {
+        console.error('Token inválido', error);
+      }
+    }
+  }, []);
+
   const isAdmin = user?.role === 'admin';
-
-
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
@@ -19,6 +32,8 @@ const Dashboard = ({ user, onLogout }) => {
     { id: 'inventario', label: 'Inventario', icon: '🏬'},
     { id: 'configuracion', label: 'Configuración', icon: '⚙️' }
   ];
+
+  
 
 
   const visibleMenuItems = isAdmin

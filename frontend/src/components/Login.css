@@ -8,6 +8,41 @@
   height: 100vh;
 }
 
+/* Contenedor general ocupa toda la pantalla */
+.login-page {
+  height: 100vh;
+  overflow-y: auto; /* Permite hacer scroll vertical */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: url('../assets/buscar.png') no-repeat center center fixed;
+  background-size: cover;
+  padding: 20px; /* importante para móviles */
+}
+
+/* Panel del formulario */
+.login-panel {
+  background-color: #fff;
+  padding: 40px;
+  max-width: 400px;
+  width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.2);
+}
+
+/* Ajustes responsive extra */
+@media screen and (max-height: 600px) {
+  .login-page {
+    align-items: flex-start;
+  }
+
+  .login-panel {
+    margin-top: 20px;
+    margin-bottom: 20px;
+  }
+}
+
+
 .login-card{
   display: flex;
   width: 800px;
@@ -30,14 +65,17 @@
   text-align: center;
   }
   
-  .login-right {
-    flex: 1;
-    padding: 60px 40px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    background: linear-gradient(180deg, #f7f7f7 0%, #ffffff 100%);
-  }
+.login-right {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start; /* 👈 esto es lo importante */
+}
+
   
   .login-form-container {
     width: 100%;

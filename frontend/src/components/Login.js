@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { jwtDecode } from 'jwt-decode';
 import './Login.css';
 import salon from '../assets/salon.jpg';
 import API_BASE_URL from '../api';
@@ -52,14 +53,21 @@ const Login = ({ onLoginSuccess }) => {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('DATA COMPLETA:', data);
         console.log('Operación exitosa:', data);
 
         if (isLogin) {
+          localStorage.setItem('token', data.token); // ✅ Guarda el token
+
           const userData = {
             fullname: data.user?.name || 'Usuario',
             email: data.user?.email,
-            ...data.user
+            role: data.user?.role,
+            id: data.user?.id
           };
+
+          localStorage.setItem('user', JSON.stringify(userData));
+          
           onLoginSuccess(userData);
         } else {
           // Modo registro: mostrar mensaje y volver a login
@@ -76,6 +84,28 @@ const Login = ({ onLoginSuccess }) => {
       setIsLoading(false);
     }
   };
+
+    useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+
+    if (token) {
+      // Guardar token
+      localStorage.setItem('token', token);
+
+      // Decodificar para obtener el rol u otros datos
+      const decoded = jwtDecode(token);
+      console.log('Usuario autenticado:', decoded);
+
+      // Redirigir según el rol (opcional)
+      if (decoded.role === 'admin') {
+        window.location.href = '/admin/dashboard';
+      } else {
+        window.location.href = '/dashboard';
+      }
+    }
+  }, []);
+
 
   // ⬇️ Aquí seguiría tu return (...)
   return (
@@ -183,6 +213,33 @@ const Login = ({ onLoginSuccess }) => {
                 {isLoading ? 'Procesando...' : (isLogin ? 'Iniciar Sesión' : 'Registrarse')}
               </button>
             </form>
+            <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+              <p>O inicia sesión con</p>
+              <a href="http://localhost:8010/api/auth/google" style={{ textDecoration: 'none' }}>
+                <button
+                  type="button"
+                  style={{
+                    backgroundColor: '#fff',
+                    color: '#444',
+                    border: '1px solid #ccc',
+                    padding: '10px 20px',
+                    borderRadius: '5px',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    margin: '0 auto',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <img
+                    src="https://developers.google.com/identity/images/g-logo.png"
+                    alt="Google logo"
+                    style={{ width: '20px', height: '20px' }}
+                  />
+                </button>
+              </a>
+            </div>
           </div>
         </div>
       </div>
