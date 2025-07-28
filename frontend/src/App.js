@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-route
 import Home from './components/Home';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
-import Reservar from './components/Reservar';
+import Reservar from './components/ReservarEvento';
 
 function AppWrapper() {
   const [user, setUser] = useState(null);

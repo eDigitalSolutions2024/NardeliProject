@@ -9,7 +9,7 @@ const Home = () => {
   return (
     <div className="home-container">
       <header className="home-header">
-        <button className="home-button" onClick={() => navigate('/login')}>
+        <button className="home-button" onClick={() => navigate('/reservar')}>
             Reservar un Evento
         </button>
         <h1>Bienvenido a Salón de Eventos Nardeli</h1>

@@ -1,59 +1,167 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import './Calendario.css';
+import API_BASE_URL from '../api';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+
+
 
 const Calendario = () => {
   const [date, setDate] = useState(new Date());
-  
-  // Datos de ejemplo para próximos eventos
-  const [eventos] = useState([
-    {
-      id: 1,
-      titulo: 'Cumpleaños María González',
-      fecha: new Date(2025, 6, 10),
-      hora: '18:00',
-      tipo: 'cumpleanos',
-      icon: '🎂',
-      invitados: 50
-    },
-    {
-      id: 2,
-      titulo: 'Boda Carlos y Ana',
-      fecha: new Date(2025, 6, 15),
-      hora: '16:00',
-      tipo: 'boda',
-      icon: '💒',
-      invitados: 120
-    },
-    {
-      id: 3,
-      titulo: 'Graduación Universidad',
-      fecha: new Date(2025, 6, 20),
-      hora: '10:00',
-      tipo: 'graduacion',
-      icon: '🎓',
-      invitados: 200
-    },
-    {
-      id: 4,
-      titulo: 'Quinceañera Sofía',
-      fecha: new Date(2025, 6, 25),
-      hora: '19:00',
-      tipo: 'quinceanera',
-      icon: '👑',
-      invitados: 80
-    },
-    {
-      id: 5,
-      titulo: 'Reunión Empresarial',
-      fecha: new Date(2025, 6, 30),
-      hora: '14:00',
-      tipo: 'empresarial',
-      icon: '💼',
-      invitados: 30
+  const [eventos, setEventos] = useState([]);
+  const [mostrarModal, setMostrarModal] = useState(false);
+  const [reservaEditando, setReservaEditando] = useState(null);
+
+   const obtenerIcono = (tipo) => {
+        switch (tipo.toLowerCase()) {
+          case 'boda': return '💒';
+          case 'cumpleaños': return '🎂';
+          case 'graduación': return '🎓';
+          case 'xv': return '👑';
+          case 'reunión': return '💼';
+          case 'comedia': return '🤡';
+          case 'musica': return '🎶';
+          default: return '🎉';
+        }
+    };
+
+    const obtenerEventos = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/reservas`);
+      const data = await response.json();
+
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+
+      // Convertir texto a Date para trabajar en react-calendar
+      const formateados = data.map(reserva => ({
+        id: reserva._id,
+        titulo: `${reserva.tipoEvento} - ${reserva.cliente}`,
+        fecha: dayjs(reserva.fecha).tz('America/Chihuahua').toDate(),
+        hora: reserva.horaInicio,
+        tipo: reserva.tipoEvento.toLowerCase(),
+        icon: obtenerIcono(reserva.tipoEvento),
+        invitados: reserva.cantidadPersonas // Puedes agregar invitados si los tienes
+      }))
+
+      .filter(evento => {
+        const fechaEvento = new Date(evento.fecha);
+        fechaEvento.setHours(0, 0, 0, 0);
+        return fechaEvento >= hoy;
+      });
+
+      setEventos(formateados);
+    } catch (error) {
+      console.error('Error al cargar reservas:', error);
     }
-  ]);
+  };
+
+
+  //eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    obtenerEventos();
+}, []);
+
+  const manejarEliminar = async (id) => {
+    if (window.confirm('¿Estás seguro de eliminar esta reserva?')) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/reservas/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          setEventos(prev => prev.filter(e => e.id !== id));
+        } else {
+          alert('Error al eliminar la reserva.');
+        }
+      } catch (error) {
+        console.error('Error al eliminar:', error);
+      }
+    }
+  };
+
+  const manejarEditar = (evento) => {
+    setReservaEditando({
+      id: evento.id,
+      cliente: evento.cliente,
+      tipo: evento.tipo || evento.tipoEvento,
+      fecha: new Date(evento.fecha),
+      hora: evento.hora || evento.horaInicio,
+      invitados: evento.invitados || evento.cantidadPersonas
+    });
+    setMostrarModal(true);
+  };
+
+  const cerrarModal = () => {
+    setReservaEditando(null);
+    setMostrarModal(false);
+  };
+
+  const handleEditarChange = (e) => {
+  const { name, value } = e.target;
+  setReservaEditando(prev => ({
+    ...prev,
+    [name]: value
+  }));
+};
+
+const actualizarReserva = async (e) => {
+  e.preventDefault();
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/reservas/${reservaEditando.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cliente: reservaEditando.cliente,
+        tipoEvento: reservaEditando.tipo,
+        fecha: new Date(reservaEditando.fecha),
+        horaInicio: reservaEditando.hora,
+        horaFin: reservaEditando.hora, // puedes cambiar esto si manejas horas reales
+        cantidadPersonas: reservaEditando.invitados,
+        telefono: "N/A" // si decides agregar
+      })
+    });
+
+    if (response.ok) {
+      const updated = await response.json();
+      console.log('🟢 RESPUESTA DEL BACKEND:', updated);
+      console.log('🟡 ID de la reserva editando:', reservaEditando.id);
+      cerrarModal(); // cerrar modal
+
+      await obtenerEventos();
+
+      setEventos(prev =>
+        prev.map(ev =>
+          ev.id === reservaEditando.id || ev._id === reservaEditando.id
+            ? {
+                ...ev,
+                id: updated._id,
+                cliente: updated.cliente,
+                tipo: updated.tipoEvento,
+                fecha: new Date(updated.fecha),
+                hora: updated.horaInicio,
+                invitados: updated.cantidadPersonas,
+                icon: obtenerIcono(updated.tipoEvento)
+              }
+            : ev
+        )
+      );
+    } else {
+      alert('Error al actualizar');
+    }
+  } catch (error) {
+    console.error('Error al actualizar:', error);
+  }
+};
+
 
   // Función para formatear fecha
   const formatearFecha = (fecha) => {
@@ -77,13 +185,15 @@ const Calendario = () => {
     if (view === 'month') {
       return eventos.some(evento => 
         evento.fecha.toDateString() === date.toDateString()
-      );
+      ) ? 'evento' : null;
     }
-    return false;
+    return null;
   };
+
 
   const eventosDelDia = getEventosDelDia(date);
 
+ 
   return (
     <div className="calendario-container">
       {/* Panel de Próximos Eventos */}
@@ -106,10 +216,67 @@ const Calendario = () => {
                   <span className="evento-hora">⏰ {evento.hora}</span>
                   <span className="evento-invitados">👥 {evento.invitados}</span>
                 </div>
+
+                <div className="evento-acciones">
+                  <button onClick={() => manejarEditar(evento)}>✏️ Editar</button>
+                  <button onClick={() => manejarEliminar(evento.id)}>🗑️ Eliminar</button>
+                </div>
               </div>
             </div>
           ))}
         </div>
+
+        {mostrarModal && reservaEditando && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <h2>Editar Reserva</h2>
+              <form onSubmit={actualizarReserva}>
+                <input
+                  type="text"
+                  name="cliente"
+                  placeholder="Nombre del cliente"
+                  value={reservaEditando.cliente}
+                  onChange={handleEditarChange}
+                  required
+                />
+                <input
+                  type="text"
+                  name="tipo"
+                  placeholder="Tipo de evento"
+                  value={reservaEditando.tipo}
+                  onChange={handleEditarChange}
+                  required
+                />
+                <input
+                  type="date"
+                  name="fecha"
+                  value={dayjs(reservaEditando.fecha).format('YYYY-MM-DD')}
+                  onChange={handleEditarChange}
+                  required
+                />
+                <input
+                  type="time"
+                  name="hora"
+                  value={reservaEditando.hora}
+                  onChange={handleEditarChange}
+                  required
+                />
+                <input
+                  type="number"
+                  name="invitados"
+                  placeholder="Cantidad de personas"
+                  value={reservaEditando.invitados}
+                  onChange={handleEditarChange}
+                  required
+                />
+                <div className="modal-actions">
+                  <button type="submit">Guardar</button>
+                  <button type="button" onClick={cerrarModal}>Cancelar</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Panel del Calendario */}

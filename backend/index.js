@@ -19,10 +19,12 @@ app.use(express.json());
 const authRoutes = require('./routes/auth');
 const loginRoutes = require('./routes/login');
 const usuariosRoutes = require('./routes/usuarios');
+const reservasRoutes = require('./routes/reservas');
 
 app.use('/api/auth', authRoutes);
 app.use('/api', loginRoutes);
 app.use('/api/usuarios', usuariosRoutes);
+app.use('/api/reservas', reservasRoutes);
 
 // ✅ Ruta de prueba
 app.get('/api/ping', (req, res) => {

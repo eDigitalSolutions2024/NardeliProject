@@ -8,6 +8,14 @@
   padding: 1rem;
 }
 
+.react-calendar__tile.evento {
+  background: #e0c3fc !important;
+  color: #491656 !important;
+  font-weight: bold;
+  border-radius: 8px;
+}
+
+
 /* Panel de eventos (izquierda) */
 .eventos-panel {
   flex: 1;
@@ -435,4 +443,39 @@
 
 .eventos-lista::-webkit-scrollbar-thumb:hover {
   background: #6b2c5e;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: 500px;
+  width: 100%;
+}
+
+.modal-content input {
+  width: 100%;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
 }
