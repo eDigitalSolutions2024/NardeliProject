@@ -15,8 +15,10 @@ router.post('/login', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
     }
 
-    // Si NO has implementado hash aún:
-    const passwordValida = password === usuario.password;
+    const passwordValida = await bcrypt.compare(password, usuario.password);
+    
+    const hashedPassword = await bcrypt.hash(password, 10);
+
 
     // Si usas bcrypt, haz esto en vez de la línea anterior:
     // const passwordValida = await bcrypt.compare(password, usuario.password);

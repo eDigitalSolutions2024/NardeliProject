@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import './Dashboard.css';
 import Calendario from './Calendario';
+import FormProducto from './FormProducto';
+import TablaProductos from './TablaProductos';
+
 
 const Dashboard = ({ onLogout }) => {
   const [user, setUser] = useState(null);
@@ -145,8 +148,9 @@ const Dashboard = ({ onLogout }) => {
       case 'inventario':
         return (
           <div className='dashboard-content'>
-            <h1>hola</h1>
-            <p>Aqui ira el inventario</p>
+            <h1>Inventario papu pro</h1>
+            <FormProducto />
+            <TablaProductos />
           </div>
         );
       case 'configuracion':
