@@ -41,21 +41,29 @@ const Calendario = () => {
       hoy.setHours(0, 0, 0, 0);
 
       // Convertir texto a Date para trabajar en react-calendar
-      const formateados = data.map(reserva => ({
-        id: reserva._id,
-        titulo: `${reserva.tipoEvento} - ${reserva.cliente}`,
-        fecha: dayjs(reserva.fecha).tz('America/Chihuahua').toDate(),
-        hora: reserva.horaInicio,
-        tipo: reserva.tipoEvento.toLowerCase(),
-        icon: obtenerIcono(reserva.tipoEvento),
-        invitados: reserva.cantidadPersonas // Puedes agregar invitados si los tienes
-      }))
+      const formateados = data.map((reserva) => {
+        const ymd = reserva.fechaLocal || String(reserva.fecha).slice(0,10);
+        return {
+          id: reserva._id,
+          titulo: `${reserva.tipoEvento} - ${reserva.cliente}`,
+          ymd,
+          fecha: new Date(`${ymd}T12:00:00`),
+          hora: reserva.horaInicio,
+          tipo: reserva.tipoEvento.toLowerCase(),
+          icon: obtenerIcono(reserva.tipoEvento),
+          invitados: reserva.cantidadPersonas,
+          cliente: reserva.cliente,                  // ← para editar
+          tipoEvento: reserva.tipoEvento,  
+        };
+      })
 
       .filter(evento => {
         const fechaEvento = new Date(evento.fecha);
         fechaEvento.setHours(0, 0, 0, 0);
         return fechaEvento >= hoy;
       });
+
+      console.log(formateados.map(e => ({ ymd: e.ymd, fechaISO: e.fecha.toISOString() })));
 
       setEventos(formateados);
     } catch (error) {
@@ -91,8 +99,8 @@ const Calendario = () => {
     setReservaEditando({
       id: evento.id,
       cliente: evento.cliente,
-      tipo: evento.tipo || evento.tipoEvento,
-      fecha: new Date(evento.fecha),
+      tipo: evento.tipoEvento || evento.tipo,
+      decha: new Date(`${evento.ymd}T12:00:00`), 
       hora: evento.hora || evento.horaInicio,
       invitados: evento.invitados || evento.cantidadPersonas
     });
@@ -122,7 +130,7 @@ const actualizarReserva = async (e) => {
       body: JSON.stringify({
         cliente: reservaEditando.cliente,
         tipoEvento: reservaEditando.tipo,
-        fecha: new Date(reservaEditando.fecha),
+        fecha: dayjs(reservaEditando.fecha).format('YYYY-MM-DD'),
         horaInicio: reservaEditando.hora,
         horaFin: reservaEditando.hora, // puedes cambiar esto si manejas horas reales
         cantidadPersonas: reservaEditando.invitados,
@@ -163,15 +171,27 @@ const actualizarReserva = async (e) => {
 };
 
 
-  // Función para formatear fecha
-  const formatearFecha = (fecha) => {
-    return fecha.toLocaleDateString('es-ES', {
+  const formatearFecha = (valor) => {
+    if (!valor) return '';                 // evita crashear si viene undefined
+
+    let d;
+    if (valor instanceof Date) d = valor;
+    else if (typeof valor === 'string') {  // "YYYY-MM-DD" o ISO
+      const s = valor.length > 10 ? valor : `${valor}T12:00:00`;
+      d = new Date(s);
+    } else if (typeof valor === 'number') d = new Date(valor);
+    else return '';
+
+    if (isNaN(d)) return '';
+    return d.toLocaleDateString('es-ES', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
     });
   };
+
+
 
   // Función para obtener eventos del día seleccionado
   const getEventosDelDia = (fechaSeleccionada) => {
@@ -210,7 +230,7 @@ const actualizarReserva = async (e) => {
               <div className="evento-info">
                 <h3 className="evento-titulo">{evento.titulo}</h3>
                 <p className="evento-fecha">
-                  {formatearFecha(evento.fecha)}
+                  {formatearFecha(evento.ymd)}
                 </p>
                 <div className="evento-detalles">
                   <span className="evento-hora">⏰ {evento.hora}</span>

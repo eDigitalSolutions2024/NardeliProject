@@ -19,6 +19,8 @@ app.use(cors({
 // ✅ Middlewares
 app.use(express.json());
 
+require('dotenv').config();
+
 // ✅ Rutas
 const authRoutes = require('./routes/auth');
 const loginRoutes = require('./routes/login');
