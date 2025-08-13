@@ -5,6 +5,10 @@ const reservaSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  correo: {
+    type: String,
+    required: true
+  },
   tipoEvento: {
     type: String,
     required: true

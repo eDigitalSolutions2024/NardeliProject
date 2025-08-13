@@ -17,6 +17,6 @@ const UsuarioSchema = new mongoose.Schema({
   lastLoginAt: { type: Date }        // sin default: null
 }, { timestamps: true });
 
-UsuarioSchema.index({ email: 1 }, { unique: true });
+//UsuarioSchema.index({ email: 1 }, { unique: true });
 
 module.exports = mongoose.model('Usuario', UsuarioSchema);

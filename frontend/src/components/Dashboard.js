@@ -41,7 +41,7 @@ const Dashboard = ({ onLogout }) => {
 
   const visibleMenuItems = isAdmin
   ? menuItems // todos
-  : menuItems.filter(item => ['dashboard', 'calendario'].includes(item.id));
+  : menuItems;
 
 
   const renderContent = () => {

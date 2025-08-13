@@ -101,7 +101,7 @@ const Login = ({ onLoginSuccess }) => {
       if (decoded.role === 'admin') {
         window.location.href = '/admin/dashboard';
       } else {
-        window.location.href = '/dashboard';
+        window.location.href = '/admin/dashboard';
       }
     }
   }, []);

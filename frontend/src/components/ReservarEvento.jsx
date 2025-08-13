@@ -70,6 +70,7 @@ const ReservarEvento = () => {
       <h2>Reservar Evento</h2>
       <form onSubmit={handleSubmit}>
         <input name="cliente" type="text" placeholder="Nombre del cliente" value={formData.cliente} onChange={handleChange} required />
+        <input name="correo" type="text" placeholder="Correo electronico" value={formData.correo} onChange={handleChange} required />
         <input name="tipoEvento" type="text" placeholder="Tipo de evento" value={formData.tipoEvento} onChange={handleChange} required />
         <input name="telefono" type="number" placeholder="Numero de telefono" value={formData.telefono} onChange={handleChange} required />
         <input name="cantidadPersonas" type="number" placeholder="Cantidad de personas" value={formData.cantidadPersonas} onChange={handleChange} />
