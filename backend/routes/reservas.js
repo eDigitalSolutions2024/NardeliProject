@@ -2,8 +2,9 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const Reserva = require('../models/Reservas');
+const Producto = require('../models/Producto');
 
-const TZ = process.env.APP_TIMEZONE || 'Amrica/Denver';
+const TZ = process.env.APP_TIMEZONE || 'America/Denver';
 
 // Convierte "YYYY-MM-DD" (o cualquier input) a Date en 12:00:00 Z
 function normalizeFechaNoonUTC(input) {
@@ -63,6 +64,7 @@ async function checarDisponibilidad({ fecha, horaInicio, horaFin, excluirId = nu
 router.post('/', async (req, res) => {
   try {
     req.body.fecha = normalizeFechaNoonUTC(req.body.fecha);
+//FALTA AGREGAR AQUI, EN CHAT SALE COMO ERROR AL EJECUTAR BACKEND  
     const disp = await checarDisponibilidad(req.body);
     if (!disp.disponible) return res.status(409).json({ error: disp.motivo });
     const nueva = new Reserva(req.body);
@@ -126,6 +128,53 @@ router.delete('/:id', async (req, res) => {
   } catch (e) {
     console.error('Error al eliminar:', e);
     res.status(500).json({ message: 'Error del servidor' });
+  }
+});
+
+//
+router.put('/:id/utensilios', /*auth,*/ async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { items = [] } = req.body;
+
+    // Validación mínima
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ msg: 'items debe ser un arreglo' });
+    }
+
+    // (Opcional) valida cada item y stock
+    const saneados = [];
+    for (const it of items) {
+      const itemId = it.itemId || it.id || null;
+      const cantidad = Number(it.cantidad ?? it.qty ?? 0);
+      if (!itemId || !it.nombre || isNaN(cantidad) || cantidad < 0) {
+        return res.status(400).json({ msg: 'Ítem inválido en la selección' });
+      }
+      // (opcional) verifica que exista el producto
+      // const prod = await Producto.findById(itemId).select('_id nombre stock');
+      // if (!prod) return res.status(400).json({ msg: 'Producto no existe' });
+      // if (prod.stock < cantidad) return res.status(400).json({ msg: `Stock insuficiente para ${prod.nombre}` });
+
+      saneados.push({
+        itemId,
+        nombre: it.nombre,
+        cantidad,
+        unidad: it.unidad || 'pza',
+        categoria: it.categoria || 'general'
+      });
+    }
+
+    const updated = await Reserva.findByIdAndUpdate(
+      id,
+      { $set: { utensilios: saneados } },
+      { new: true }
+    );
+
+    if (!updated) return res.status(404).json({ msg: 'Reserva no encontrada' });
+    return res.json({ msg: 'Selección guardada', reserva: updated });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ msg: 'Error interno' });
   }
 });
 
