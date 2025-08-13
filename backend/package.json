@@ -10,6 +10,7 @@
   "dependencies": {
     "backend": "file:",
     "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dayjs": "^1.11.13",
     "dayjs-plugin-utc": "^0.1.2",
@@ -19,6 +20,7 @@
     "jwt-decode": "^4.0.0",
     "mongoose": "^8.16.2",
     "multer": "^2.0.2",
+    "nodemailer": "^7.0.5",
     "react-router-dom": "^7.6.1"
   },
   "devDependencies": {
