@@ -4,6 +4,7 @@ import Home from './components/Home';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import Reservar from './components/ReservarEvento';
+import DashboardCliente from './components/DashboardCliente';
 
 function AppWrapper() {
   const [user, setUser] = useState(null);
@@ -21,6 +22,7 @@ function AppWrapper() {
       <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} />} />
       <Route path="/dashboard" element={<Dashboard user={user} />} />
       <Route path="/reservar" element={<Reservar />} />
+      <Route path="/cliente/dashboard" element={<DashboardCliente/>} />
     </Routes>
   );
 }

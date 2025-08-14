@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './DashboardCliente.css';
-import API_BASE_URL from '../api';
+//import API_BASE_URL from '../api';
+import API_BASE_URL, { API_ORIGIN } from '../api';
 
 // Helper: placeholder si no hay imagen
 const PLACEHOLDER =
@@ -8,6 +9,13 @@ const PLACEHOLDER =
   encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="100%" height="100%" fill="#f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9ca3af" font-family="Arial" font-size="14">Sin imagen</text></svg>`
   );
+
+const resolveImg = (img) => {
+    if (!img) return PLACEHOLDER;
+        const clean = String(img).replace(/\\/g, '/');   // por si hay backslashes de Windows
+            if (clean.startsWith('http')) return clean;      // ya es absoluta
+            return `${API_ORIGIN}${clean.startsWith('/') ? '' : '/'}${clean}`;
+};
 
 const DashboardCliente = ({ reservaId: reservaIdProp }) => {
   const [items, setItems] = useState([]);          // inventario desde backend
@@ -33,7 +41,7 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
       setError('');
       try {
         // 🔁 Ajusta al que ya tengas: /inventario, /api/inventario, /productos?tipo=utensilio, etc.
-        const res = await fetch(`${API_BASE_URL}/inventario`, {
+        const res = await fetch(`${API_BASE_URL}/productos/inventario`, {
           headers: { 'Content-Type': 'application/json' },
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -46,7 +54,7 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
           categoria: x.categoria || x.category || 'general',
           stock: Number(x.stock ?? x.existencias ?? 0),
           unidad: x.unidad || x.unit || 'pza',
-          imagen: x.imagen || x.image || PLACEHOLDER,
+          imagen: x.imagen || x.image || '',
         }));
         if (alive) setItems(normalizados);
       } catch (e) {
@@ -169,7 +177,8 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
                 const agotado = it.stock <= 0;
                 return (
                   <div key={it.id} className="item-card">
-                    <img className="item-img" src={it.imagen || PLACEHOLDER} alt={it.nombre} />
+                    <img className="item-img" src={resolveImg(it.imagen)} alt={it.nombre} 
+                        onError={(e) => { e.currentTarget.src = PLACEHOLDER; }} />
                     <div>
                       <h4 className="item-title">{it.nombre}</h4>
                       <div className="item-meta">
@@ -233,6 +242,9 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
           <button className="save" disabled={saving || Object.values(seleccion).length === 0} onClick={guardarSeleccion}>
             {saving ? 'Guardando…' : 'Guardar selección'}
           </button>
+
+          <button
+            className="cd-btn" type="button" onClick={() => { if (!reservaId) return alert('No hay reservaId'); window.open(`${API_BASE_URL}/reservas/${reservaId}/pdf`, '_blank'); }}>Descargar PDF</button>
         </div>
       </div>
     </div>

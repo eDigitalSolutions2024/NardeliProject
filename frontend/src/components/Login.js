@@ -146,16 +146,8 @@ const Login = ({ onLoginSuccess }) => {
                   Iniciar sesión
                 </button>
 
-                <button 
-                  type="button" 
-                  className={!isLogin ? 'toggle-btn active' : 'toggle-btn'}
-                  onClick={() => {
-                    setIsLogin(false);
-                    setError('');
-                  }}
-                >
-                  Registrarse
-                </button>
+                { /*<button type="button" className={!isLogin ? 'toggle-btn active' : 'toggle-btn'} onClick={() => { setIsLogin(false); setError(''); }}>Registrarse</button> */}
+                
               </div>
 
               {!isLogin && (
