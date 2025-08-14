@@ -308,35 +308,22 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-/*router.get('/:id/pdf', async (req, res) => {
+// Ver una reserva por id (para depurar)
+router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    if (!mongoose.isValidObjectId(id)) {
-      return res.status(400).json({ msg: 'ID inválido' });
-    }
+    if (!mongoose.isValidObjectId(id)) return res.status(400).json({ msg: 'ID inválido' });
 
-    const reserva = await Reserva.findById(id).lean();
-    if (!reserva) return res.status(404).json({ msg: 'Reserva no encontrada' });
+    const r = await Reserva.findById(id).lean();
+    if (!r) return res.status(404).json({ msg: 'No encontrada' });
 
-    // Si quieres precios, carga Productos; si no, puedes omitir esto.
-    const items = Array.isArray(reserva.utensilios) ? reserva.utensilios : [];
-    const ids = items.map(u => u.itemId).filter(v => v && mongoose.isValidObjectId(v));
-
-    let productosById = new Map();
-    if (ids.length) {
-      const prods = await Producto.find({ _id: { $in: ids } })
-        .select('_id nombre precio')
-        .lean();
-      productosById = new Map(prods.map(p => [String(p._id), p]));
-    }
-
-    streamReservaPDF(res, { reserva, productosById });
+    return res.json(r);
   } catch (e) {
-    console.error('PDF error:', e);
-    return res.status(500).json({ msg: 'No se pudo generar el PDF' });
+    console.error(e);
+    return res.status(500).json({ msg: 'Error del servidor' });
   }
 });
-*/
+
 
 router.put('/:id/utensilios', async (req, res) => {
   try {
@@ -354,14 +341,22 @@ router.put('/:id/utensilios', async (req, res) => {
     for (const it of items) {
       const itemId = it.itemId || it.id;
       const cantidad = Number(it.cantidad ?? it.qty ?? 0);
-      if (!itemId || !it.nombre || !Number.isFinite(cantidad) || cantidad < 0) {
+
+      if (!it.nombre || !Number.isFinite(cantidad) || cantidad < 0) {
         return res.status(400).json({ msg: 'Ítem inválido' });
       }
-      if (!mongoose.isValidObjectId(itemId)) {
-        return res.status(400).json({ msg: 'itemId inválido' });
+
+      // itemId es opcional para el PDF (solo se usa para precio). Si viene, valida:
+      let castId;
+      if (itemId) {
+        if (!mongoose.isValidObjectId(itemId)) {
+          return res.status(400).json({ msg: 'itemId inválido' });
+        }
+        castId = new mongoose.Types.ObjectId(itemId);
       }
+
       saneados.push({
-        itemId: new mongoose.Types.ObjectId(itemId),
+        ...(castId ? { itemId: castId } : {}),
         nombre: it.nombre,
         cantidad,
         unidad: it.unidad || 'pza',

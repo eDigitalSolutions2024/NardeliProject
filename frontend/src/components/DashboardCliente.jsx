@@ -243,8 +243,19 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
             {saving ? 'Guardando…' : 'Guardar selección'}
           </button>
 
-          <button
-            className="cd-btn" type="button" onClick={() => { if (!reservaId) return alert('No hay reservaId'); window.open(`${API_BASE_URL}/reservas/${reservaId}/pdf`, '_blank'); }}>Descargar PDF</button>
+            <button
+                className="cd-btn"
+                type="button"
+                onClick={() => {
+                    if (!reservaId) return alert('No hay reservaId');
+                    const url = `${API_BASE_URL}/reservas/${reservaId}/pdf`;
+                    console.log('PDF URL =>', url);
+                    window.open(url, '_blank');
+                }}
+                >
+                Descargar PDF
+            </button>
+
         </div>
       </div>
     </div>
