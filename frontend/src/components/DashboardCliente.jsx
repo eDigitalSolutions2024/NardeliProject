@@ -141,7 +141,7 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
       <div className="cd-header">
         <div>
           <h2>Panel del Cliente</h2>
-          <small>Selecciona los utensilios que necesitas para tu evento</small>
+          <small>Selecciona los articulos que necesitas para tu evento</small>
         </div>
         <div className="badge ok">Reserva: {reservaId || '—'}</div>
       </div>
@@ -221,7 +221,7 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
           <h3>Resumen de selección</h3>
           <div className="sel-list">
             {Object.values(seleccion).length === 0 ? (
-              <div className="empty">Aún no has agregado utensilios.</div>
+              <div className="empty">Aún no has agregado articulos.</div>
             ) : (
               Object.values(seleccion).map(({ item, qty }) => (
                 <div key={item.id} className="sel-item">

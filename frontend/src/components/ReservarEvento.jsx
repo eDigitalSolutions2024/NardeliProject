@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../api';
 import './Reservar.css';
+import { iniciarAccesoPorCorreo } from '../api/auth';
 
 const ReservarEvento = () => {
   const [formData, setFormData] = useState({
     cliente: '',
-    correo: '',              // 👈 faltaba en el estado inicial
+    correo: '',            
     tipoEvento: '',
     fecha: '',
     horaInicio: '',
@@ -25,6 +26,8 @@ const ReservarEvento = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
     if (mensaje) setMensaje('');
   };
+
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -74,14 +77,35 @@ const ReservarEvento = () => {
       }
 
       // ✅ Redirigir directo al Dashboard del cliente con el id
-      navigate(`/cliente/dashboard?reservaId=${reservaId}`);
+      //navigate(`/cliente/dashboard?reservaId=${reservaId}`);
+
+      try {
+        const r = await iniciarAccesoPorCorreo({
+          correo: payload.correo,
+          nombre: payload.cliente,
+          telefono: payload.telefono,
+        });
+        console.log('auth/start =>', r);
+        setMensaje('Te enviamos un código a tu correo para ingresar.');
+      } catch (err) {
+        console.error('auth/start error =>', err);
+        setMensaje(err.message || 'No se pudo enviar el código. Puedes reintentar más tarde.');
+      }
+
+      // 🔹 Redirigir a la página para ingresar el código
+      navigate(`/ingresar-codigo?email=${encodeURIComponent(payload.correo)}&reservaId=${encodeURIComponent(reservaId)}`);
+
     } catch (error) {
       console.error('Error al guardar:', error);
       setMensaje('❌ Error de conexión');
     } finally {
       setEnviando(false);
     }
+
+
   };
+
+  
 
   return (
     <div className="reserva-form-container">
@@ -97,10 +121,10 @@ const ReservarEvento = () => {
         <input name="horaInicio" type="time" value={formData.horaInicio} onChange={handleChange} required />
         <input name="horaFin" type="time" value={formData.horaFin} onChange={handleChange} required />
         <textarea name="descripcion" placeholder="Observaciones" value={formData.descripcion} onChange={handleChange} />
-        <button type="submit" disabled={enviando}>{enviando ? 'Guardando…' : 'Guardar reserva'}</button>
+        <button type="submit" disabled={enviando}>{enviando ? 'Guardando…' : 'Solicitar reserva'}</button>
       </form>
       {mensaje && <p>{mensaje}</p>}
-      <button className="home-button" onClick={() => navigate('/cliente/dashboard')} type="button"> Ver dashboard del cliente por mientras </button>
+      {/*<button className="home-button" onClick={() => navigate('/cliente/dashboard')} type="button"> Ver dashboard del cliente por mientras </button>*/}
     </div>
   );
 };
