@@ -8,72 +8,95 @@ function money(n) {
 }
 const sum = (arr) => arr.reduce((a, b) => a + b, 0);
 
+// ======= Estilos de marca (ajusta a tu gusto) =======
+const COLORS = {
+  brand: '#ab38d8ff',         // banda superior (tu celeste)
+  text: '#111111',
+  mute: '#6b7280',          // gris etiquetas
+  tableHeadBg: '#f3f4f6',
+  zebra: '#fafafa',
+  border: '#e5e7eb',
+  noteBg: '#f9fafb',
+  totalBg: '#eef2ff',
+  totalText: '#1f2937'
+};
+const FONTS = {
+  base: 10,
+  small: 8,
+  h1: 16,
+  h2: 12
+};
+
+// ======= Helpers de dibujo =======
+function labelValue(doc, { x, y, wLabel = 85, wValue = 180, label, value }) {
+  doc.font('Helvetica').fontSize(FONTS.base).fillColor(COLORS.mute);
+  doc.text(label, x, y, { width: wLabel });
+  doc.fillColor(COLORS.text).font('Helvetica-Bold');
+  doc.text(value ?? '—', x + wLabel + 8, y, { width: wValue });
+  return Math.max(
+    doc.heightOfString(label, { width: wLabel }),
+    doc.heightOfString(String(value ?? '—'), { width: wValue })
+  );
+}
+
+function sectionTitle(doc, text, x, y) {
+  doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(FONTS.h2);
+  doc.text(text, x, y);
+  doc.fontSize(FONTS.base);
+}
+
 function drawHeaderRow(doc, { x, y, widths, headers }) {
-  const H = 20;
+  const H = 22;
   doc.save();
-  doc.rect(x, y, sum(widths), H).fill('#f3f4f6').fillColor('#000');
+  doc.roundedRect(x, y, sum(widths), H, 6).fill(COLORS.tableHeadBg);
+  doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(FONTS.base);
 
   let cx = x;
-  doc.font('Helvetica-Bold').fontSize(10);
   headers.forEach((h, i) => {
-    doc.text(h, cx + 6, y + 5, {
-      width: widths[i] - 12,
-      align: i >= headers.length - 2 ? 'right' : 'left',
+    doc.text(h, cx + 10, y + 6, {
+      width: widths[i] - 20,
+      align: i >= headers.length - 2 ? 'right' : 'left'
     });
     cx += widths[i];
   });
-
-  doc.moveTo(x, y + H).lineTo(x + sum(widths), y + H).strokeColor('#ddd').stroke();
   doc.restore();
+  return y + H;
 }
 
 function drawRow(doc, { x, y, widths, values, zebra = false }) {
-  const PAD = 6;
-  doc.save();
+  const PADX = 10, PADY = 6;
+  const heights = values.map((v, i) =>
+    doc.heightOfString(String(v ?? ''), { width: widths[i] - PADX * 2 })
+  );
+  const rowH = Math.max(20, ...heights) + PADY * 2;
 
-  // alto dinámico por contenido
-  const heights = values.map((val, i) => {
-    const cellW = widths[i] - PAD * 2;
-    return doc.heightOfString(String(val ?? ''), {
-      width: cellW,
-      align: i >= values.length - 2 ? 'right' : 'left',
-    }) + PAD * 2;
-  });
-  let rowH = Math.max(18, ...heights);
-
-  // salto de página si no cabe
-  if (y + rowH > doc.page.height - 60) {
+  // salto de página
+  if (y + rowH > doc.page.height - doc.page.margins.bottom - 60) {
     doc.addPage();
-    y = 50;
+    return drawRow(doc, { x, y: doc.y, widths, values, zebra }); // recursivo en nueva página
   }
 
-  // zebra
-  if (zebra) doc.rect(x, y, sum(widths), rowH).fill('#fafafa');
+  doc.save();
+  if (zebra) doc.rect(x, y, sum(widths), rowH).fill(COLORS.zebra);
 
-  // texto celda por celda
   let cx = x;
-  doc.fillColor('#000').font('Helvetica').fontSize(10);
+  doc.fillColor(COLORS.text).font('Helvetica').fontSize(FONTS.base);
   values.forEach((val, i) => {
-    doc.text(String(val ?? ''), cx + PAD, y + PAD, {
-      width: widths[i] - PAD * 2,
-      align: i >= values.length - 2 ? 'right' : 'left',
+    doc.text(String(val ?? ''), cx + PADX, y + PADY, {
+      width: widths[i] - PADX * 2,
+      align: i >= values.length - 2 ? 'right' : 'left'
     });
     cx += widths[i];
   });
 
-  doc.moveTo(x, y + rowH).lineTo(x + sum(widths), y + rowH).strokeColor('#eee').stroke();
+  // línea inferior
+  doc.moveTo(x, y + rowH).lineTo(x + sum(widths), y + rowH).strokeColor(COLORS.border).lineWidth(0.7).stroke();
   doc.restore();
   return y + rowH;
 }
 
-/**
- * Genera y envía el PDF al response (stream).
- * @param {object} res - Express Response
- * @param {object} options
- * @param {object} options.reserva - Documento de la reserva (lean)
- * @param {Map<string,object>} [options.productosById] - Map _id -> { nombre, precio }
- */
-function streamReservaPDF(res, { reserva, productosById = new Map() }) {
+// ======= Generación principal =======
+function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} }) {
   const MARGIN = 40;
   const PAGE_W = 595.28;
   const CONTENT_W = PAGE_W - MARGIN * 2;
@@ -85,58 +108,71 @@ function streamReservaPDF(res, { reserva, productosById = new Map() }) {
   const doc = new PDFDocument({ size: 'A4', margin: MARGIN, bufferPages: true });
   doc.pipe(res);
 
-  // Barra de título
-  const PURPLE = '#813eeeff';
+  // ===== Encabezado =====
+  const topY = MARGIN - 18;
   doc.save();
-  doc.rect(MARGIN, MARGIN - 25, CONTENT_W, 24).fill(PURPLE);
-  doc.fill('#fff').font('Helvetica-Bold').fontSize(13)
-    .text('Nardeli · Confirmación de Reserva', MARGIN + 12, MARGIN - 22);
+  doc.roundedRect(MARGIN, topY, CONTENT_W, 28, 6).fill(COLORS.brand);
+  doc.fill('#ffffff').font('Helvetica-Bold').fontSize(FONTS.h1);
+  doc.text(`${brand.title || 'Nardeli'} · Confirmación de Reserva`, MARGIN + 14, topY + 7);
   doc.restore();
 
-  // Bloque de datos
-  const textBlock = (label, value) => {
-    doc.font('Helvetica').fontSize(10).fillColor('#000')
-      .text(`${label}: ${value || '—'}`, { width: CONTENT_W });
-  };
+  // Logo opcional (si pasas brand.logoPath con ruta absoluta/valida)
+  // try { doc.image(brand.logoPath, PAGE_W - MARGIN - 90, topY - 2, { width: 88 }); } catch (_) {}
 
   doc.moveDown(1.2);
-  textBlock('Reserva ID', reserva?._id);
-  textBlock('Cliente', reserva?.cliente);
-  textBlock('Correo', reserva?.correo);
-  textBlock('Tipo de evento', reserva?.tipoEvento);
-  textBlock('Fecha', reserva?.fecha ? new Date(reserva.fecha).toLocaleDateString('es-MX') : '—');
-  textBlock('Horario', `${reserva?.horaInicio || '—'} - ${reserva?.horaFin || '—'}`);
-  textBlock('Teléfono', reserva?.telefono);
 
+  // ===== Datos en dos columnas =====
+  const col1x = startX, col2x = startX + CONTENT_W / 2 + 10;
+  let y1 = doc.y, y2 = doc.y;
+
+  y1 += labelValue(doc, { x: col1x, y: y1, label: 'Reserva ID', value: String(reserva?._id || '—') }) + 8;
+  y1 += labelValue(doc, { x: col1x, y: y1, label: 'Cliente', value: reserva?.cliente }) + 8;
+  y1 += labelValue(doc, { x: col1x, y: y1, label: 'Correo', value: reserva?.correo }) + 8;
+
+  const fechaTxt = reserva?.fecha ? new Date(reserva.fecha).toLocaleDateString('es-MX') : '—';
+  y2 += labelValue(doc, { x: col2x, y: y2, label: 'Tipo de evento', value: reserva?.tipoEvento }) + 8;
+  y2 += labelValue(doc, { x: col2x, y: y2, label: 'Fecha', value: fechaTxt }) + 8;
+  y2 += labelValue(doc, { x: col2x, y: y2, label: 'Horario', value: `${reserva?.horaInicio || '—'} - ${reserva?.horaFin || '—'}` }) + 8;
+  y2 += labelValue(doc, { x: col2x, y: y2, label: 'Teléfono', value: reserva?.telefono }) + 8;
+
+  const afterInfoY = Math.max(y1, y2) + 6;
+
+  // ===== Notas (panel) =====
   if (reserva?.descripcion) {
-    doc.moveDown(0.5);
-    doc.font('Helvetica-Bold').text('Notas', { continued: false });
-    doc.font('Helvetica').text(reserva.descripcion, { width: CONTENT_W });
+    const panelH = Math.max(
+      40,
+      doc.heightOfString(reserva.descripcion, { width: CONTENT_W - 16 }) + 20
+    );
+    doc.save();
+    doc.roundedRect(startX, afterInfoY, CONTENT_W, panelH, 8).fill(COLORS.noteBg);
+    doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(FONTS.h2)
+      .text('Notas', startX + 12, afterInfoY + 10);
+    doc.font('Helvetica').fontSize(FONTS.base).fillColor(COLORS.text)
+      .text(reserva.descripcion, startX + 12, afterInfoY + 30, { width: CONTENT_W - 24 });
+    doc.restore();
   }
 
-  doc.moveDown(1);
+  let y = reserva?.descripcion ? afterInfoY +  (doc.heightOfString(reserva.descripcion, { width: CONTENT_W - 16 }) + 40) : afterInfoY + 10;
+  y += 8;
 
-  // Tabla
+  // ===== Tabla =====
+  sectionTitle(doc, 'Utensilios seleccionados', startX, y);
+  y = doc.y + 8;
+
   const lista = Array.isArray(reserva?.utensilios) ? reserva.utensilios : [];
   const showPrices = lista.some(u => {
     const p = u.itemId && productosById.get(String(u.itemId));
     return Number.isFinite(p?.precio);
   });
 
-  const widths = showPrices ? [220, 110, 60, 50, 70, 80] : [260, 140, 70, 60];
+  const widths = showPrices ? [240, 110, 60, 50, 70, 65] : [300, 140, 70, 60];
   const headers = showPrices
     ? ['Nombre', 'Categoría', 'Unidad', 'Cant.', 'P. Unit.', 'Total']
     : ['Nombre', 'Categoría', 'Unidad', 'Cant.'];
 
-  let y = doc.y + 8;
-  doc.font('Helvetica-Bold').fontSize(12).text('Utensilios seleccionados', startX, y);
-  y = doc.y + 6;
-
-  drawHeaderRow(doc, { x: startX, y, widths, headers });
-  y += 22;
+  y = drawHeaderRow(doc, { x: startX, y, widths, headers });
 
   let grandTotal = 0;
-
   lista.forEach((u, idx) => {
     const prod = u.itemId && productosById.get(String(u.itemId));
     const pu = Number.isFinite(prod?.precio) ? prod.precio : null;
@@ -151,31 +187,34 @@ function streamReservaPDF(res, { reserva, productosById = new Map() }) {
     y = drawRow(doc, { x: startX, y, widths, values: row, zebra: idx % 2 === 1 });
   });
 
+  // ===== Total destacado =====
   if (showPrices) {
-    doc.moveDown(0.6);
-    doc.font('Helvetica-Bold').fontSize(11)
-      .text(`TOTAL: ${money(grandTotal)}`, MARGIN, doc.y, { width: CONTENT_W, align: 'right' });
-    doc.font('Helvetica').fontSize(8).fillColor('#666')
-      .text('Los precios mostrados son referenciales; favor de confirmar con administración.', {
-        width: CONTENT_W, align: 'right',
-      })
-      .fillColor('#000');
+    const boxW = 220, boxH = 46, boxX = startX + CONTENT_W - boxW, boxY = y + 10;
+    doc.save();
+    doc.roundedRect(boxX, boxY, boxW, boxH, 8).fill(COLORS.totalBg);
+    doc.fillColor(COLORS.totalText).font('Helvetica-Bold').fontSize(FONTS.h2)
+      .text(`TOTAL`, boxX + 14, boxY + 10);
+    doc.font('Helvetica-Bold').fontSize(FONTS.h2)
+      .text(money(grandTotal), boxX + 14, boxY + 10, { width: boxW - 28, align: 'right' });
+    doc.font('Helvetica').fontSize(FONTS.small).fillColor(COLORS.mute)
+      .text('Precios referenciales, confirmar con administración.', boxX + 14, boxY + 28, { width: boxW - 28, align: 'right' });
+    doc.restore();
   } else {
     doc.moveDown(0.6);
-    doc.font('Helvetica').fontSize(9).fillColor('#666')
+    doc.font('Helvetica').fontSize(FONTS.small).fillColor(COLORS.mute)
       .text('Sin precios: se muestra solo el desglose de utensilios seleccionados.', { width: CONTENT_W })
-      .fillColor('#000');
+      .fillColor(COLORS.text);
   }
 
-  // Paginación
-  const pageCount = doc.bufferedPageRange().count;
-  for (let i = 0; i < pageCount; i++) {
+  // ===== Pie de página: contacto + paginación =====
+  const pageRange = doc.bufferedPageRange();
+  for (let i = 0; i < pageRange.count; i++) {
     doc.switchToPage(i);
-    doc.font('Helvetica').fontSize(8).fillColor('#666')
-      .text(`Página ${i + 1} de ${pageCount}`, MARGIN, doc.page.height - MARGIN + 10, {
-        width: CONTENT_W, align: 'right',
-      })
-      .fillColor('#000');
+    const footerY = doc.page.height - doc.page.margins.bottom + 8;
+    doc.font('Helvetica').fontSize(FONTS.small).fillColor(COLORS.mute);
+    const contacto = brand.footer || 'Nardeli · contacto@nardeli.mx · +52 000 000 0000';
+    doc.text(contacto, startX, footerY, { width: CONTENT_W / 2 });
+    doc.text(`Página ${i + 1} de ${pageRange.count}`, startX, footerY, { width: CONTENT_W, align: 'right' });
   }
 
   doc.end();

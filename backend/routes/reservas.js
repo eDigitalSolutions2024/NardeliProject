@@ -378,6 +378,35 @@ router.put('/:id/utensilios', async (req, res) => {
   }
 });
 
+router.get('/:id/pdf', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ msg: 'ID inválido' });
+    }
+
+    const reserva = await Reserva.findById(id).lean();
+    if (!reserva) {
+      return res.status(404).json({ msg: 'Reserva no encontrada' });
+    }
+
+    let productosPorId = {};
+    const idsProductos = (reserva.utensilios || [])
+      .map(u => u.itemId)
+      .filter(Boolean);
+
+    if (idsProductos.length) {
+      const productos = await Producto.find({ _id: { $in: idsProductos } }).lean();
+      productosPorId = Object.fromEntries(productos.map(p => [String(p._id), p]));
+    }
+
+    await streamReservaPDF(res, { reserva, productosPorId });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ msg: 'Error interno al generar PDF' });
+  }
+});
+
 
 
 module.exports = router;
