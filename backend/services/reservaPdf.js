@@ -1,4 +1,3 @@
-// backend/services/reservaPdf.js
 const PDFDocument = require('pdfkit');
 
 function money(n) {
@@ -405,3 +404,6 @@ function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} 
 }
 
 module.exports = { streamReservaPDF };
+
+
+
