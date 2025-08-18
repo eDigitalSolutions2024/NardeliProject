@@ -1,3 +1,4 @@
+
 const mongoose = require('mongoose');
 
 const utensilioSchema = new mongoose.Schema({
@@ -20,7 +21,9 @@ const reservaSchema = new mongoose.Schema({
   cantidadPersonas: { type: Number, required: true },
   descripcion: { type: String, default: '' },
   utensilios: { type: [utensilioSchema], default: [] },
-  creadoEn: { type: Date, default: Date.now }
+  creadoEn: { type: Date, default: Date.now },
+  pdfUrl: { type: String, default: null },
+  pdfPath: { type: String, default: null }
 });
 
 

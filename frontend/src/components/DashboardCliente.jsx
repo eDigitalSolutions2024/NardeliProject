@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './DashboardCliente.css';
-//import API_BASE_URL from '../api';
+import { useLocation, useParams } from 'react-router-dom';
 import API_BASE_URL, { API_ORIGIN } from '../api';
 
 // Helper: placeholder si no hay imagen
@@ -26,12 +26,16 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
   const [seleccion, setSeleccion] = useState({});  // { [id]: { item, qty } }
   const [error, setError] = useState('');
 
+  const { search } = useLocation();
+  const { reservaId: reservaIdParam } = useParams();
+
   // Puedes pasar el id por props, query string ?reservaId=... o ruta /cliente/:reservaId
-  const reservaId = useMemo(() => {
-    if (reservaIdProp) return reservaIdProp;
-    const p = new URLSearchParams(window.location.search).get('reservaId');
-    return p || null;
-  }, [reservaIdProp]);
+const reservaId = useMemo(() => {
+  // prioridad: prop > param de ruta > querystring
+  const fromQuery = new URLSearchParams(search).get('reservaId');
+  return reservaIdProp ?? reservaIdParam ?? fromQuery ?? null;
+}, [reservaIdProp, reservaIdParam, search]);
+  
 
   // Carga inventario (ajusta el endpoint a tu backend)
   useEffect(() => {

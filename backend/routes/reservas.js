@@ -378,7 +378,7 @@ router.put('/:id/utensilios', async (req, res) => {
   }
 });
 
-router.get('/:id/pdf', async (req, res) => {
+/*router.get('/:id/pdf', async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.isValidObjectId(id)) {
@@ -401,6 +401,37 @@ router.get('/:id/pdf', async (req, res) => {
     }
 
     await streamReservaPDF(res, { reserva, productosPorId });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ msg: 'Error interno al generar PDF' });
+  }
+});*/
+
+// ⬇️ Reemplaza TODO este handler por este
+router.get('/:id/pdf', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ msg: 'ID inválido' });
+    }
+
+    const reserva = await Reserva.findById(id).lean();
+    if (!reserva) {
+      return res.status(404).json({ msg: 'Reserva no encontrada' });
+    }
+
+    // Construir Map<String,_id> -> producto (lo que el PDF necesita)
+    let productosById = new Map();
+    const ids = (reserva.utensilios || []).map(u => u.itemId).filter(Boolean);
+    if (ids.length) {
+      const productos = await Producto.find({ _id: { $in: ids } }).lean();
+      productosById = new Map(productos.map(p => [String(p._id), p]));
+    }
+
+    const brand = { title: 'Nardeli', footer: 'Nardeli - Salón de Eventos' };
+
+    // No hace falta await; streamea directo al response
+    streamReservaPDF(res, { reserva, productosById, brand });
   } catch (e) {
     console.error(e);
     return res.status(500).json({ msg: 'Error interno al generar PDF' });

@@ -34,6 +34,8 @@ const ReservarEvento = () => {
     setMensaje('');
     setEnviando(true);
 
+    const action = e.nativeEvent?.submitter?.dataset?.action || 'dashboard';
+
     try {
       // normalizamos payload
       const payload = {
@@ -76,8 +78,10 @@ const ReservarEvento = () => {
         return;
       }
 
-      // ✅ Redirigir directo al Dashboard del cliente con el id
-      //navigate(`/cliente/dashboard?reservaId=${reservaId}`);
+      if (action === 'dashboard') {
+        navigate(`/cliente/dashboard?reservaId=${encodeURIComponent(reservaId)}`);
+        return;
+      }
 
       try {
         const r = await iniciarAccesoPorCorreo({
@@ -101,8 +105,6 @@ const ReservarEvento = () => {
     } finally {
       setEnviando(false);
     }
-
-
   };
 
   
@@ -121,10 +123,11 @@ const ReservarEvento = () => {
         <input name="horaInicio" type="time" value={formData.horaInicio} onChange={handleChange} required />
         <input name="horaFin" type="time" value={formData.horaFin} onChange={handleChange} required />
         <textarea name="descripcion" placeholder="Observaciones" value={formData.descripcion} onChange={handleChange} />
-        <button type="submit" disabled={enviando}>{enviando ? 'Guardando…' : 'Solicitar reserva'}</button>
+        <button type="submit" data-action="codigo" disabled={enviando}>{enviando ? 'Guardando…' : 'Solicitar reserva'}</button>
+        <button type="submit"  data-action="dashboard" disabled={enviando}>{enviando ? 'Guardando…' : 'Reservar'}</button>
       </form>
       {mensaje && <p>{mensaje}</p>}
-      {/*<button className="home-button" onClick={() => navigate('/cliente/dashboard')} type="button"> Ver dashboard del cliente por mientras </button>*/}
+      <button className="home-button" onClick={() => navigate('/cliente/dashboard')} type="button"> Ver dashboard del cliente por mientras </button>
     </div>
   );
 };

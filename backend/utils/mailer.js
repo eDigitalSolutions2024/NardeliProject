@@ -1,61 +1,60 @@
 // backend/utils/mailer.js
 const nodemailer = require('nodemailer');
 
-const hasSMTP = Boolean(
-  process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS
-);
+const DEV = process.env.MAIL_DEV_MODE === '1';
 
-let transporter;
+const transporter = DEV
+  // modo desarrollo: imprime el correo en consola (no necesita SMTP real)
+  ? nodemailer.createTransport({ streamTransport: true, newline: 'unix', buffer: true })
+  : nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMPP_PORT || process.env.SMTP_PORT || 587),
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
 
-if (hasSMTP) {
-  transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: false, // STARTTLS en 587
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
-} else {
-  // Fallback dev: imprime en consola
-  transporter = {
-    sendMail: async (opts) => {
-      console.log('\n[DEV EMAIL] -------------------------------');
-      console.log('To:', opts.to);
-      console.log('Subject:', opts.subject);
-      console.log('Text:', opts.text);
-      console.log('HTML:', opts.html);
-      console.log('------------------------------------------\n');
-    },
-  };
-}
+// Verifica el transporte al iniciar
+(async () => {
+  try {
+    await transporter.verify();
+    console.log('[MAILER] SMTP listo (DEV=', DEV, ')');
+  } catch (e) {
+    console.error('[MAILER] ERROR de SMTP:', e.message || e);
+  }
+})();
 
-async function sendMagicLinkEmail(to, link) {
-  const subject = 'Tu enlace para entrar a Nardeli';
-  const text = `Abre este enlace para iniciar sesión (expira pronto): ${link}`;
+/**
+ * Envía el código y link mágico
+ * @param {{to:string, code:string, link?:string, from?:string}} param0
+ */
+async function sendMagicCode({ to, code, link, from }) {
+  const expires = Number(process.env.MAGIC_LINK_EXPIRES_MIN || 15);
+
   const html = `
-    <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.4">
-      <h2 style="margin:0 0 8px">Accede para administrar tu evento</h2>
-      <p style="margin:0 0 16px">Haz clic para entrar sin contraseña. Este enlace expira en poco tiempo.</p>
-      <p style="margin:0 0 16px">
-        <a href="${link}" style="display:inline-block;padding:10px 16px;background:#6b46c1;color:#fff;border-radius:8px;text-decoration:none">
-          Entrar ahora
-        </a>
-      </p>
-      <p style="font-size:13px;color:#555">Si el botón no funciona, copia y pega este enlace en tu navegador:<br>
-        <span style="word-break:break-all">${link}</span>
-      </p>
-    </div>
-  `;
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
+      <h2 style="color:#7c3aed;margin:0 0 8px">Nardeli · Acceso</h2>
+      <p>Tu código (válido por ${expires} min):</p>
+      <div style="font-size:26px;font-weight:700;letter-spacing:4px;border:1px solid #eee;padding:10px 14px;display:inline-block">
+        ${code}
+      </div>
+      ${link ? `<p style="margin:16px 0">O usa este enlace:</p>
+      <p><a href="${link}" style="color:#7c3aed">${link}</a></p>` : ''}
+    </div>`;
 
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM || 'Nardeli <no-reply@localhost>',
+  const info = await transporter.sendMail({
+    from: from || process.env.SMTP_FROM || 'Nardeli <no-reply@localhost>',
     to,
-    subject,
-    text,
+    subject: 'Tu código de acceso',
     html,
   });
+
+  if (DEV && info?.message) {
+    console.log('==== EMAIL (DEV) ====\n' + info.message.toString());
+  }
+  console.log('[MAILER] enviado:', info?.messageId || '(ok)');
 }
 
-module.exports = { sendMagicLinkEmail };
+module.exports = { sendMagicCode };
