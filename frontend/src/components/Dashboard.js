@@ -5,6 +5,7 @@ import Calendario from './Calendario';
 import FormProducto from './FormProducto';
 import TablaProductos from './TablaProductos';
 import API_BASE_URL from '../api'; // ⬅️ ajusta la ruta si tu archivo api está en otro lugar
+import Clientes from './Clientes';
 
 const Dashboard = ({ onLogout }) => {
   const [user, setUser] = useState(null);
@@ -118,12 +119,10 @@ const Dashboard = ({ onLogout }) => {
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { id: 'eventos', label: 'Eventos', icon: '🎉' },
     { id: 'clientes', label: 'Clientes', icon: '👥' },
     { id: 'calendario', label: 'Calendario', icon: '📅' },
     { id: 'reportes', label: 'Reportes', icon: '📈' },
     { id: 'inventario', label: 'Inventario', icon: '🏬'},
-    { id: 'configuracion', label: 'Configuración', icon: '⚙️' }
   ];
 
   const visibleMenuItems = isAdmin ? menuItems : menuItems;
@@ -224,18 +223,12 @@ const Dashboard = ({ onLogout }) => {
             </div>
           </div>
         );
-      case 'eventos':
-        return (
-          <div className="dashboard-content">
-            <h1>Gestión de Eventos</h1>
-            <p>Aquí puedes administrar todos los eventos del salón.</p>
-          </div>
-        );
+
       case 'clientes':
         return (
           <div className="dashboard-content">
             <h1>Gestión de Clientes</h1>
-            <p>Administra la información de tus clientes.</p>
+            <Clientes />
           </div>
         );
       case 'calendario':
