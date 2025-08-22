@@ -135,3 +135,32 @@
 .empty{
   text-align:center; color:var(--muted); padding:28px 0;
 }
+
+
+/*Cambio minimo */
+
+/* precio al lado del título (solo admin) */
+.item-price {
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+/* badge admin opcional */
+.badge.admin {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #f59e0b;
+}
+
+
+.edit-price-btn, .edit-price-inline {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: #fff;
+  cursor: pointer;
+}
+.edit-price-btn:hover, .edit-price-inline:hover {
+  background: #f6f6f6;
+}

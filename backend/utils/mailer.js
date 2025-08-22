@@ -8,7 +8,7 @@ const transporter = DEV
   ? nodemailer.createTransport({ streamTransport: true, newline: 'unix', buffer: true })
   : nodemailer.createTransport({
       host: process.env.SMTP_HOST,
-      port: Number(process.env.SMPP_PORT || process.env.SMTP_PORT || 587),
+      port: Number(process.env.SMTP_PORT || process.env.SMTP_PORT || 587),
       secure: false,
       auth: {
         user: process.env.SMTP_USER,

@@ -315,13 +315,22 @@ function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} 
   sectionTitle(doc, 'Utensilios Reservados', startX, doc.y, '🍽️');
   doc.y += 30;
 
-  const lista = Array.isArray(reserva?.utensilios) ? reserva.utensilios : [];
-  const showPrices = lista.some(u => {
-    const p = u.itemId && productosById.get(String(u.itemId));
-    return Number.isFinite(p?.precio);
-  });
+ const lista = Array.isArray(reserva?.utensilios) ? reserva.utensilios : [];
 
-  const widths = showPrices ? [200, 90, 60, 65, 75, 85] : [260, 110, 70, 85];
+// helpers locales para esta sección
+const getProd = (u) => (u?.itemId ? productosById.get(String(u.itemId)) : null);
+const precioFila = (u) => {
+  // 1) prioridad: snapshot guardado en la reserva
+  if (Number.isFinite(u?.precio)) return u.precio;
+  // 2) fallback: precio del producto (si existe)
+  const p = getProd(u);
+  return Number.isFinite(p?.precio) ? p.precio : null;
+};
+
+const showPrices = lista.some((u) => Number.isFinite(precioFila(u)));
+
+
+  const widths = showPrices ? [150, 90, 60, 60, 75, 85] : [260, 110, 70, 85];
   const headers = showPrices
     ? ['Nombre', 'Categoría', 'Unidad', 'Cantidad', 'P. Unit.', 'Subtotal']
     : ['Nombre', 'Categoría', 'Unidad', 'Cantidad'];
@@ -330,27 +339,31 @@ function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} 
 
   let grandTotal = 0;
   lista.forEach((u, idx) => {
-    const prod = u.itemId && productosById.get(String(u.itemId));
-    const pu = Number.isFinite(prod?.precio) ? prod.precio : null;
-    const cant = Number(u.cantidad || 0);
-    const sub = Number.isFinite(pu) ? pu * cant : null;
-    if (Number.isFinite(sub)) grandTotal += sub;
+    const prod = getProd(u);
+const pu = precioFila(u);                 // 👈 ahora prioriza u.precio
+const cant = Number(u.cantidad || 0);
+const sub = Number.isFinite(pu) ? pu * cant : null;
+if (Number.isFinite(sub)) grandTotal += sub;
 
-    const row = showPrices
-      ? [
-          u.nombre || prod?.nombre || '—',
-          u.categoria || 'General',
-          u.unidad || 'pza',
-          String(cant),
-          pu ? money(pu) : '—',
-          sub ? money(sub) : '—'
-        ]
-      : [
-          u.nombre || prod?.nombre || '—',
-          u.categoria || 'General',
-          u.unidad || 'pza',
-          String(cant)
-        ];
+const nombre = u.nombre || prod?.nombre || '—';
+const categoria = u.categoria || 'General';
+const unidad = u.unidad || 'pza';
+
+const row = showPrices
+  ? [
+      nombre,
+      categoria,
+      unidad,
+      String(cant),
+      Number.isFinite(pu) ? money(pu) : '—',     // 👈 muestra $0.00 si pu es 0
+      Number.isFinite(sub) ? money(sub) : '—'
+    ]
+  : [
+      nombre,
+      categoria,
+      unidad,
+      String(cant)
+    ];
 
     y = drawRow(doc, { x: startX, y, widths, values: row, zebra: idx % 2 === 1 });
   });

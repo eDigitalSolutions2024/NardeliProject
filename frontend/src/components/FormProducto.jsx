@@ -7,8 +7,8 @@ const FormProducto = ({ onProductoAgregado = () => {} }) => {
   const [formData, setFormData] = useState({
     nombre: '',
     categoria: '',
-    cantidad: 0,
-    precio: 0,
+    cantidad: '',
+    precio: '',
     descripcion: '',
     imagen: ''
   });
@@ -63,16 +63,26 @@ const FormProducto = ({ onProductoAgregado = () => {} }) => {
       <h2>Registrar nuevo producto</h2>
       {mensaje && <p>{mensaje}</p>}
       <form onSubmit={handleSubmit}>
+
         <label htmlFor='nombre'>Nombre del producto:</label>
         <input name="nombre" placeholder="Nombre" value={formData.nombre} onChange={handleChange} required />
+
         <label htmlFor='nombre'>Categoria:</label>
         <input name="categoria" placeholder="Categoría" value={formData.categoria} onChange={handleChange} required />
+
         <label htmlFor='nombre'>Cantidad:</label>
         <input name="cantidad" type="number" placeholder="Cantidad" value={formData.cantidad} onChange={handleChange} required />
+
+        <label htmlFor='nombre'>Precio:</label>
+        <input name="precio" type="number" placeholder="Precio" value={formData.precio} onChange={handleChange} required />
+
         <label htmlFor='nombre'>Descripción:</label>
         <textarea name="descripcion" placeholder="Descripción" value={formData.descripcion} onChange={handleChange} />
+
         <label htmlFor='nombre'>Imagen:</label>
         <input id="imagen" type="file" accept="image/*" onChange={(e) => setFormData({ ...formData, imagen: e.target.files[0] })}/>
+
+
         <button type="submit">Agregar producto</button>
       </form>
     </div>

@@ -3,7 +3,7 @@ import './DashboardCliente.css';
 import { useLocation, useParams } from 'react-router-dom';
 import API_BASE_URL, { API_ORIGIN } from '../api';
 
-// Helper: placeholder si no hay imagen
+// Placeholder si no hay imagen
 const PLACEHOLDER =
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
@@ -11,54 +11,72 @@ const PLACEHOLDER =
   );
 
 const resolveImg = (img) => {
-    if (!img) return PLACEHOLDER;
-        const clean = String(img).replace(/\\/g, '/');   // por si hay backslashes de Windows
-            if (clean.startsWith('http')) return clean;      // ya es absoluta
-            return `${API_ORIGIN}${clean.startsWith('/') ? '' : '/'}${clean}`;
+  if (!img) return PLACEHOLDER;
+  const clean = String(img).replace(/\\/g, '/');
+  if (clean.startsWith('http')) return clean;
+  return `${API_ORIGIN}${clean.startsWith('/') ? '' : '/'}${clean}`;
+};
+
+// Parseo robusto de precio
+const toPrice = (v) => {
+  if (v == null) return 0;
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string') {
+    const s = v.trim().replace(/\s+/g, '').replace(',', '.').replace(/[^0-9.\-]/g, '');
+    const n = parseFloat(s);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
 };
 
 const DashboardCliente = ({ reservaId: reservaIdProp }) => {
-  const [items, setItems] = useState([]);          // inventario desde backend
+  // Inventario (con precio para fallback visual)
+  const [items, setItems] = useState([]); // [{id, nombre, categoria, stock, unidad, imagen, precio}]
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [q, setQ] = useState('');                  // búsqueda
-  const [cat, setCat] = useState('');              // filtro categoría
-  const [seleccion, setSeleccion] = useState({});  // { [id]: { item, qty } }
+  const [q, setQ] = useState('');
+  const [cat, setCat] = useState('');
+  const [seleccion, setSeleccion] = useState({}); // { [id]: { item, qty } }
   const [error, setError] = useState('');
+
+  // Snapshot de utensilios guardados en la BD
+  const [utensiliosBD, setUtensiliosBD] = useState([]); // [{ itemId, nombre, precio, ... }]
 
   const { search } = useLocation();
   const { reservaId: reservaIdParam } = useParams();
 
-  // Puedes pasar el id por props, query string ?reservaId=... o ruta /cliente/:reservaId
-const reservaId = useMemo(() => {
-  // prioridad: prop > param de ruta > querystring
-  const fromQuery = new URLSearchParams(search).get('reservaId');
-  return reservaIdProp ?? reservaIdParam ?? fromQuery ?? null;
-}, [reservaIdProp, reservaIdParam, search]);
-  
+  // Modo admin vía ?mode=admin
+  const isAdmin = useMemo(() => {
+    const sp = new URLSearchParams(search);
+    return sp.get('mode') === 'admin';
+  }, [search]);
 
-  // Carga inventario (ajusta el endpoint a tu backend)
+  // Id de reserva: prop > param > query
+  const reservaId = useMemo(() => {
+    const fromQuery = new URLSearchParams(search).get('reservaId');
+    return reservaIdProp ?? reservaIdParam ?? fromQuery ?? null;
+  }, [reservaIdProp, reservaIdParam, search]);
+
+  // ===== 1) Cargar inventario (incluye precio como fallback) =====
   useEffect(() => {
     let alive = true;
-    (async () => {
+    const load = async () => {
       setLoading(true);
       setError('');
       try {
-        // 🔁 Ajusta al que ya tengas: /inventario, /api/inventario, /productos?tipo=utensilio, etc.
-        const res = await fetch(`${API_BASE_URL}/productos/inventario`, {
-          headers: { 'Content-Type': 'application/json' },
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-
-        // Normaliza forma mínima esperada
-        const normalizados = (Array.isArray(data) ? data : data.items || []).map((x) => ({
+        const urlInv = `${API_BASE_URL}/productos/inventario`;
+        const rInv = await fetch(urlInv, { headers: { 'Content-Type': 'application/json' } });
+        if (!rInv.ok) throw new Error(`HTTP ${rInv.status} inventario`);
+        const dInv = await rInv.json();
+        const listInv = Array.isArray(dInv) ? dInv : (dInv.items || []);
+        const normalizados = listInv.map((x) => ({
           id: x._id || x.id,
-          nombre: x.nombre || x.name || 'Ítem',
-          categoria: x.categoria || x.category || 'general',
-          stock: Number(x.stock ?? x.existencias ?? 0),
-          unidad: x.unidad || x.unit || 'pza',
-          imagen: x.imagen || x.image || '',
+          nombre: x.nombre || 'Ítem',
+          categoria: x.categoria || 'general',
+          stock: Number(x.stock ?? x.cantidad ?? 0),
+          unidad: x.unidad || 'pza',
+          imagen: x.imagen || '',
+          precio: toPrice(x.precio ?? 0), // 👈 importante: fallback visual
         }));
         if (alive) setItems(normalizados);
       } catch (e) {
@@ -67,10 +85,135 @@ const reservaId = useMemo(() => {
       } finally {
         if (alive) setLoading(false);
       }
+    };
+    load();
+    return () => { alive = false; };
+  }, [API_BASE_URL]);
+
+  // ===== 2) Cargar snapshot de utensilios desde la BD =====
+  useEffect(() => {
+    if (!reservaId) return;
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch(`${API_BASE_URL}/reservas/${reservaId}/utensilios`);
+        if (r.ok) {
+          const arr = await r.json();
+          if (alive) setUtensiliosBD(Array.isArray(arr) ? arr : []);
+        }
+      } catch (e) {
+        console.error('utensilios GET:', e);
+      }
     })();
     return () => { alive = false; };
-  }, []);
+  }, [reservaId, API_BASE_URL]);
 
+  // Mapas rápidos
+  const reservedPriceById = useMemo(() => {
+    const m = new Map();
+    (utensiliosBD || []).forEach(u => {
+      const id = String(u.itemId || u.id || u._id);
+      m.set(id, toPrice(u.precio));
+    });
+    return m;
+  }, [utensiliosBD]);
+
+  const invPriceById = useMemo(() => {
+    const m = new Map();
+    (items || []).forEach(p => m.set(String(p.id), toPrice(p.precio)));
+    return m;
+  }, [items]);
+
+  // Precio para UI: 1) utensilios (snapshot) 2) inventario (fallback) 3) 0
+  const priceFor = (productId) => {
+  const id = String(productId);
+  const r = reservedPriceById.get(id);
+  if (Number.isFinite(r) && r > 0) return r;          // snapshot válido
+  const i = invPriceById.get(id);
+  if (Number.isFinite(i) && i > 0) return i;          // fallback inventario
+  return Number.isFinite(r) ? r : 0;                  // si el 0 es intencional, muéstralo
+};
+
+  // ===== 3) Cargar selección (BD o localStorage) =====
+  useEffect(() => {
+    if (!reservaId || items.length === 0) return;
+
+    const mergeSeleccionFromSaved = (savedArr) => {
+      if (!Array.isArray(savedArr) || savedArr.length === 0) return;
+      const byId = new Map(items.map(it => [String(it.id), it]));
+      const next = {};
+      savedArr.forEach(s => {
+        const sid = String(s.itemId || s.id || s._id);
+        const base = byId.get(sid) || {
+          id: sid,
+          nombre: s.nombre || 'Ítem',
+          categoria: s.categoria || 'general',
+          unidad: s.unidad || 'pza',
+          imagen: s.imagen || '',
+          stock: Number(s.stock ?? 0),
+          precio: toPrice(s.precio),
+        };
+        next[sid] = { item: base, qty: Number(s.cantidad ?? s.qty ?? 0) };
+      });
+      setSeleccion(next);
+    };
+
+    (async () => {
+      try {
+        // a) /reservas/:id/utensilios
+        let saved = null;
+        const r1 = await fetch(`${API_BASE_URL}/reservas/${reservaId}/utensilios`);
+        if (r1.ok) {
+          const d1 = await r1.json();
+          saved = Array.isArray(d1) ? d1 : d1.items;
+        } else {
+          // b) /reservas/:id (por compatibilidad)
+          const r2 = await fetch(`${API_BASE_URL}/reservas/${reservaId}`);
+          if (r2.ok) {
+            const d2 = await r2.json();
+            saved = d2?.utensilios || d2?.items || d2?.seleccion || null;
+          }
+        }
+
+        if (saved && saved.length) {
+          mergeSeleccionFromSaved(saved);
+          return;
+        }
+
+        // c) Fallback: localStorage
+        const raw = localStorage.getItem(`sel_${reservaId}`);
+        if (raw) {
+          const arr = JSON.parse(raw);
+          mergeSeleccionFromSaved(arr);
+        }
+      } catch (e) {
+        console.error('cargar selección:', e);
+        const raw = localStorage.getItem(`sel_${reservaId}`);
+        if (raw) {
+          try {
+            const arr = JSON.parse(raw);
+            mergeSeleccionFromSaved(arr);
+          } catch {}
+        }
+      }
+    })();
+  }, [reservaId, items, API_BASE_URL]);
+
+  // ===== 4) Persistir selección en localStorage (con precio mostrado) =====
+  useEffect(() => {
+    if (!reservaId) return;
+    const arr = Object.values(seleccion).map(({ item, qty }) => ({
+      itemId: item.id,
+      nombre: item.nombre,
+      cantidad: qty,
+      unidad: item.unidad,
+      categoria: item.categoria,
+      precio: priceFor(item.id), // 👈 precio que ve la UI (utensilios o fallback inventario)
+    }));
+    localStorage.setItem(`sel_${reservaId}`, JSON.stringify(arr));
+  }, [seleccion, reservaId, reservedPriceById, invPriceById]);
+
+  // ====== utilidades de UI ======
   const cats = useMemo(() => {
     const set = new Set(items.map(i => i.categoria));
     return ['Todas', ...Array.from(set)];
@@ -85,13 +228,18 @@ const reservaId = useMemo(() => {
     });
   }, [items, q, cat]);
 
-  // ====== Selección ======
   const setQty = (item, qty) => {
-    qty = Math.max(0, Math.min(qty, item.stock));
+    const stock = items.find(p => p.id === item.id)?.stock ?? 0;
+    qty = Math.max(0, Math.min(qty, stock));
     setSeleccion(prev => {
       const next = { ...prev };
-      if (qty === 0) delete next[item.id];
-      else next[item.id] = { item, qty };
+      if (qty === 0){
+        delete next[item.id];
+      } else {
+        // congela un snapshot local; el precio visual viene de priceFor
+        const snapshotItem = { ...item };
+        next[item.id] = { item: snapshotItem, qty };
+      }
       return next;
     });
   };
@@ -103,24 +251,39 @@ const reservaId = useMemo(() => {
     [seleccion]
   );
 
-  // ====== Guardar selección ======
+  const totalMonto = useMemo(
+    () => Object.values(seleccion).reduce((acc, x) => acc + (priceFor(x.item.id) * x.qty), 0),
+    [seleccion, reservedPriceById, invPriceById]
+  );
+
+  // ====== Guardar selección (persiste precio que se muestra) ======
   const guardarSeleccion = async () => {
     if (!reservaId) {
       alert('No se encontró el ID de la reserva.');
       return;
     }
     const token = localStorage.getItem('token') || '';
-    const itemsPayload = Object.values(seleccion).map(({ item, qty }) => ({
-      itemId: item.id,
-      nombre: item.nombre,
-      cantidad: qty,
-      unidad: item.unidad,
-      categoria: item.categoria,
-    }));
+    const itemsPayload = Object.values(seleccion).map(({ item, qty }) => {
+      const id = String(item.id);
+      const base = {
+        itemId: item.id,
+        nombre: item.nombre,
+        cantidad: qty,
+        unidad: item.unidad,
+        categoria: item.categoria,
+      };
+
+      // 🚫 No envíes precio en el primer guardado (deja que el backend copie desde inventario)
+      // ✅ Sí envía precio si YA existe snapshot en la reserva (o si lo cambiaste por PATCH)
+      if (reservedPriceById.has(id)) {
+        base.precio = priceFor(id); // el de utensilios
+      }
+      return base;
+    });
     try {
       setSaving(true);
       const res = await fetch(`${API_BASE_URL}/reservas/${reservaId}/utensilios`, {
-        method: 'PUT', // o POST según tu backend
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : undefined,
@@ -131,6 +294,11 @@ const reservaId = useMemo(() => {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.msg || `HTTP ${res.status}`);
       }
+      // refresca snapshot desde BD (ya con precio copiado en el primer guardado)
+      try {
+        const r = await fetch(`${API_BASE_URL}/reservas/${reservaId}/utensilios`);
+        if (r.ok) setUtensiliosBD(await r.json());
+      } catch {}
       alert('¡Selección guardada!');
     } catch (e) {
       console.error(e);
@@ -140,14 +308,89 @@ const reservaId = useMemo(() => {
     }
   };
 
+  // ====== Editar precio (solo admin) — afecta SOLO utensilios (PATCH) ======
+// ====== Editar precio (solo admin) — modifica SOLO el snapshot de utensilios ======
+const editarPrecio = async (item) => {
+  if (!isAdmin) return;
+  if (!reservaId) { alert('No hay reservaId'); return; }
+
+  const actual = priceFor(item.id);
+  const input = window.prompt(`Nuevo precio para "${item.nombre}"`, (Number.isFinite(actual) ? actual : 0).toFixed(2));
+  if (input === null) return;
+
+  const value = Number(String(input).replace(',', '.').trim());
+  if (!Number.isFinite(value) || value < 0) {
+    alert('Precio inválido');
+    return;
+  }
+
+  const token = localStorage.getItem('token') || '';
+
+  try {
+    const resp = await fetch(
+      `${API_BASE_URL}/reservas/${reservaId}/utensilios/${encodeURIComponent(item.id)}/precio`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        // nombre es opcional; si la línea no existe el backend hace upsert con nombre/categoria/unidad del Producto
+        body: JSON.stringify({ precio: value, nombre: item.nombre })
+      }
+    );
+
+    if (!resp.ok) {
+      // intenta extraer el mensaje de error del backend
+      const text = await resp.text().catch(() => '');
+      let msg;
+      try {
+        const j = JSON.parse(text);
+        msg = j?.msg || text;
+      } catch {
+        msg = text || `HTTP ${resp.status}`;
+      }
+      throw new Error(msg);
+    }
+
+    // PATCH devuelve { ok:true, utensilios:[...] }
+    const data = await resp.json().catch(() => ({}));
+
+    if (Array.isArray(data?.utensilios)) {
+      setUtensiliosBD(data.utensilios);
+    } else {
+      // por si tu backend devolviera otra forma, refrezca el snapshot
+      const r = await fetch(`${API_BASE_URL}/reservas/${reservaId}/utensilios`);
+      if (r.ok) setUtensiliosBD(await r.json());
+    }
+
+    // feedback inmediato si el ítem estaba en la selección (la UI lee priceFor())
+    setSeleccion(prev => (prev[item.id] ? { ...prev, [item.id]: { ...prev[item.id] } } : prev));
+  } catch (err) {
+    console.error('editarPrecio', err);
+    alert(
+      err?.message?.includes('Failed to fetch')
+        ? 'No se pudo contactar al servidor (posible CORS/preflight).'
+        : err?.message || 'No se pudo actualizar el precio en la reserva'
+    );
+  }
+};
+
+
+
+
   return (
     <div className="cliente-dashboard">
       <div className="cd-header">
         <div>
           <h2>Panel del Cliente</h2>
-          <small>Selecciona los articulos que necesitas para tu evento</small>
+          <small>
+            {isAdmin ? 'Vista de administrador — se muestran precios (desde la reserva)' : 'Selecciona los artículos que necesitas para tu evento'}
+          </small>
         </div>
-        <div className="badge ok">Reserva: {reservaId || '—'}</div>
+        <div className={`badge ${isAdmin ? 'admin' : 'ok'}`}>
+          {isAdmin ? 'ADMIN' : 'Reserva'}{!isAdmin && ':'} {isAdmin ? '' : (reservaId || '—')}
+        </div>
       </div>
 
       <div className="cd-toolbar">
@@ -177,36 +420,68 @@ const reservaId = useMemo(() => {
           ) : (
             <div className="inventory-grid">
               {filtrados.map((it) => {
-                const qty = seleccion[it.id]?.qty || 0;
-                const agotado = it.stock <= 0;
+                const sel = seleccion[it.id];
+                const qty = sel?.qty || 0;
+                const stock = items.find(p => p.id === it.id)?.stock ?? 0;
+                const agotado = stock <= 0;
+                const precioNum = priceFor(it.id); // 👈 precio desde utensilios (o inventario como fallback)
+
                 return (
                   <div key={it.id} className="item-card">
-                    <img className="item-img" src={resolveImg(it.imagen)} alt={it.nombre} 
-                        onError={(e) => { e.currentTarget.src = PLACEHOLDER; }} />
+                    <img
+                      className="item-img"
+                      src={resolveImg(it.imagen)}
+                      alt={it.nombre}
+                      onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}
+                    />
                     <div>
-                      <h4 className="item-title">{it.nombre}</h4>
+                      <h4 className="item-title" style={{ display:'flex', alignItems:'center', gap:8 }}>
+                        {it.nombre}
+                        {isAdmin && (
+                          <>
+                            <span className="item-price"> ${precioNum.toFixed(2)}</span>
+                            <button
+                              type="button"
+                              className="edit-price-btn"
+                              onClick={() => editarPrecio(it)}
+                              title="Editar precio de este artículo en la reserva"
+                              style={{
+                                fontSize: 12,
+                                padding: '2px 8px',
+                                borderRadius: 8,
+                                border: '1px solid #ddd',
+                                background: '#fff',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Editar precio
+                            </button>
+                          </>
+                        )}
+                      </h4>
+
                       <div className="item-meta">
                         <span className="badge">{it.categoria}</span>
-                        <span className={`badge ${agotado ? 'out' : it.stock < 10 ? 'warn' : 'ok'}`}>
-                          Stock: {it.stock} {it.unidad}
+                        <span className={`badge ${agotado ? 'out' : stock < 10 ? 'warn' : 'ok'}`}>
+                          Stock: {stock} {it.unidad || 'pza'}
                         </span>
                       </div>
 
                       <div className="item-actions">
                         <div className="qty">
-                          <button onClick={() => inc(it, -1)} disabled={qty <= 0}>−</button>
+                          <button onClick={() => setQty(it, Math.max(0, qty - 1))} disabled={qty <= 0}>−</button>
                           <input
                             type="number"
                             min="0"
-                            max={it.stock}
+                            max={stock}
                             value={qty}
                             onChange={(e) => setQty(it, Number(e.target.value))}
                           />
-                          <button onClick={() => inc(it, +1)} disabled={qty >= it.stock}>+</button>
+                          <button onClick={() => setQty(it, Math.min(qty + 1, stock))} disabled={qty >= stock}>+</button>
                         </div>
                         <button
                           className="add-btn"
-                          onClick={() => setQty(it, Math.min((qty || 0) + 1, it.stock))}
+                          onClick={() => setQty(it, Math.min((qty || 0) + 1, stock))}
                           disabled={agotado}
                         >
                           Añadir
@@ -225,41 +500,63 @@ const reservaId = useMemo(() => {
           <h3>Resumen de selección</h3>
           <div className="sel-list">
             {Object.values(seleccion).length === 0 ? (
-              <div className="empty">Aún no has agregado articulos.</div>
+              <div className="empty">Aún no has agregado artículos.</div>
             ) : (
-              Object.values(seleccion).map(({ item, qty }) => (
-                <div key={item.id} className="sel-item">
-                  <div>
-                    <strong>{item.nombre}</strong>
-                    <div><small>{qty} {item.unidad} • {item.categoria}</small></div>
+              Object.values(seleccion).map(({ item, qty }) => {
+                const p = priceFor(item.id);
+                const sub = p * qty;
+                return (
+                  <div key={item.id} className="sel-item">
+                    <div>
+                      <strong>{item.nombre}</strong>
+                      <div className="small">
+                        <small>
+                          {qty} {item.unidad || 'pza'} • {item.categoria}
+                          {isAdmin && ` • $${p.toFixed(2)} c/u`}
+                        </small>
+                      </div>
+                    </div>
+                    <div className="d-flex" style={{ display:'flex', alignItems:'center', gap:8 }}>
+                      {isAdmin && <strong>${sub.toFixed(2)}</strong>}
+                      <button className="del" onClick={() => setQty(item, 0)}>Quitar</button>
+                    </div>
                   </div>
-                  <button className="del" onClick={() => setQty(item, 0)}>Quitar</button>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
-          <div style={{display:'flex', justifyContent:'space-between', marginBottom:12}}>
+          <div style={{display:'flex', justifyContent:'space-between', marginBottom:8}}>
             <strong>Total unidades</strong>
             <strong>{totalUnidades}</strong>
           </div>
-          <button className="save" disabled={saving || Object.values(seleccion).length === 0} onClick={guardarSeleccion}>
-            {saving ? 'Guardando…' : 'Guardar selección'}
+
+          {isAdmin && (
+            <div style={{display:'flex', justifyContent:'space-between', marginBottom:12}}>
+              <strong>Total $</strong>
+              <strong>${totalMonto.toFixed(2)}</strong>
+            </div>
+          )}
+
+          <button
+            className="save"
+            disabled={saving || Object.values(seleccion).length === 0}
+            onClick={guardarSeleccion}
+          >
+            {saving ? 'Guardando…' : 'Finalizar Reserva'}
           </button>
 
-            <button
-                className="cd-btn"
-                type="button"
-                onClick={() => {
-                    if (!reservaId) return alert('No hay reservaId');
-                    const url = `${API_BASE_URL}/reservas/${reservaId}/pdf`;
-                    console.log('PDF URL =>', url);
-                    window.open(url, '_blank');
-                }}
-                >
-                Descargar PDF
-            </button>
-
+          <button
+            className="cd-btn"
+            type="button"
+            onClick={() => {
+              if (!reservaId) return alert('No hay reservaId');
+              const url = `${API_BASE_URL}/reservas/${reservaId}/pdf`;
+              window.open(url, '_blank');
+            }}
+          >
+            Descargar PDF
+          </button>
         </div>
       </div>
     </div>

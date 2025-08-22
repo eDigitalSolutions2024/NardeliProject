@@ -18,3 +18,32 @@
   border-radius: 4px;
   object-fit: cover;
 }
+
+
+
+/*Estilos para el modal de editar productos*/
+/* Modal simple */
+.modal-overlay{
+  position: fixed; inset: 0; background: rgba(0,0,0,.35);
+  display: flex; align-items: center; justify-content: center; z-index: 9999;
+}
+.modal-card{
+  width: 95%; max-width: 560px; background: #fff; border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.2); overflow: hidden;
+}
+.modal-header{
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-bottom: 1px solid #eee;
+}
+.close-x{ border: none; background: transparent; font-size: 22px; cursor: pointer; }
+.modal-body{ padding: 16px 18px; }
+.form-row{ display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.form-row input{ padding: 8px 10px; border: 1px solid #ddd; border-radius: 8px; }
+.preview img{ width: 120px; height: 120px; object-fit: cover; border-radius: 8px; border: 1px solid #eee; }
+.modal-actions{ display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+
+/* Botones utilitarios (si no usas Bootstrap en esta vista) */
+.btn{ padding: 8px 12px; border-radius: 8px; border: 1px solid transparent; cursor: pointer; }
+.btn-primary{ background: #2563eb; color: #fff; }
+.btn-primary:hover{ filter: brightness(0.95); }
+.btn-light{ background: #f3f4f6; }

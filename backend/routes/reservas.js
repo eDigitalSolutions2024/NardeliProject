@@ -330,29 +330,33 @@ router.put('/:id/utensilios', async (req, res) => {
     const { id } = req.params;
     const { items = [] } = req.body;
 
-    if (!mongoose.isValidObjectId(id)) {
-      return res.status(400).json({ msg: 'ID inválido' });
-    }
-    if (!Array.isArray(items)) {
-      return res.status(400).json({ msg: 'items debe ser un arreglo' });
-    }
+    if (!mongoose.isValidObjectId(id)) return res.status(400).json({ msg: 'ID inválido' });
+    if (!Array.isArray(items)) return res.status(400).json({ msg: 'items debe ser un arreglo' });
 
+    // 1) Trae la reserva actual para poder preservar precios anteriores si no se envían
+    const reservaActual = await Reserva.findById(id).lean();
+    if (!reservaActual) return res.status(404).json({ msg: 'Reserva no encontrada' });
+
+    const prevById = new Map(
+      (reservaActual.utensilios || [])
+        .map(u => [String(u.itemId || u._id || u.id), u])
+    );
+
+    // 2) Saneo de items entrantes y recolección de ids para precio de inventario si falta
     const saneados = [];
+    const idsParaPrecio = [];
     for (const it of items) {
-      const itemId = it.itemId || it.id;
+      const itemId = it.itemId || it.id || it._id;
       const cantidad = Number(it.cantidad ?? it.qty ?? 0);
-
       if (!it.nombre || !Number.isFinite(cantidad) || cantidad < 0) {
         return res.status(400).json({ msg: 'Ítem inválido' });
       }
 
-      // itemId es opcional para el PDF (solo se usa para precio). Si viene, valida:
-      let castId;
+      let castId = null;
       if (itemId) {
-        if (!mongoose.isValidObjectId(itemId)) {
-          return res.status(400).json({ msg: 'itemId inválido' });
-        }
+        if (!mongoose.isValidObjectId(itemId)) return res.status(400).json({ msg: 'itemId inválido' });
         castId = new mongoose.Types.ObjectId(itemId);
+        idsParaPrecio.push(castId);
       }
 
       saneados.push({
@@ -360,23 +364,154 @@ router.put('/:id/utensilios', async (req, res) => {
         nombre: it.nombre,
         cantidad,
         unidad: it.unidad || 'pza',
-        categoria: it.categoria || 'general'
+        categoria: it.categoria || 'general',
+        _precioInput: it.precio // temporal
       });
     }
 
+    // 3) Carga precios del inventario SOLO para los que los necesiten
+    let invPriceById = new Map();
+    if (idsParaPrecio.length) {
+      const prods = await Producto.find({ _id: { $in: idsParaPrecio } })
+        .select('precio')
+        .lean();
+      invPriceById = new Map(prods.map(p => [String(p._id), Number(p.precio ?? 0)]));
+    }
+
+    // 4) Decide el precio final por ítem (prioridad: input > precio previo en reserva > inventario > 0)
+   const snapshot = saneados.map(s => {
+  const key = s.itemId ? String(s.itemId) : null;
+
+  const fromPrev  = key && prevById.get(key) ? Number(prevById.get(key).precio) : undefined;
+  const fromInv   = key && invPriceById.has(key) ? Number(invPriceById.get(key)) : undefined;
+
+  // 👇 Cambia la detección de input a "realmente enviado"
+  const inputCandidato = s._precioInput;
+  const hasInput = inputCandidato !== undefined && inputCandidato !== null && inputCandidato !== '';
+  const fromInput = hasInput ? Number(inputCandidato) : undefined;
+
+  const precioFinal = Number.isFinite(fromInput)
+  ? fromInput
+  : (Number.isFinite(fromPrev) && fromPrev > 0)
+    ? fromPrev
+    : (Number.isFinite(fromInv) && fromInv > 0)
+      ? fromInv
+      : 0;
+  const { _precioInput, ...rest } = s;
+  return { ...rest, precio: precioFinal };
+});
+
+
+    // 5) Guarda
     const updated = await Reserva.findByIdAndUpdate(
       id,
-      { $set: { utensilios: saneados } },
+      { $set: { utensilios: snapshot } },
       { new: true }
     );
 
-    if (!updated) return res.status(404).json({ msg: 'Reserva no encontrada' });
     return res.json({ ok: true, reserva: updated });
   } catch (e) {
     console.error(e);
     return res.status(500).json({ msg: 'Error interno' });
   }
 });
+
+
+
+
+router.patch('/:id/utensilios/:lineId', async (req, res) => {
+  try {
+    const { id, lineId } = req.params;
+    if (!mongoose.isValidObjectId(id) || !mongoose.isValidObjectId(lineId)) {
+      return res.status(400).json({ msg: 'ID inválido' });
+    }
+
+    const set = {};
+    if (req.body.cantidad != null) set['utensilios.$.cantidad'] = Number(req.body.cantidad);
+    if (req.body.precio   != null) set['utensilios.$.precio']   = Number(req.body.precio);
+    if (req.body.nombre)           set['utensilios.$.nombre']   = req.body.nombre;
+    if (req.body.categoria)        set['utensilios.$.categoria']= String(req.body.categoria).toLowerCase();
+    if (req.body.unidad)           set['utensilios.$.unidad']   = req.body.unidad;
+    if (req.body.imagen)           set['utensilios.$.imagen']   = req.body.imagen;
+
+    const r = await Reserva.findOneAndUpdate(
+      { _id: id, 'utensilios._id': lineId },
+      { $set: set },
+      { new: true, runValidators: true }
+    ).select('utensilios');
+
+    if (!r) return res.status(404).json({ msg: 'Reserva o línea no encontrada' });
+    res.json(r.utensilios);
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({ msg: 'Error al actualizar la línea' });
+  }
+});
+
+router.get('/:id/utensilios', async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) return res.status(400).json({ msg: 'ID inválido' });
+  const r = await Reserva.findById(id).select('utensilios').lean();
+  if (!r) return res.status(404).json({ msg: 'Reserva no encontrada' });
+  res.json(r.utensilios || []);
+});
+
+// PATCH /reservas/:id/utensilios/:itemId/precio
+// PATCH /reservas/:id/utensilios/:itemId/precio  -> upsert en utensilios
+router.patch('/:id/utensilios/:itemId/precio', async (req, res) => {
+  try {
+    const { id, itemId } = req.params;
+
+    if (!mongoose.isValidObjectId(id) || !mongoose.isValidObjectId(itemId)) {
+      return res.status(400).json({ msg: 'ID inválido' });
+    }
+
+    // 👇 acepta precio tanto en body como (por si acaso) en query
+    const precioRaw = (req.body && req.body.precio) ?? req.query.precio;
+    const p = Number(precioRaw);
+    if (!Number.isFinite(p) || p < 0) {
+      return res.status(400).json({ msg: 'Precio inválido' });
+    }
+
+    // 1) intenta actualizar si ya existe la línea
+    const updated = await Reserva.findOneAndUpdate(
+      { _id: id, 'utensilios.itemId': itemId },
+      { $set: { 'utensilios.$.precio': p } },
+      { new: true }
+    ).lean();
+
+    if (updated) {
+      return res.json({ ok: true, utensilios: updated.utensilios });
+    }
+
+    // 2) si no existe, upsert: crea línea con cantidad 0
+    const prod = await Producto.findById(itemId).select('nombre categoria unidad imagen').lean();
+    const nuevaLinea = {
+      itemId: new mongoose.Types.ObjectId(itemId),
+      nombre: prod?.nombre || 'Ítem',
+      categoria: (prod?.categoria || 'general').toLowerCase(),
+      unidad: prod?.unidad || 'pza',
+      cantidad: 0,
+      precio: p,
+      ...(prod?.imagen ? { imagen: prod.imagen } : {})
+    };
+
+    const afterPush = await Reserva.findByIdAndUpdate(
+      id,
+      { $push: { utensilios: nuevaLinea } },
+      { new: true }
+    ).lean();
+
+    if (!afterPush) return res.status(404).json({ msg: 'Reserva no encontrada' });
+    return res.json({ ok: true, utensilios: afterPush.utensilios });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ msg: 'Error interno' });
+  }
+});
+
+
+
 
 /*router.get('/:id/pdf', async (req, res) => {
   try {

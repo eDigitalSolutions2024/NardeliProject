@@ -73,6 +73,7 @@ router.get('/inventario', async (req, res) => {
       categoria: p.categoria || 'general',
       unidad: p.unidad || 'pza',    // si tu modelo no tiene "unidad", se mostrará 'pza'
       imagen: p.imagen || null,
+      stock: Number(p.cantidad ?? 0),
       stock: Number(p.cantidad ?? 0) // 👈 importante: stock = cantidad
     }));
 
