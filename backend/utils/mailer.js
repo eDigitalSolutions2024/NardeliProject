@@ -3,26 +3,43 @@ const nodemailer = require('nodemailer');
 
 const DEV = process.env.MAIL_DEV_MODE === '1';
 
+// helper: interpreta 1/true/yes como booleano
+const toBool = (v) => /^(1|true|yes)$/i.test(String(v || ''));
+
+// Lee flags desde .env
+const SECURE = toBool(process.env.SMTP_SECURE);     // true => 465, false => 587
+const HOST   = process.env.SMTP_HOST;
+const PORT   = Number(process.env.SMTP_PORT || (SECURE ? 465 : 587));
+const USER   = process.env.SMTP_USER;
+const PASS   = process.env.SMTP_PASS;
+
 const transporter = DEV
-  // modo desarrollo: imprime el correo en consola (no necesita SMTP real)
-  ? nodemailer.createTransport({ streamTransport: true, newline: 'unix', buffer: true })
+  ? nodemailer.createTransport({
+      streamTransport: true,
+      newline: 'unix',
+      buffer: true,
+    })
   : nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT || process.env.SMTP_PORT || 587),
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
+      host: HOST,
+      port: PORT,
+      secure: SECURE,
+      auth: USER && PASS ? { user: USER, pass: PASS } : undefined,
+      // Si trabajas en dev y tu proveedor usa TLS con cert self-signed:
+      // tls: { rejectUnauthorized: false },
     });
 
 // Verifica el transporte al iniciar
 (async () => {
   try {
     await transporter.verify();
-    console.log('[MAILER] SMTP listo (DEV=', DEV, ')');
+    console.log(`[MAILER] SMTP listo (DEV=${DEV}) host=${HOST} port=${PORT} secure=${SECURE}`);
   } catch (e) {
-    console.error('[MAILER] ERROR de SMTP:', e.message || e);
+    console.error('[MAILER] ERROR de SMTP verify:', {
+      message: e.message,
+      code: e.code,
+      command: e.command,
+      response: e.response,
+    });
   }
 })();
 
@@ -45,7 +62,7 @@ async function sendMagicCode({ to, code, link, from }) {
     </div>`;
 
   const info = await transporter.sendMail({
-    from: from || process.env.SMTP_FROM || 'Nardeli <no-reply@localhost>',
+    from: from || process.env.SMTP_FROM, // <-- DEBE estar configurado en .env
     to,
     subject: 'Tu código de acceso',
     html,
