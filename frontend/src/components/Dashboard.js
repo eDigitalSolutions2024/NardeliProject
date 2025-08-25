@@ -6,6 +6,7 @@ import FormProducto from './FormProducto';
 import TablaProductos from './TablaProductos';
 import API_BASE_URL from '../api'; // ⬅️ ajusta la ruta si tu archivo api está en otro lugar
 import Clientes from './Clientes';
+import Reserva from './ReservarEvento';
 
 const Dashboard = ({ onLogout }) => {
   const [user, setUser] = useState(null);
@@ -123,6 +124,7 @@ const Dashboard = ({ onLogout }) => {
     { id: 'calendario', label: 'Calendario', icon: '📅' },
     { id: 'reportes', label: 'Reportes', icon: '📈' },
     { id: 'inventario', label: 'Inventario', icon: '🏬'},
+    { id: 'reservar', label: 'Reservar', icon: '✅'},
   ];
 
   const visibleMenuItems = isAdmin ? menuItems : menuItems;
@@ -146,7 +148,8 @@ const Dashboard = ({ onLogout }) => {
         return (
           <div className="dashboard-content">
             <div className="dashboard-header">
-              <h1>Bienvenido, {user?.fullname || user?.email}</h1>
+              <h1>Bienvenido, Admin{user?.fullname || user?.email}</h1>
+              
               <p>Panel de control - Salón de Eventos Nardeli</p>
             </div>
 
@@ -244,10 +247,19 @@ const Dashboard = ({ onLogout }) => {
             <p>Visualiza reportes detallados del negocio.</p>
           </div>
         );
+        case 'reservar':
+        return (
+          <div className='dashboard-content'>
+            <h1>Reservar Evento</h1>
+            <Reserva />
+           
+          </div>
+        );
+        
       case 'inventario':
         return (
           <div className='dashboard-content'>
-            <h1>Inventario papu pro</h1>
+            <h1>Inventario</h1>
             <FormProducto />
             <TablaProductos />
           </div>
@@ -306,7 +318,7 @@ const Dashboard = ({ onLogout }) => {
               {menuItems.find(item => item.id === activeSection)?.label || 'Dashboard'}
             </h1>
           </div>
-          <div className="header-right">
+          {/*<div className="header-right">
             <div className="user-info" onClick={() => setShowDropdown(!showDropdown)} style={{position: 'relative', cursor: 'pointer'}}>
               <span className="user-avatar">👤</span>
               <span className="user-name">{user?.fullname || user?.email}</span>
@@ -316,9 +328,9 @@ const Dashboard = ({ onLogout }) => {
                   <button className='dropdown-item'>Ver perfil</button>
                   <button className='dropdown-item' onClick={onLogout}>Cerrar sesion</button>
                 </div>
-              )}
+              )}  
             </div>
-          </div>
+          </div>     lo comentamos para entregar avance de administrador */}
         </header>
 
         <main className="content-area">

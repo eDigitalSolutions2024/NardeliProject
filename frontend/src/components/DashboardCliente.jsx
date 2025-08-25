@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './DashboardCliente.css';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import API_BASE_URL, { API_ORIGIN } from '../api';
 
 // Placeholder si no hay imagen
@@ -44,6 +44,7 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
 
   const { search } = useLocation();
   const { reservaId: reservaIdParam } = useParams();
+  const navigate = useNavigate();
 
   // Modo admin vía ?mode=admin
   const isAdmin = useMemo(() => {
@@ -51,11 +52,49 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
     return sp.get('mode') === 'admin';
   }, [search]);
 
-  // Id de reserva: prop > param > query
-  const reservaId = useMemo(() => {
+  // Id de reserva inicial: prop > param > query
+  const initialReservaId = useMemo(() => {
     const fromQuery = new URLSearchParams(search).get('reservaId');
     return reservaIdProp ?? reservaIdParam ?? fromQuery ?? null;
   }, [reservaIdProp, reservaIdParam, search]);
+
+  // Estado real de reservaId (permite resolverlo con el token si no vino por URL)
+  const [reservaId, setReservaId] = useState(initialReservaId);
+
+  // Resolver reservaId con el token si no vino por URL/prop
+  // Resolver reservaId con el token si no vino por URL/prop
+useEffect(() => {
+  if (reservaId) return; // ya la tenemos
+  const token = localStorage.getItem('token');
+  if (!token) { 
+    // aquí sí tiene sentido ir al login si NO hay token
+    window.location.href = '/login';
+    return; 
+  }
+
+  (async () => {
+    try {
+      const r = await fetch(`${API_BASE_URL}/reservas/activa`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d = await r.json();
+      if (d?.ok && d?.reservaId) {
+        setReservaId(d.reservaId);
+        const usp = new URLSearchParams(search);
+        usp.set('reservaId', d.reservaId);
+        window.history.replaceState({}, '', `/cliente/dashboard?${usp.toString()}`);
+      } else {
+        setError('No se pudo obtener tu reserva activa.');
+      }
+    } catch (e) {
+      console.error('activa GET:', e);
+      // 👇 en vez de navegar al login, mostramos un mensaje
+      setError('No se pudo conectar para obtener tu reserva. Intenta de nuevo.');
+    }
+  })();
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, [reservaId]);
 
   // ===== 1) Cargar inventario (incluye precio como fallback) =====
   useEffect(() => {
@@ -76,7 +115,7 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
           stock: Number(x.stock ?? x.cantidad ?? 0),
           unidad: x.unidad || 'pza',
           imagen: x.imagen || '',
-          precio: toPrice(x.precio ?? 0), // 👈 importante: fallback visual
+          precio: toPrice(x.precio ?? 0), // fallback visual
         }));
         if (alive) setItems(normalizados);
       } catch (e) {
@@ -126,13 +165,13 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
 
   // Precio para UI: 1) utensilios (snapshot) 2) inventario (fallback) 3) 0
   const priceFor = (productId) => {
-  const id = String(productId);
-  const r = reservedPriceById.get(id);
-  if (Number.isFinite(r) && r > 0) return r;          // snapshot válido
-  const i = invPriceById.get(id);
-  if (Number.isFinite(i) && i > 0) return i;          // fallback inventario
-  return Number.isFinite(r) ? r : 0;                  // si el 0 es intencional, muéstralo
-};
+    const id = String(productId);
+    const r = reservedPriceById.get(id);
+    if (Number.isFinite(r) && r > 0) return r;          // snapshot válido
+    const i = invPriceById.get(id);
+    if (Number.isFinite(i) && i > 0) return i;          // fallback inventario
+    return Number.isFinite(r) ? r : 0;                  // si el 0 es intencional, muéstralo
+  };
 
   // ===== 3) Cargar selección (BD o localStorage) =====
   useEffect(() => {
@@ -208,7 +247,7 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
       cantidad: qty,
       unidad: item.unidad,
       categoria: item.categoria,
-      precio: priceFor(item.id), // 👈 precio que ve la UI (utensilios o fallback inventario)
+      precio: priceFor(item.id), // precio que ve la UI
     }));
     localStorage.setItem(`sel_${reservaId}`, JSON.stringify(arr));
   }, [seleccion, reservaId, reservedPriceById, invPriceById]);
@@ -236,7 +275,6 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
       if (qty === 0){
         delete next[item.id];
       } else {
-        // congela un snapshot local; el precio visual viene de priceFor
         const snapshotItem = { ...item };
         next[item.id] = { item: snapshotItem, qty };
       }
@@ -272,9 +310,6 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
         unidad: item.unidad,
         categoria: item.categoria,
       };
-
-      // 🚫 No envíes precio en el primer guardado (deja que el backend copie desde inventario)
-      // ✅ Sí envía precio si YA existe snapshot en la reserva (o si lo cambiaste por PATCH)
       if (reservedPriceById.has(id)) {
         base.precio = priceFor(id); // el de utensilios
       }
@@ -294,7 +329,6 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.msg || `HTTP ${res.status}`);
       }
-      // refresca snapshot desde BD (ya con precio copiado en el primer guardado)
       try {
         const r = await fetch(`${API_BASE_URL}/reservas/${reservaId}/utensilios`);
         if (r.ok) setUtensiliosBD(await r.json());
@@ -308,76 +342,67 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
     }
   };
 
-  // ====== Editar precio (solo admin) — afecta SOLO utensilios (PATCH) ======
-// ====== Editar precio (solo admin) — modifica SOLO el snapshot de utensilios ======
-const editarPrecio = async (item) => {
-  if (!isAdmin) return;
-  if (!reservaId) { alert('No hay reservaId'); return; }
+  // ====== Editar precio (solo admin) — modifica SOLO el snapshot de utensilios ======
+  const editarPrecio = async (item) => {
+    if (!isAdmin) return;
+    if (!reservaId) { alert('No hay reservaId'); return; }
 
-  const actual = priceFor(item.id);
-  const input = window.prompt(`Nuevo precio para "${item.nombre}"`, (Number.isFinite(actual) ? actual : 0).toFixed(2));
-  if (input === null) return;
+    const actual = priceFor(item.id);
+    const input = window.prompt(`Nuevo precio para "${item.nombre}"`, (Number.isFinite(actual) ? actual : 0).toFixed(2));
+    if (input === null) return;
 
-  const value = Number(String(input).replace(',', '.').trim());
-  if (!Number.isFinite(value) || value < 0) {
-    alert('Precio inválido');
-    return;
-  }
-
-  const token = localStorage.getItem('token') || '';
-
-  try {
-    const resp = await fetch(
-      `${API_BASE_URL}/reservas/${reservaId}/utensilios/${encodeURIComponent(item.id)}/precio`,
-      {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        // nombre es opcional; si la línea no existe el backend hace upsert con nombre/categoria/unidad del Producto
-        body: JSON.stringify({ precio: value, nombre: item.nombre })
-      }
-    );
-
-    if (!resp.ok) {
-      // intenta extraer el mensaje de error del backend
-      const text = await resp.text().catch(() => '');
-      let msg;
-      try {
-        const j = JSON.parse(text);
-        msg = j?.msg || text;
-      } catch {
-        msg = text || `HTTP ${resp.status}`;
-      }
-      throw new Error(msg);
+    const value = Number(String(input).replace(',', '.').trim());
+    if (!Number.isFinite(value) || value < 0) {
+      alert('Precio inválido');
+      return;
     }
 
-    // PATCH devuelve { ok:true, utensilios:[...] }
-    const data = await resp.json().catch(() => ({}));
+    const token = localStorage.getItem('token') || '';
 
-    if (Array.isArray(data?.utensilios)) {
-      setUtensiliosBD(data.utensilios);
-    } else {
-      // por si tu backend devolviera otra forma, refrezca el snapshot
-      const r = await fetch(`${API_BASE_URL}/reservas/${reservaId}/utensilios`);
-      if (r.ok) setUtensiliosBD(await r.json());
+    try {
+      const resp = await fetch(
+        `${API_BASE_URL}/reservas/${reservaId}/utensilios/${encodeURIComponent(item.id)}/precio`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ precio: value, nombre: item.nombre })
+        }
+      );
+
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => '');
+        let msg;
+        try {
+          const j = JSON.parse(text);
+          msg = j?.msg || text;
+        } catch {
+          msg = text || `HTTP ${resp.status}`;
+        }
+        throw new Error(msg);
+      }
+
+      const data = await resp.json().catch(() => ({}));
+
+      if (Array.isArray(data?.utensilios)) {
+        setUtensiliosBD(data.utensilios);
+      } else {
+        const r = await fetch(`${API_BASE_URL}/reservas/${reservaId}/utensilios`);
+        if (r.ok) setUtensiliosBD(await r.json());
+      }
+
+      setSeleccion(prev => (prev[item.id] ? { ...prev, [item.id]: { ...prev[item.id] } } : prev));
+    } catch (err) {
+      console.error('editarPrecio', err);
+      alert(
+        err?.message?.includes('Failed to fetch')
+          ? 'No se pudo contactar al servidor (posible CORS/preflight).'
+          : err?.message || 'No se pudo actualizar el precio en la reserva'
+      );
     }
-
-    // feedback inmediato si el ítem estaba en la selección (la UI lee priceFor())
-    setSeleccion(prev => (prev[item.id] ? { ...prev, [item.id]: { ...prev[item.id] } } : prev));
-  } catch (err) {
-    console.error('editarPrecio', err);
-    alert(
-      err?.message?.includes('Failed to fetch')
-        ? 'No se pudo contactar al servidor (posible CORS/preflight).'
-        : err?.message || 'No se pudo actualizar el precio en la reserva'
-    );
-  }
-};
-
-
-
+  };
 
   return (
     <div className="cliente-dashboard">
@@ -424,7 +449,7 @@ const editarPrecio = async (item) => {
                 const qty = sel?.qty || 0;
                 const stock = items.find(p => p.id === it.id)?.stock ?? 0;
                 const agotado = stock <= 0;
-                const precioNum = priceFor(it.id); // 👈 precio desde utensilios (o inventario como fallback)
+                const precioNum = priceFor(it.id);
 
                 return (
                   <div key={it.id} className="item-card">

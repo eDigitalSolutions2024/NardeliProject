@@ -7,8 +7,25 @@ const mongoose = require('mongoose');
 const Reserva = require('../models/Reservas');
 const Producto = require('../models/Producto'); // asegúrate que está importado
 const { streamReservaPDF } = require('../services/reservaPdf');
-
+const jwt = require('jsonwebtoken');
 const TZ = process.env.APP_TIMEZONE || 'America/Ciudad_Juarez';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'secreto-temporal';
+
+
+// middleware auth simple (si ya tienes uno, usa ese)
+function auth(req, res, next) {
+  const h = req.headers.authorization || '';
+  const t = h.startsWith('Bearer ') ? h.slice(7) : null;
+  if (!t) return res.status(401).json({ ok:false, msg:'No token' });
+  try {
+    req.user = jwt.verify(t, JWT_SECRET); // { sub, email, role }
+    next();
+  } catch {
+    return res.status(401).json({ ok:false, msg:'Token inválido' });
+  }
+}
+
 
 // Convierte "YYYY-MM-DD" (o cualquier input) a Date en 12:00:00 Z
 function normalizeFechaNoonUTC(input) {
@@ -570,6 +587,28 @@ router.get('/:id/pdf', async (req, res) => {
   } catch (e) {
     console.error(e);
     return res.status(500).json({ msg: 'Error interno al generar PDF' });
+  }
+});
+
+
+
+
+// 👇 NUEVO: devuelve (o crea) la reserva "borrador" del cliente autenticado
+router.get('/reservas/activa', auth, async (req, res) => {
+  try {
+    const clienteId = req.user.sub; // viene del JWT que emites en /auth/verify
+    let r = await Reserva.findOne({ clienteId, estado: 'borrador' });
+    if (!r) {
+      r = await Reserva.create({
+        clienteId,
+        estado: 'borrador',
+        createdAt: new Date(),
+      });
+    }
+    res.json({ ok: true, reservaId: String(r._id) });
+  } catch (e) {
+    console.error('reservas/activa error:', e);
+    res.status(500).json({ ok:false, msg:'No se pudo obtener la reserva activa' });
   }
 });
 

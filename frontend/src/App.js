@@ -19,8 +19,9 @@ function AppWrapper() {
 
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} />} />
+      <Route path="/" element={<Dashboard user={user} />} />
+      {/*   <Route path="/" element={<Home />} />
+      <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} />} />   */}
       <Route path="/dashboard" element={<Dashboard user={user} />} />
       <Route path="/reservar" element={<Reservar />} />
       <Route path="/cliente/dashboard" element={<DashboardCliente />} />

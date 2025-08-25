@@ -26,7 +26,11 @@ export default function IngresarCodigo() {
       if (!resp.ok || !data.ok) throw new Error(data.msg || 'Código inválido');
 
       localStorage.setItem('token', data.token);
-      window.location.href = '/cliente/dashboard';
+      
+      const next = data.reservaId
+      ? `/cliente/dashboard?reservaId=${encodeURIComponent(data.reservaId)}`
+      : '/cliente/dashboard';
+     window.location.href = next;
     } catch (err) {
       alert(err.message || 'Error verificando código');
     } finally {
