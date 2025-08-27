@@ -381,23 +381,52 @@ const row = showPrices
   }
 
   // ===== Información adicional (más compacta) =====
-  doc.y += 25;
-  
-  const infoCard = drawCard(doc, {
-    x: startX,
-    y: doc.y,
-    width: CONTENT_W,
-    height: 75
-  });
-  
-  doc.save();
-  doc.fillColor(COLORS.primaryLight).font('Helvetica-Bold').fontSize(FONTS.h3);
-  doc.text('Información Importante', infoCard.x, infoCard.y);
-  doc.font('Helvetica').fontSize(FONTS.small).fillColor(COLORS.text);
-  doc.text('• Favor de confirmar su asistencia 48 hrs antes del evento', infoCard.x, infoCard.y + 20);
-  doc.text('• Los utensilios deben ser devueltos en las mismas condiciones', infoCard.x, infoCard.y + 32);
-  doc.text('• Para cambios o cancelaciones, contactar con 24 hrs de anticipación', infoCard.x, infoCard.y + 44);
-  doc.restore();
+doc.y += 25;
+
+// Construye bullets con la descripción de cada utensilio
+const descBullets = [];
+(lista || []).forEach(u => {
+  const p = u?.itemId ? productosById.get(String(u.itemId)) : null;
+  const desc =
+    (u?.descripcion && String(u.descripcion).trim()) ||
+    (p?.descripcion && String(p.descripcion).trim());
+
+  if (desc) {
+    const nombre = u?.nombre || p?.nombre || 'Ítem';
+    descBullets.push(`• ${nombre}: ${desc}`);
+  }
+});
+
+const baseBullets = [
+  '• Favor de confirmar su asistencia 48 hrs antes del evento',
+  '• Los utensilios deben ser devueltos en las mismas condiciones',
+  '• Para cambios o cancelaciones, contactar con 24 hrs de anticipación'
+];
+
+// Texto final (base + descripciones)
+const infoText = [...baseBullets, ...descBullets].join('\n');
+
+// Altura dinámica de la tarjeta según contenido
+const infoTextH = doc.heightOfString(infoText, { width: CONTENT_W - 32, lineGap: 2 });
+const infoCardH = Math.max(75, infoTextH + 30); // + título/espacios
+
+const infoCard = drawCard(doc, {
+  x: startX,
+  y: doc.y,
+  width: CONTENT_W,
+  height: infoCardH
+});
+
+doc.save();
+doc.fillColor(COLORS.primaryLight).font('Helvetica-Bold').fontSize(FONTS.h3);
+doc.text('Información Importante', infoCard.x, infoCard.y);
+
+doc.font('Helvetica').fontSize(FONTS.small).fillColor(COLORS.text);
+doc.text(infoText, infoCard.x, infoCard.y + 20, {
+  width: CONTENT_W - 32,
+  lineGap: 2
+});
+doc.restore();
 
   // ===== Pie de página mejorado (solo una página) =====
   const footerY = doc.page.height - doc.page.margins.bottom + 15;

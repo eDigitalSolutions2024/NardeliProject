@@ -5,29 +5,27 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const Reserva = require('../models/Reservas');
-const Producto = require('../models/Producto'); // asegúrate que está importado
+const Producto = require('../models/Producto');
 const { streamReservaPDF } = require('../services/reservaPdf');
 const jwt = require('jsonwebtoken');
 const TZ = process.env.APP_TIMEZONE || 'America/Ciudad_Juarez';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto-temporal';
 
-
-// middleware auth simple (si ya tienes uno, usa ese)
+// ===== Auth muy simple (usa el tuyo si ya tienes uno) =====
 function auth(req, res, next) {
   const h = req.headers.authorization || '';
   const t = h.startsWith('Bearer ') ? h.slice(7) : null;
-  if (!t) return res.status(401).json({ ok:false, msg:'No token' });
+  if (!t) return res.status(401).json({ ok: false, msg: 'No token' });
   try {
     req.user = jwt.verify(t, JWT_SECRET); // { sub, email, role }
     next();
   } catch {
-    return res.status(401).json({ ok:false, msg:'Token inválido' });
+    return res.status(401).json({ ok: false, msg: 'Token inválido' });
   }
 }
 
-
-// Convierte "YYYY-MM-DD" (o cualquier input) a Date en 12:00:00 Z
+// ===== Helpers de fecha/horario =====
 function normalizeFechaNoonUTC(input) {
   if (!input) return null;
   let ymd;
@@ -35,8 +33,6 @@ function normalizeFechaNoonUTC(input) {
   else ymd = new Date(input).toISOString().slice(0, 10);
   return new Date(`${ymd}T12:00:00Z`);
 }
-
-// --- helpers de fecha/horario ---
 function timeToMinutes(t) {
   const [h, m] = String(t || '').split(':').map(Number);
   return h * 60 + m;
@@ -48,7 +44,6 @@ function ymd(input) {
   if (!input) return null;
   return (typeof input === 'string' ? input : new Date(input).toISOString()).slice(0, 10);
 }
-// Filtro “reservas del mismo día LOCAL”
 function sameDayFilter(fechaStr, excluirId = null) {
   const expr = {
     $expr: {
@@ -62,6 +57,7 @@ function sameDayFilter(fechaStr, excluirId = null) {
   return expr;
 }
 
+// ===== Mailer para contraseñas temporales =====
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT || 587),
@@ -69,10 +65,9 @@ const transporter = nodemailer.createTransport({
   auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
 });
 
-// genera una contraseña aleatoria simple (ajusta política si quieres)
 function genPassword(len = 10) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@$!%*?&';
-  return Array.from({ length: len }, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+  return Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
 async function ensureUserAndMaybeSendPassword({ email, fullname }) {
@@ -80,7 +75,6 @@ async function ensureUserAndMaybeSendPassword({ email, fullname }) {
   let user = await Usuario.findOne({ email: correo });
 
   if (!user) {
-    // crear usuario con rol user y password random
     const plain = genPassword(10);
     const hash = await bcrypt.hash(plain, 10);
     user = await Usuario.create({
@@ -90,7 +84,6 @@ async function ensureUserAndMaybeSendPassword({ email, fullname }) {
       password: hash,
     });
 
-    // enviar contraseña
     const loginUrl = `${process.env.FRONTEND_BASE_URL || 'http://localhost:3000'}/login`;
     await transporter.sendMail({
       from: process.env.FROM_EMAIL,
@@ -113,9 +106,7 @@ async function ensureUserAndMaybeSendPassword({ email, fullname }) {
     return { created: true, sentPassword: true };
   }
 
-  // usuario existe
   if (!user.password) {
-    // tenía cuenta sin password: asignar una
     const plain = genPassword(10);
     const hash = await bcrypt.hash(plain, 10);
     user.password = hash;
@@ -140,11 +131,12 @@ async function ensureUserAndMaybeSendPassword({ email, fullname }) {
     return { created: false, sentPassword: true };
   }
 
-  // ya tiene password; no reenviamos la contraseña (opcional: notificar)
   return { created: false, sentPassword: false };
 }
 
-// Crear reserva pública y enviar contraseña al cliente
+// ====== Rutas públicas ======
+
+// POST /reservas/public (crea y envía contraseña si aplica)
 router.post('/public', async (req, res) => {
   try {
     const {
@@ -159,12 +151,10 @@ router.post('/public', async (req, res) => {
       descripcion = ''
     } = req.body || {};
 
-    // Validación básica
     if (!cliente || !correo || !tipoEvento || !fecha || !horaInicio || !horaFin || !telefono || !cantidadPersonas) {
       return res.status(400).json({ msg: 'Faltan campos obligatorios' });
     }
 
-    // Normalizar fecha y checar disponibilidad
     const fechaNorm = normalizeFechaNoonUTC(fecha);
     if (!fechaNorm || isNaN(fechaNorm)) {
       return res.status(400).json({ msg: 'Fecha inválida' });
@@ -173,7 +163,6 @@ router.post('/public', async (req, res) => {
     const disp = await checarDisponibilidad({ fecha: fechaNorm, horaInicio, horaFin });
     if (!disp.disponible) return res.status(409).json({ msg: disp.motivo });
 
-    // Guardar reserva
     const nueva = await new Reserva({
       cliente,
       correo: correo.toLowerCase().trim(),
@@ -186,7 +175,6 @@ router.post('/public', async (req, res) => {
       descripcion
     }).save();
 
-    // Asegurar usuario y enviar contraseña si aplica
     const emailResult = await ensureUserAndMaybeSendPassword({
       email: correo,
       fullname: cliente
@@ -195,7 +183,7 @@ router.post('/public', async (req, res) => {
     return res.status(201).json({
       msg: 'Reserva creada',
       reserva: nueva,
-      userNotice: emailResult // {created, sentPassword}
+      userNotice: emailResult
     });
   } catch (e) {
     console.error('Error en /reservas/public:', e);
@@ -203,7 +191,7 @@ router.post('/public', async (req, res) => {
   }
 });
 
-
+// ===== Lógica de disponibilidad =====
 async function checarDisponibilidad({ fecha, horaInicio, horaFin, excluirId = null }) {
   const fechaStr = ymd(fecha);
   if (!fechaStr || !horaInicio || !horaFin) return { disponible: false, motivo: 'Datos incompletos' };
@@ -217,7 +205,8 @@ async function checarDisponibilidad({ fecha, horaInicio, horaFin, excluirId = nu
   return choca ? { disponible: false, motivo: 'Empalme con otra reserva' } : { disponible: true };
 }
 
-// Crear
+// ===== CRUD de reservas =====
+
 // Crear
 router.post('/', async (req, res) => {
   try {
@@ -230,7 +219,6 @@ router.post('/', async (req, res) => {
 
     const guardada = await new Reserva(req.body).save();
 
-    // 👇 respuesta estandarizada: trae id y la reserva
     return res.status(201).json({
       ok: true,
       id: guardada._id,
@@ -242,17 +230,14 @@ router.post('/', async (req, res) => {
   }
 });
 
-
-// Listar (con fechaLocal) y filtro opcional por correo
+// Listar (con fechaLocal) + filtro opcional por correo
 router.get('/', async (req, res) => {
   try {
-    const { correo } = req.query;   // ?correo=cliente@dominio.com
+    const { correo } = req.query;
     const pipeline = [];
 
     if (correo) {
-      pipeline.push({
-        $match: { correo: correo.toLowerCase().trim() }
-      });
+      pipeline.push({ $match: { correo: correo.toLowerCase().trim() } });
     }
 
     pipeline.push(
@@ -273,6 +258,7 @@ router.get('/', async (req, res) => {
     return res.status(500).json({ msg: 'Error del servidor' });
   }
 });
+
 // Ver disponibilidad sin crear
 router.post('/disponibilidad', async (req, res) => {
   try {
@@ -325,7 +311,7 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// Ver una reserva por id (para depurar)
+// Ver una reserva por id (debug)
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -341,7 +327,9 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// ===== Utensilios (selección del cliente) =====
 
+// PUT /reservas/:id/utensilios  (reemplaza snapshot)
 router.put('/:id/utensilios', async (req, res) => {
   try {
     const { id } = req.params;
@@ -350,16 +338,15 @@ router.put('/:id/utensilios', async (req, res) => {
     if (!mongoose.isValidObjectId(id)) return res.status(400).json({ msg: 'ID inválido' });
     if (!Array.isArray(items)) return res.status(400).json({ msg: 'items debe ser un arreglo' });
 
-    // 1) Trae la reserva actual para poder preservar precios anteriores si no se envían
+    // 1) reserva actual para preservar datos (precio/descripcion, etc)
     const reservaActual = await Reserva.findById(id).lean();
     if (!reservaActual) return res.status(404).json({ msg: 'Reserva no encontrada' });
 
     const prevById = new Map(
-      (reservaActual.utensilios || [])
-        .map(u => [String(u.itemId || u._id || u.id), u])
+      (reservaActual.utensilios || []).map(u => [String(u.itemId || u._id || u.id), u])
     );
 
-    // 2) Saneo de items entrantes y recolección de ids para precio de inventario si falta
+    // 2) saneo de entrada + recolectar ids para consultar inventario
     const saneados = [];
     const idsParaPrecio = [];
     for (const it of items) {
@@ -382,44 +369,53 @@ router.put('/:id/utensilios', async (req, res) => {
         cantidad,
         unidad: it.unidad || 'pza',
         categoria: it.categoria || 'general',
-        _precioInput: it.precio // temporal
+        _precioInput: it.precio,          // temporal para decidir prioridad
+        _descInput: it.descripcion         // ⬅️ NUEVO: descripción enviada desde el front (si vino)
       });
     }
 
-    // 3) Carga precios del inventario SOLO para los que los necesiten
-    let invPriceById = new Map();
+    // 3) consulta inventario: precio + descripcion
+    let invById = new Map();
     if (idsParaPrecio.length) {
       const prods = await Producto.find({ _id: { $in: idsParaPrecio } })
-        .select('precio')
+        .select('precio descripcion')
         .lean();
-      invPriceById = new Map(prods.map(p => [String(p._id), Number(p.precio ?? 0)]));
+
+      invById = new Map(
+        prods.map(p => [
+          String(p._id),
+          { precio: Number(p.precio ?? 0), descripcion: p.descripcion || '' }
+        ])
+      );
     }
 
-    // 4) Decide el precio final por ítem (prioridad: input > precio previo en reserva > inventario > 0)
-   const snapshot = saneados.map(s => {
-  const key = s.itemId ? String(s.itemId) : null;
+    // 4) decidir precio/descripcion final por prioridad
+    const snapshot = saneados.map(s => {
+      const key = s.itemId ? String(s.itemId) : null;
 
-  const fromPrev  = key && prevById.get(key) ? Number(prevById.get(key).precio) : undefined;
-  const fromInv   = key && invPriceById.has(key) ? Number(invPriceById.get(key)) : undefined;
+      const prev = key && prevById.get(key);
+      const prevPrice = prev ? Number(prev.precio) : undefined;
+      const prevDesc  = prev ? (prev.descripcion || '') : '';
 
-  // 👇 Cambia la detección de input a "realmente enviado"
-  const inputCandidato = s._precioInput;
-  const hasInput = inputCandidato !== undefined && inputCandidato !== null && inputCandidato !== '';
-  const fromInput = hasInput ? Number(inputCandidato) : undefined;
+      const inv = key && invById.get(key);
+      const invPrice = inv ? inv.precio : undefined;
+      const invDesc  = inv ? inv.descripcion : '';
 
-  const precioFinal = Number.isFinite(fromInput)
-  ? fromInput
-  : (Number.isFinite(fromPrev) && fromPrev > 0)
-    ? fromPrev
-    : (Number.isFinite(fromInv) && fromInv > 0)
-      ? fromInv
-      : 0;
-  const { _precioInput, ...rest } = s;
-  return { ...rest, precio: precioFinal };
-});
+      const hasInputPrice = s._precioInput !== undefined && s._precioInput !== null && s._precioInput !== '';
+      const finalPrice =
+        Number.isFinite(Number(s._precioInput)) ? Number(s._precioInput)
+        : (Number.isFinite(prevPrice) && prevPrice > 0) ? prevPrice
+        : (Number.isFinite(invPrice) && invPrice > 0) ? invPrice
+        : 0;
 
+      const hasInputDesc = s._descInput != null && String(s._descInput).trim() !== '';
+const finalDesc = hasInputDesc ? String(s._descInput) : (prevDesc || invDesc || '');
 
-    // 5) Guarda
+      const { _precioInput, _descInput, ...rest } = s;
+      return { ...rest, precio: finalPrice, descripcion: finalDesc };
+    });
+
+    // 5) guardar snapshot
     const updated = await Reserva.findByIdAndUpdate(
       id,
       { $set: { utensilios: snapshot } },
@@ -433,9 +429,7 @@ router.put('/:id/utensilios', async (req, res) => {
   }
 });
 
-
-
-
+// PATCH /reservas/:id/utensilios/:lineId  (editar campos de una línea)
 router.patch('/:id/utensilios/:lineId', async (req, res) => {
   try {
     const { id, lineId } = req.params;
@@ -450,6 +444,7 @@ router.patch('/:id/utensilios/:lineId', async (req, res) => {
     if (req.body.categoria)        set['utensilios.$.categoria']= String(req.body.categoria).toLowerCase();
     if (req.body.unidad)           set['utensilios.$.unidad']   = req.body.unidad;
     if (req.body.imagen)           set['utensilios.$.imagen']   = req.body.imagen;
+    if (req.body.descripcion != null) set['utensilios.$.descripcion'] = String(req.body.descripcion); // ⬅️ NUEVO
 
     const r = await Reserva.findOneAndUpdate(
       { _id: id, 'utensilios._id': lineId },
@@ -465,6 +460,7 @@ router.patch('/:id/utensilios/:lineId', async (req, res) => {
   }
 });
 
+// GET /reservas/:id/utensilios
 router.get('/:id/utensilios', async (req, res) => {
   const { id } = req.params;
   if (!mongoose.isValidObjectId(id)) return res.status(400).json({ msg: 'ID inválido' });
@@ -473,8 +469,7 @@ router.get('/:id/utensilios', async (req, res) => {
   res.json(r.utensilios || []);
 });
 
-// PATCH /reservas/:id/utensilios/:itemId/precio
-// PATCH /reservas/:id/utensilios/:itemId/precio  -> upsert en utensilios
+// PATCH /reservas/:id/utensilios/:itemId/precio  (upsert si no existe)
 router.patch('/:id/utensilios/:itemId/precio', async (req, res) => {
   try {
     const { id, itemId } = req.params;
@@ -483,14 +478,12 @@ router.patch('/:id/utensilios/:itemId/precio', async (req, res) => {
       return res.status(400).json({ msg: 'ID inválido' });
     }
 
-    // 👇 acepta precio tanto en body como (por si acaso) en query
     const precioRaw = (req.body && req.body.precio) ?? req.query.precio;
     const p = Number(precioRaw);
     if (!Number.isFinite(p) || p < 0) {
       return res.status(400).json({ msg: 'Precio inválido' });
     }
 
-    // 1) intenta actualizar si ya existe la línea
     const updated = await Reserva.findOneAndUpdate(
       { _id: id, 'utensilios.itemId': itemId },
       { $set: { 'utensilios.$.precio': p } },
@@ -501,8 +494,11 @@ router.patch('/:id/utensilios/:itemId/precio', async (req, res) => {
       return res.json({ ok: true, utensilios: updated.utensilios });
     }
 
-    // 2) si no existe, upsert: crea línea con cantidad 0
-    const prod = await Producto.findById(itemId).select('nombre categoria unidad imagen').lean();
+    // upsert: crear línea con info del producto (incluye descripcion)
+    const prod = await Producto.findById(itemId)
+      .select('nombre categoria unidad imagen descripcion')
+      .lean();
+
     const nuevaLinea = {
       itemId: new mongoose.Types.ObjectId(itemId),
       nombre: prod?.nombre || 'Ítem',
@@ -510,6 +506,7 @@ router.patch('/:id/utensilios/:itemId/precio', async (req, res) => {
       unidad: prod?.unidad || 'pza',
       cantidad: 0,
       precio: p,
+      descripcion: prod?.descripcion || '',    // ⬅️ NUEVO
       ...(prod?.imagen ? { imagen: prod.imagen } : {})
     };
 
@@ -527,39 +524,7 @@ router.patch('/:id/utensilios/:itemId/precio', async (req, res) => {
   }
 });
 
-
-
-
-/*router.get('/:id/pdf', async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!mongoose.isValidObjectId(id)) {
-      return res.status(400).json({ msg: 'ID inválido' });
-    }
-
-    const reserva = await Reserva.findById(id).lean();
-    if (!reserva) {
-      return res.status(404).json({ msg: 'Reserva no encontrada' });
-    }
-
-    let productosPorId = {};
-    const idsProductos = (reserva.utensilios || [])
-      .map(u => u.itemId)
-      .filter(Boolean);
-
-    if (idsProductos.length) {
-      const productos = await Producto.find({ _id: { $in: idsProductos } }).lean();
-      productosPorId = Object.fromEntries(productos.map(p => [String(p._id), p]));
-    }
-
-    await streamReservaPDF(res, { reserva, productosPorId });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ msg: 'Error interno al generar PDF' });
-  }
-});*/
-
-// ⬇️ Reemplaza TODO este handler por este
+// GET /reservas/:id/pdf
 router.get('/:id/pdf', async (req, res) => {
   try {
     const { id } = req.params;
@@ -572,7 +537,6 @@ router.get('/:id/pdf', async (req, res) => {
       return res.status(404).json({ msg: 'Reserva no encontrada' });
     }
 
-    // Construir Map<String,_id> -> producto (lo que el PDF necesita)
     let productosById = new Map();
     const ids = (reserva.utensilios || []).map(u => u.itemId).filter(Boolean);
     if (ids.length) {
@@ -581,8 +545,6 @@ router.get('/:id/pdf', async (req, res) => {
     }
 
     const brand = { title: 'Nardeli', footer: 'Nardeli - Salón de Eventos' };
-
-    // No hace falta await; streamea directo al response
     streamReservaPDF(res, { reserva, productosById, brand });
   } catch (e) {
     console.error(e);
@@ -590,13 +552,11 @@ router.get('/:id/pdf', async (req, res) => {
   }
 });
 
-
-
-
-// 👇 NUEVO: devuelve (o crea) la reserva "borrador" del cliente autenticado
+// ===== Reserva activa (borrador) del cliente autenticado =====
+// OJO: si montas este router en /reservas, la ruta final es /reservas/activa
 router.get('/reservas/activa', auth, async (req, res) => {
   try {
-    const clienteId = req.user.sub; // viene del JWT que emites en /auth/verify
+    const clienteId = req.user.sub;
     let r = await Reserva.findOne({ clienteId, estado: 'borrador' });
     if (!r) {
       r = await Reserva.create({
@@ -608,10 +568,8 @@ router.get('/reservas/activa', auth, async (req, res) => {
     res.json({ ok: true, reservaId: String(r._id) });
   } catch (e) {
     console.error('reservas/activa error:', e);
-    res.status(500).json({ ok:false, msg:'No se pudo obtener la reserva activa' });
+    res.status(500).json({ ok: false, msg: 'No se pudo obtener la reserva activa' });
   }
 });
-
-
 
 module.exports = router;
