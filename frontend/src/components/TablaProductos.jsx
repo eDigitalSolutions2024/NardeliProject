@@ -3,6 +3,14 @@ import axios from 'axios';
 import './TablaProductos.css';
 import API_BASE_URL from '../api';
 
+const fntMXN = new Intl.NumberFormat('es-MX', {
+  style: 'currency',
+  currency: 'MXN',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+const formatMXN = (v) => fntMXN.format(Number(v|| 0));
+
 export default function TablaProductos() {
   const [productos, setProductos] = useState([]);
   const [cargando, setCargando] = useState(false);
@@ -15,7 +23,8 @@ export default function TablaProductos() {
     categoria: '',
     cantidad: 0,
     precio: 0,
-    imagen: '', // ruta actual (string)
+    imagen: '', 
+    descripcion: '',// ruta actual (string)
   });
   const [imagenFile, setImagenFile] = useState(null);
   const [preview, setPreview] = useState(''); // preview de imagen
@@ -42,6 +51,7 @@ export default function TablaProductos() {
       cantidad: Number(p.cantidad || 0),
       precio: Number(p.precio || 0),
       imagen: p.imagen || '',
+      descripcion: p.descripcion || '',
     });
     setImagenFile(null);
     setPreview(p.imagen ? `${API_BASE_URL}${p.imagen}` : '');
@@ -109,6 +119,7 @@ export default function TablaProductos() {
             <tr>
               <th>Imagen</th>
               <th>Nombre</th>
+              <th>Descricpion</th>
               <th>Categoría</th>
               <th>Cantidad</th>
               <th>Precio</th>
@@ -130,9 +141,10 @@ export default function TablaProductos() {
                   ) : 'Sin imagen'}
                 </td>
                 <td>{producto.nombre}</td>
+                <td>{producto.descripcion}</td>
                 <td>{producto.categoria}</td>
                 <td>{producto.cantidad}</td>
-                <td>${Number(producto.precio || 0)}</td>
+                <td>{formatMXN(producto.precio || 0)}</td>
                 <td>
                   <button
                     className="btn btn-primary"
@@ -203,6 +215,17 @@ export default function TablaProductos() {
                   onChange={onChange}
                   
                   min="0"
+                  required
+                />
+              </div>
+
+              <div className="form-row">
+                <label>Descripcion</label>
+                <input
+                  type="text"
+                  name="descripcion"
+                  value={form.descripcion}
+                  onChange={onChange}
                   required
                 />
               </div>

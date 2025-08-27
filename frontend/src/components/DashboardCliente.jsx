@@ -31,7 +31,7 @@ const toPrice = (v) => {
 
 const DashboardCliente = ({ reservaId: reservaIdProp }) => {
   // Inventario (con precio para fallback visual)
-  const [items, setItems] = useState([]); // [{id, nombre, categoria, stock, unidad, imagen, precio}]
+  const [items, setItems] = useState([]); // [{id, nombre, categoria, stock, unidad, imagen, precio, descripcion}]
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [q, setQ] = useState('');
@@ -40,7 +40,7 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
   const [error, setError] = useState('');
 
   // Snapshot de utensilios guardados en la BD
-  const [utensiliosBD, setUtensiliosBD] = useState([]); // [{ itemId, nombre, precio, ... }]
+  const [utensiliosBD, setUtensiliosBD] = useState([]); // [{ itemId, nombre, precio, descripcion, ... }]
 
   const { search } = useLocation();
   const { reservaId: reservaIdParam } = useParams();
@@ -62,39 +62,36 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
   const [reservaId, setReservaId] = useState(initialReservaId);
 
   // Resolver reservaId con el token si no vino por URL/prop
-  // Resolver reservaId con el token si no vino por URL/prop
-useEffect(() => {
-  if (reservaId) return; // ya la tenemos
-  const token = localStorage.getItem('token');
-  if (!token) { 
-    // aquí sí tiene sentido ir al login si NO hay token
-    window.location.href = '/login';
-    return; 
-  }
-
-  (async () => {
-    try {
-      const r = await fetch(`${API_BASE_URL}/reservas/activa`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const d = await r.json();
-      if (d?.ok && d?.reservaId) {
-        setReservaId(d.reservaId);
-        const usp = new URLSearchParams(search);
-        usp.set('reservaId', d.reservaId);
-        window.history.replaceState({}, '', `/cliente/dashboard?${usp.toString()}`);
-      } else {
-        setError('No se pudo obtener tu reserva activa.');
-      }
-    } catch (e) {
-      console.error('activa GET:', e);
-      // 👇 en vez de navegar al login, mostramos un mensaje
-      setError('No se pudo conectar para obtener tu reserva. Intenta de nuevo.');
+  useEffect(() => {
+    if (reservaId) return; // ya la tenemos
+    const token = localStorage.getItem('token');
+    if (!token) { 
+      window.location.href = '/login';
+      return; 
     }
-  })();
-// eslint-disable-next-line react-hooks/exhaustive-deps
-}, [reservaId]);
+
+    (async () => {
+      try {
+        const r = await fetch(`${API_BASE_URL}/reservas/activa`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const d = await r.json();
+        if (d?.ok && d?.reservaId) {
+          setReservaId(d.reservaId);
+          const usp = new URLSearchParams(search);
+          usp.set('reservaId', d.reservaId);
+          window.history.replaceState({}, '', `/cliente/dashboard?${usp.toString()}`);
+        } else {
+          setError('No se pudo obtener tu reserva activa.');
+        }
+      } catch (e) {
+        console.error('activa GET:', e);
+        setError('No se pudo conectar para obtener tu reserva. Intenta de nuevo.');
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reservaId]);
 
   // ===== 1) Cargar inventario (incluye precio como fallback) =====
   useEffect(() => {
@@ -115,7 +112,8 @@ useEffect(() => {
           stock: Number(x.stock ?? x.cantidad ?? 0),
           unidad: x.unidad || 'pza',
           imagen: x.imagen || '',
-          precio: toPrice(x.precio ?? 0), // fallback visual
+          precio: toPrice(x.precio ?? 0),       // fallback visual
+          descripcion: x.descripcion || ''       // 👈 NUEVO: descripción desde inventario
         }));
         if (alive) setItems(normalizados);
       } catch (e) {
@@ -191,7 +189,12 @@ useEffect(() => {
           imagen: s.imagen || '',
           stock: Number(s.stock ?? 0),
           precio: toPrice(s.precio),
+          descripcion: s.descripcion || ''      // 👈 NUEVO: preserva descripción desde BD/localStorage
         };
+        // si existe en inventario y no tiene descripción en saved, usa la del inventario
+        if (!base.descripcion && byId.get(sid)?.descripcion) {
+          base.descripcion = byId.get(sid).descripcion;
+        }
         next[sid] = { item: base, qty: Number(s.cantidad ?? s.qty ?? 0) };
       });
       setSeleccion(next);
@@ -248,6 +251,7 @@ useEffect(() => {
       unidad: item.unidad,
       categoria: item.categoria,
       precio: priceFor(item.id), // precio que ve la UI
+      descripcion: item.descripcion || ''      // 👈 NUEVO: guarda descripción en localStorage
     }));
     localStorage.setItem(`sel_${reservaId}`, JSON.stringify(arr));
   }, [seleccion, reservaId, reservedPriceById, invPriceById]);
@@ -262,8 +266,11 @@ useEffect(() => {
     const term = q.trim().toLowerCase();
     return items.filter(i => {
       const passCat = !cat || cat === 'Todas' || i.categoria === cat;
-      const passQ = !term || (i.nombre?.toLowerCase().includes(term));
-      return passCat && passQ;
+      const hayTerm = !term || (
+        i.nombre?.toLowerCase().includes(term) ||
+        i.descripcion?.toLowerCase().includes(term) // opcional: busca también en descripción
+      );
+      return passCat && hayTerm;
     });
   }, [items, q, cat]);
 
@@ -275,7 +282,7 @@ useEffect(() => {
       if (qty === 0){
         delete next[item.id];
       } else {
-        const snapshotItem = { ...item };
+        const snapshotItem = { ...item }; // incluye descripcion si existe en item
         next[item.id] = { item: snapshotItem, qty };
       }
       return next;
@@ -309,9 +316,12 @@ useEffect(() => {
         cantidad: qty,
         unidad: item.unidad,
         categoria: item.categoria,
+        descripcion: item.descripcion || '' // 👈 NUEVO: enviar descripción al backend
       };
+
+      // No envíes precio en el primer guardado; sí si ya existe snapshot
       if (reservedPriceById.has(id)) {
-        base.precio = priceFor(id); // el de utensilios
+        base.precio = priceFor(id);
       }
       return base;
     });

@@ -7,6 +7,7 @@ const utensilioSchema = new mongoose.Schema({
   cantidad: { type: Number, required: true, min: 0 },
   unidad: { type: String, default: 'pza' },
   precio:    { type: Number, min: 0, default: 0 },
+  descripcion:{ type: String, default: '' },
   categoria: { type: String, default: 'general' }
 }, { _id: false });
 
