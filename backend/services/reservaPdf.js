@@ -1,112 +1,48 @@
+// services/reservaPdf.js
 const PDFDocument = require('pdfkit');
 
+/** === Helpers numéricos/formatos === **/
 function money(n) {
-  return Number.isFinite(n)
-    ? n.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 })
+  const v = Number(n);
+  return Number.isFinite(v)
+    ? v.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 })
     : '—';
 }
-const sum = (arr) => arr.reduce((a, b) => a + b, 0);
+function pct(n) {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return '0%';
+  // muestra máximo 2 decimales si aplica
+  const s = Math.round(v * 100) % 100 === 0 ? v.toFixed(0) : v.toFixed(2);
+  return `${s}%`;
+}
 
-// ======= Paleta de colores inspirada en tu aplicación Nardeli =======
+/** === Paleta / fuentes === **/
 const COLORS = {
-  primary: '#7c3aed',        // Púrpura principal (similar al de tu app)
-  primaryDark: '#5b21b6',    // Púrpura más oscuro para contraste
-  primaryLight: '#a855f7',   // Púrpura claro para acentos
-  secondary: '#ec4899',      // Rosa/magenta complementario
-  background: '#f8fafc',     // Fondo principal muy suave
-  cardBg: '#ffffff',         // Fondo de tarjetas
-  text: '#1e293b',          // Texto principal (azul muy oscuro)
-  textMuted: '#64748b',     // Texto secundario
-  border: '#e2e8f0',        // Bordes suaves
-  success: '#10b981',       // Verde para elementos positivos
-  warning: '#f59e0b',       // Amarillo/naranja para alertas
-  tableHeader: '#f1f5f9',   // Fondo de encabezados de tabla
-  tableZebra: '#f8fafc',    // Filas alternadas
-  gradient: {
-    start: '#7c3aed',
-    end: '#ec4899'
-  }
+  primary: '#7c3aed',
+  primaryDark: '#5b21b6',
+  primaryLight: '#a855f7',
+  background: '#f8fafc',
+  cardBg: '#ffffff',
+  text: '#1e293b',
+  textMuted: '#64748b',
+  border: '#e2e8f0',
+  tableZebra: '#f8fafc',
 };
-
 const FONTS = {
   tiny: 7,
   small: 8,
   base: 10,
   medium: 11,
-  large: 12,
-  h3: 13,
   h2: 14,
-  h1: 18,
-  title: 22
+  title: 22,
 };
 
-// ======= Helpers de dibujo mejorados =======
-function drawGradientRect(doc, x, y, width, height, startColor, endColor, radius = 0) {
-  // Gradiente horizontal más suave
-  const steps = 50;
-  const stepWidth = width / steps;
-  
-  for (let i = 0; i < steps; i++) {
-    const ratio = i / (steps - 1);
-    const color = interpolateColor(startColor, endColor, ratio);
-    
-    if (radius > 0 && (i === 0 || i === steps - 1)) {
-      if (i === 0) {
-        doc.roundedRect(x + i * stepWidth, y, stepWidth + 1, height, radius, true, false, true, false).fill(color);
-      } else {
-        doc.roundedRect(x + i * stepWidth, y, stepWidth + 1, height, radius, false, true, false, true).fill(color);
-      }
-    } else {
-      doc.rect(x + i * stepWidth, y, stepWidth + 1, height).fill(color);
-    }
-  }
-}
-
-function interpolateColor(color1, color2, ratio) {
-  // Conversión hex a RGB
-  const hex1 = color1.replace('#', '');
-  const hex2 = color2.replace('#', '');
-  
-  const r1 = parseInt(hex1.substr(0, 2), 16);
-  const g1 = parseInt(hex1.substr(2, 2), 16);
-  const b1 = parseInt(hex1.substr(4, 2), 16);
-  
-  const r2 = parseInt(hex2.substr(0, 2), 16);
-  const g2 = parseInt(hex2.substr(2, 2), 16);
-  const b2 = parseInt(hex2.substr(4, 2), 16);
-  
-  const r = Math.round(r1 + (r2 - r1) * ratio);
-  const g = Math.round(g1 + (g2 - g1) * ratio);
-  const b = Math.round(b1 + (b2 - b1) * ratio);
-  
-  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-}
-
-function labelValue(doc, { x, y, wLabel = 90, wValue = 180, label, value, style = 'default' }) {
-  const styles = {
-    default: { labelColor: COLORS.textMuted, valueColor: COLORS.text, labelFont: 'Helvetica', valueFont: 'Helvetica-Bold' },
-    highlight: { labelColor: COLORS.primary, valueColor: COLORS.text, labelFont: 'Helvetica-Bold', valueFont: 'Helvetica-Bold' },
-    subtle: { labelColor: COLORS.textMuted, valueColor: COLORS.textMuted, labelFont: 'Helvetica', valueFont: 'Helvetica' }
-  };
-  
-  const currentStyle = styles[style] || styles.default;
-  
-  doc.font(currentStyle.labelFont).fontSize(FONTS.base).fillColor(currentStyle.labelColor);
-  doc.text(label, x, y, { width: wLabel });
-  doc.fillColor(currentStyle.valueColor).font(currentStyle.valueFont);
-  doc.text(value ?? '—', x + wLabel + 8, y, { width: wValue });
-  
-  return Math.max(
-    doc.heightOfString(label, { width: wLabel }),
-    doc.heightOfString(String(value ?? '—'), { width: wValue })
-  );
-}
+/** === Helpers de layout === **/
+const sum = (arr) => arr.reduce((a, b) => a + b, 0);
 
 function sectionTitle(doc, text, x, y, icon = null) {
   doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(FONTS.h2);
-  
   if (icon) {
-    // Dibuja un pequeño círculo con ícono (puedes mejorarlo con íconos reales)
     doc.save();
     doc.circle(x, y + 8, 8).fill(COLORS.primary);
     doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(FONTS.small);
@@ -114,102 +50,143 @@ function sectionTitle(doc, text, x, y, icon = null) {
     doc.restore();
     doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(FONTS.h2);
     doc.text(text, x + 24, y);
+    const tw = doc.widthOfString(text);
+    doc.moveTo(x + 24, y + 18).lineTo(x + 24 + tw, y + 18)
+      .strokeColor(COLORS.primary).lineWidth(2).stroke();
   } else {
     doc.text(text, x, y);
+    const tw = doc.widthOfString(text);
+    doc.moveTo(x, y + 18).lineTo(x + tw, y + 18)
+      .strokeColor(COLORS.primary).lineWidth(2).stroke();
   }
-  
-  // Línea decorativa debajo del título
-  const textWidth = doc.widthOfString(text);
-  doc.moveTo(x + (icon ? 24 : 0), y + 18).lineTo(x + (icon ? 24 : 0) + textWidth, y + 18)
-     .strokeColor(COLORS.primary).lineWidth(2).stroke();
-  
-  doc.fontSize(FONTS.base);
+  doc.fontSize(FONTS.base).fillColor(COLORS.text);
 }
 
-function drawCard(doc, { x, y, width, height, content, padding = 16 }) {
-  // Sombra sutil
+function drawCard(doc, { x, y, width, height, padding = 14 }) {
   doc.save();
-  doc.rect(x + 2, y + 2, width, height).fill('#00000008');
-  
-  // Tarjeta principal
-  doc.roundedRect(x, y, width, height, 8).fill(COLORS.cardBg);
-  doc.roundedRect(x, y, width, height, 8).stroke(COLORS.border);
+  doc.rect(x + 2, y + 2, width, height).fill('#0000000A');
+  doc.roundedRect(x, y, width, height, 8).fill(COLORS.cardBg).strokeColor(COLORS.border).stroke();
   doc.restore();
-  
-  // Contenido
-  if (content) content(doc, x + padding, y + padding, width - padding * 2, height - padding * 2);
-  
-  return { x: x + padding, y: y + padding, contentWidth: width - padding * 2, contentHeight: height - padding * 2 };
+  return {
+    x: x + padding,
+    y: y + padding,
+    w: width - padding * 2,
+    h: height - padding * 2
+  };
 }
 
-function drawHeaderRow(doc, { x, y, widths, headers }) {
-  const H = 28;
-  
-  // Fondo con gradiente sutil
-  doc.save();
-  doc.roundedRect(x, y, sum(widths), H, 8).fill(COLORS.primary);
-  
-  // Texto del encabezado
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(FONTS.medium);
+function labelValue(doc, { x, y, wLabel = 80, wValue = 180, label, value, boldValue = false }) {
+  doc.font('Helvetica').fontSize(FONTS.base).fillColor(COLORS.textMuted);
+  doc.text(label, x, y, { width: wLabel, lineBreak: false, ellipsis: true });
+  doc.fillColor(COLORS.text).font(boldValue ? 'Helvetica-Bold' : 'Helvetica');
+  doc.text(String(value ?? '—'), x + wLabel + 8, y, { width: wValue, lineBreak: false, ellipsis: true });
+  const h1 = doc.heightOfString(label, { width: wLabel });
+  const h2 = doc.heightOfString(String(value ?? '—'), { width: wValue });
+  return Math.max(h1, h2);
+}
 
+/** === Tabla === **/
+const HEADER_H = 28;
+const ROW_H = 26;
+const PADX = 10;
+
+function drawTableHeader(doc, { x, y, widths, headers }) {
+  doc.save();
+  doc.roundedRect(x, y, sum(widths), HEADER_H, 6).fill(COLORS.primary);
+  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(FONTS.medium);
   let cx = x;
   headers.forEach((h, i) => {
-    doc.text(h, cx + 12, y + 8, {
-      width: widths[i] - 24,
-      align: i >= headers.length - 2 ? 'right' : 'left'
+    doc.text(h, cx + PADX, y + 7, {
+      width: widths[i] - PADX * 2,
+      align: i >= headers.length - 2 ? 'right' : 'left',
+      lineBreak: false,
+      ellipsis: true
     });
     cx += widths[i];
   });
   doc.restore();
-  return y + H;
+  return y + HEADER_H;
 }
 
-function drawRow(doc, { x, y, widths, values, zebra = false, isTotal = false }) {
-  const PADX = 12, PADY = 8;
-  const heights = values.map((v, i) =>
-    doc.heightOfString(String(v ?? ''), { width: widths[i] - PADX * 2 })
-  );
-  const rowH = Math.max(24, ...heights) + PADY * 2;
+function ensureSpace(doc, need, onNewPage) {
+  const bottom = doc.page.height - doc.page.margins.bottom;
+  if (doc.y + need > bottom) {
+    doc.addPage();
+    if (onNewPage) onNewPage();
+  }
+}
 
-  // NO hacer salto de página automático para mantener todo en una sola página
+function drawTableRow(doc, { x, y, widths, values, zebra = false, isTotal = false }) {
+  const w = sum(widths);
   doc.save();
-  
+
+  // fondo
   if (isTotal) {
-    // Fila de total con estilo especial
-    doc.roundedRect(x, y, sum(widths), rowH, 6).fill(COLORS.primary);
+    doc.roundedRect(x, y, w, ROW_H, 6).fill(COLORS.primary);
     doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(FONTS.medium);
   } else {
-    // Fila normal
-    if (zebra) doc.rect(x, y, sum(widths), rowH).fill(COLORS.tableZebra);
+    if (zebra) {
+      doc.rect(x, y, w, ROW_H).fill(COLORS.tableZebra);
+    }
     doc.fillColor(COLORS.text).font('Helvetica').fontSize(FONTS.base);
   }
 
+  // celdas (una línea con elipsis)
   let cx = x;
-  values.forEach((val, i) => {
+  values.forEach((v, i) => {
     const align = i >= values.length - 2 ? 'right' : 'left';
-    doc.text(String(val ?? ''), cx + PADX, y + PADY, {
+    doc.text(String(v ?? ''), cx + PADX, y + 6, {
       width: widths[i] - PADX * 2,
-      align: align
+      align,
+      lineBreak: false,
+      ellipsis: true
     });
     cx += widths[i];
   });
 
-  // Línea inferior sutil
   if (!isTotal) {
-    doc.moveTo(x, y + rowH - 1).lineTo(x + sum(widths), y + rowH - 1)
-       .strokeColor(COLORS.border).lineWidth(0.5).stroke();
+    doc.moveTo(x, y + ROW_H).lineTo(x + w, y + ROW_H)
+      .strokeColor(COLORS.border).lineWidth(0.5).stroke();
   }
-  
+
   doc.restore();
-  return y + rowH;
+  return y + ROW_H;
 }
 
-// ======= Generación principal mejorada =======
+/** === Cálculos de importes === **/
+function precioFila(u, productosById) {
+  if (Number.isFinite(u?.precio)) return Number(u.precio);
+  const p = u?.itemId ? productosById.get(String(u.itemId)) : null;
+  return Number.isFinite(p?.precio) ? Number(p.precio) : null;
+}
+function calcularSubTotal(utensilios, productosById) {
+  return (Array.isArray(utensilios) ? utensilios : []).reduce((acc, u) => {
+    const p = precioFila(u, productosById);
+    const q = Number(u?.cantidad || 0);
+    return acc + (Number.isFinite(p) ? (p * q) : 0);
+  }, 0);
+}
+function calcularDescuento(subTotal, descuento) {
+  const d = descuento || {};
+  const tipo = d.tipo || 'monto';
+  const valor = Number(d.valor || 0);
+  if (!Number.isFinite(valor) || valor <= 0) return { tipo, valor, monto: 0 };
+  if (tipo === 'porcentaje') {
+    const pctVal = Math.max(0, Math.min(100, valor));
+    const monto = Math.min(subTotal, subTotal * (pctVal / 100));
+    return { tipo, valor: pctVal, monto };
+  }
+  // monto
+  const monto = Math.min(subTotal, Math.max(0, valor));
+  return { tipo, valor, monto };
+}
+
+/** === Documento principal === **/
 function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} }) {
   const MARGIN = 40;
   const PAGE_W = 595.28;
   const CONTENT_W = PAGE_W - MARGIN * 2;
-  const startX = MARGIN;
+  const X = MARGIN;
 
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `inline; filename="Reserva-${reserva?._id || 'N'}.pdf"`);
@@ -217,235 +194,227 @@ function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} 
   const doc = new PDFDocument({ size: 'A4', margin: MARGIN, bufferPages: true });
   doc.pipe(res);
 
-  // ===== Encabezado moderno con color sólido =====
-  const headerH = 65;
-  const topY = MARGIN - 25;
-  
-  // Encabezado con color sólido púrpura
+  /** Encabezado **/
+  const headerH = 64;
+  const topY = doc.y - 20;
   doc.save();
-  doc.roundedRect(MARGIN - 20, topY, CONTENT_W + 40, headerH, 12).fill(COLORS.primary);
-  
-  // Título principal
+  doc.roundedRect(X - 20, topY, CONTENT_W + 40, headerH, 12).fill(COLORS.primary);
   doc.fill('#ffffff').font('Helvetica-Bold').fontSize(FONTS.title);
-  doc.text(`${brand.title || 'Nardeli'}`, MARGIN, topY + 12);
+  doc.text(brand.title || 'Nardeli', X, topY + 10);
   doc.font('Helvetica').fontSize(FONTS.h2);
-  doc.text('Confirmación de Reserva', MARGIN, topY + 38);
+
+  const esCotizacion = (reserva?.tipoReserva || 'evento') === 'cotizacion';
+  const subtitulo = esCotizacion ? 'Cotización' : 'Confirmación de Reserva';
+  doc.text(subtitulo, X, topY + 36);
   doc.restore();
 
-  doc.y = topY + headerH + 25;
+  doc.moveDown();
+  doc.y = topY + headerH + 18;
 
-  // ===== Información principal en tarjetas (más compactas) =====
-  const cardHeight = 110;
+  /** Tarjetas: cliente / evento **/
+  const cardH = 110;
   const cardY = doc.y;
-  
-  // Tarjeta 1: Información del cliente
-  const card1 = drawCard(doc, {
-    x: startX,
-    y: cardY,
-    width: (CONTENT_W - 20) / 2,
-    height: cardHeight
-  });
-  
-  let y1 = card1.y;
-  sectionTitle(doc, 'Cliente', card1.x, y1, '👤');
-  y1 += 22;
-  y1 += labelValue(doc, { x: card1.x, y: y1, wLabel: 70, wValue: 140, label: 'Nombre:', value: reserva?.cliente, style: 'highlight' }) + 8;
-  y1 += labelValue(doc, { x: card1.x, y: y1, wLabel: 70, wValue: 140, label: 'Correo:', value: reserva?.correo }) + 8;
-  y1 += labelValue(doc, { x: card1.x, y: y1, wLabel: 70, wValue: 140, label: 'Teléfono:', value: reserva?.telefono }) + 8;
-  
-  // Tarjeta 2: Información del evento
-  const card2 = drawCard(doc, {
-    x: startX + (CONTENT_W + 20) / 2,
-    y: cardY,
-    width: (CONTENT_W - 20) / 2,
-    height: cardHeight
-  });
-  
-  let y2 = card2.y;
-  sectionTitle(doc, 'Evento', card2.x, y2, '🎉');
-  y2 += 22;
-  
-  const fechaTxt = reserva?.fecha ? new Date(reserva.fecha).toLocaleDateString('es-MX', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  }) : '—';
-  
-  y2 += labelValue(doc, { x: card2.x, y: y2, wLabel: 70, wValue: 140, label: 'Tipo:', value: reserva?.tipoEvento, style: 'highlight' }) + 8;
-  y2 += labelValue(doc, { x: card2.x, y: y2, wLabel: 70, wValue: 140, label: 'Fecha:', value: fechaTxt }) + 8;
-  y2 += labelValue(doc, { x: card2.x, y: y2, wLabel: 70, wValue: 140, label: 'Horario:', value: `${reserva?.horaInicio || '—'} - ${reserva?.horaFin || '—'}` }) + 8;
 
-  doc.y = cardY + cardHeight + 20;
+  const c1 = drawCard(doc, { x: X, y: cardY, width: (CONTENT_W - 20) / 2, height: cardH });
+  sectionTitle(doc, 'Cliente', c1.x, c1.y, '👤');
+  let y1 = c1.y + 22;
+  y1 += labelValue(doc, { x: c1.x, y: y1, label: 'Nombre:', value: reserva?.cliente, wLabel: 65, wValue: c1.w - 65 - 8, boldValue: true }) + 6;
+  y1 += labelValue(doc, { x: c1.x, y: y1, label: 'Correo:', value: reserva?.correo, wLabel: 65, wValue: c1.w - 65 - 8 }) + 6;
+  y1 += labelValue(doc, { x: c1.x, y: y1, label: 'Teléfono:', value: reserva?.telefono, wLabel: 65, wValue: c1.w - 65 - 8 }) + 6;
 
-  // ===== ID de reserva destacado (más compacto) =====
-  const idCard = drawCard(doc, {
-    x: startX,
-    y: doc.y,
-    width: CONTENT_W,
-    height: 40
-  });
-  
-  doc.save();
-  doc.fillColor(COLORS.primary).font('Helvetica-Bold').fontSize(FONTS.h3);
-  doc.text('ID de Reserva:', idCard.x, idCard.y + 6);
-  doc.fillColor(COLORS.text).fontSize(FONTS.h2);
-  doc.text(`#${String(reserva?._id || 'N/A').slice(-8).toUpperCase()}`, idCard.x + 120, idCard.y + 6);
-  doc.restore();
+  const c2 = drawCard(doc, { x: X + (CONTENT_W + 20) / 2, y: cardY, width: (CONTENT_W - 20) / 2, height: cardH });
+  sectionTitle(doc, 'Evento', c2.x, c2.y, '🎉');
+  let y2 = c2.y + 22;
+  const fechaTxt = reserva?.fecha
+    ? new Date(reserva.fecha).toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    : '—';
+  y2 += labelValue(doc, { x: c2.x, y: y2, label: 'Tipo:', value: reserva?.tipoEvento, wLabel: 65, wValue: c2.w - 65 - 8, boldValue: true }) + 6;
+  y2 += labelValue(doc, { x: c2.x, y: y2, label: 'Fecha:', value: fechaTxt, wLabel: 65, wValue: c2.w - 65 - 8 }) + 6;
+  y2 += labelValue(doc, { x: c2.x, y: y2, label: 'Horario:', value: `${reserva?.horaInicio || '—'} – ${reserva?.horaFin || '—'}`, wLabel: 65, wValue: c2.w - 65 - 8 }) + 6;
 
-  doc.y = idCard.y + 50;
+  doc.y = cardY + cardH + 12;
 
-  // ===== Notas mejoradas (más compactas) =====
-  if (reserva?.descripcion) {
-    const notesCard = drawCard(doc, {
-      x: startX,
-      y: doc.y,
-      width: CONTENT_W,
-      height: Math.max(60, doc.heightOfString(reserva.descripcion, { width: CONTENT_W - 32 }) + 35)
-    });
-    
-    sectionTitle(doc, 'Notas Especiales', notesCard.x, notesCard.y, '📝');
+  /** ID de reserva **/
+  const idCard = drawCard(doc, { x: X, y: doc.y, width: CONTENT_W, height: 40 });
+  doc.fillColor(COLORS.primary).font('Helvetica-Bold').fontSize(FONTS.medium);
+  doc.text('ID de Reserva:', idCard.x, idCard.y + 8, { lineBreak: false, ellipsis: true });
+  doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(FONTS.h2);
+  doc.text(`#${String(reserva?._id || 'N/A').slice(-8).toUpperCase()}`, idCard.x + 110, idCard.y + 6, { lineBreak: false, ellipsis: true });
+  doc.y = idCard.y + 48;
+
+  /** Notas (si hay) **/
+  if (reserva?.descripcion && String(reserva.descripcion).trim()) {
+    const notes = String(reserva.descripcion).trim();
+    const h = Math.max(60, doc.heightOfString(notes, { width: CONTENT_W - 28 }) + 28);
+    const nCard = drawCard(doc, { x: X, y: doc.y, width: CONTENT_W, height: h });
+    sectionTitle(doc, 'Notas', nCard.x, nCard.y, '📝');
     doc.font('Helvetica').fontSize(FONTS.base).fillColor(COLORS.text);
-    doc.text(reserva.descripcion, notesCard.x, notesCard.y + 20, { width: notesCard.contentWidth, lineGap: 1 });
-    
-    doc.y = notesCard.y + Math.max(60, doc.heightOfString(reserva.descripcion, { width: CONTENT_W - 32 }) + 35) + 15;
+    doc.text(notes, nCard.x, nCard.y + 20, { width: nCard.w, lineGap: 2 });
+    doc.y = nCard.y + h - 12;
   }
 
-  // ===== Tabla de utensilios mejorada =====
-  sectionTitle(doc, 'Utensilios Reservados', startX, doc.y, '🍽️');
-  doc.y += 30;
+  /** Tabla de utensilios **/
+  doc.moveDown();
+  sectionTitle(doc, 'Utensilios / Servicios', X, doc.y, '🍽️');
+  doc.y += 14;
 
- const lista = Array.isArray(reserva?.utensilios) ? reserva.utensilios : [];
+  const lista = Array.isArray(reserva?.utensilios) ? reserva.utensilios : [];
 
-// helpers locales para esta sección
-const getProd = (u) => (u?.itemId ? productosById.get(String(u.itemId)) : null);
-const precioFila = (u) => {
-  // 1) prioridad: snapshot guardado en la reserva
-  if (Number.isFinite(u?.precio)) return u.precio;
-  // 2) fallback: precio del producto (si existe)
-  const p = getProd(u);
-  return Number.isFinite(p?.precio) ? p.precio : null;
-};
+  // ¿Hay precios para mostrar totales?
+  const showPrices = lista.some((u) => Number.isFinite(precioFila(u, productosById)));
 
-const showPrices = lista.some((u) => Number.isFinite(precioFila(u)));
+  // Anchos de columnas
+  // Ajustados para evitar saltos; elipsis si no caben
+  const widths = showPrices
+    ? [200, 90, 60, 55, 85, 85]  // Nombre, Categoría, Unidad, Cant., P.Unit., Importe
+    : [280, 120, 80, 85];
 
-
-  const widths = showPrices ? [150, 90, 60, 60, 75, 85] : [260, 110, 70, 85];
   const headers = showPrices
-    ? ['Nombre', 'Categoría', 'Unidad', 'Cantidad', 'P. Unit.', 'Subtotal']
-    : ['Nombre', 'Categoría', 'Unidad', 'Cantidad'];
+    ? ['Nombre', 'Categoría', 'Unidad', 'Cant.', 'P. Unit.', 'Importe']
+    : ['Nombre', 'Categoría', 'Unidad', 'Cant.'];
 
-  let y = drawHeaderRow(doc, { x: startX, y: doc.y, widths, headers });
+  // Si el ancho total no coincide con CONTENT_W, hace un pequeño ajuste en la 1a col
+  const gap = CONTENT_W - sum(widths);
+  if (Math.abs(gap) > 1) widths[0] += gap;
 
-  let grandTotal = 0;
-  lista.forEach((u, idx) => {
-    const prod = getProd(u);
-const pu = precioFila(u);                 // 👈 ahora prioriza u.precio
-const cant = Number(u.cantidad || 0);
-const sub = Number.isFinite(pu) ? pu * cant : null;
-if (Number.isFinite(sub)) grandTotal += sub;
+  const tableStartY = drawTableHeader(doc, { x: X, y: doc.y, widths, headers });
+  let y = tableStartY;
 
-const nombre = u.nombre || prod?.nombre || '—';
-const categoria = u.categoria || 'General';
-const unidad = u.unidad || 'pza';
+  function printHeaderOnNewPage() {
+    doc.y = doc.page.margins.top;
+    sectionTitle(doc, 'Utensilios / Servicios', X, doc.y, '🍽️');
+    doc.y += 14;
+    y = drawTableHeader(doc, { x: X, y: doc.y, widths, headers });
+  }
 
-const row = showPrices
-  ? [
-      nombre,
-      categoria,
-      unidad,
-      String(cant),
-      Number.isFinite(pu) ? money(pu) : '—',     // 👈 muestra $0.00 si pu es 0
-      Number.isFinite(sub) ? money(sub) : '—'
-    ]
-  : [
-      nombre,
-      categoria,
-      unidad,
-      String(cant)
-    ];
+  let subTotal = 0;
+  lista.forEach((u, i) => {
+    const prod = u?.itemId ? productosById.get(String(u.itemId)) : null;
+    const nombre = u?.nombre || prod?.nombre || '—';
+    const categoria = u?.categoria || 'General';
+    const unidad = u?.unidad || 'pza';
+    const cant = Number(u?.cantidad || 0);
+    const pu = precioFila(u, productosById);
+    const importe = Number.isFinite(pu) ? pu * cant : null;
+    if (Number.isFinite(importe)) subTotal += importe;
 
-    y = drawRow(doc, { x: startX, y, widths, values: row, zebra: idx % 2 === 1 });
+    const rowValues = showPrices
+      ? [nombre, categoria, unidad, String(cant), Number.isFinite(pu) ? money(pu) : '—', Number.isFinite(importe) ? money(importe) : '—']
+      : [nombre, categoria, unidad, String(cant)];
+
+    ensureSpace(doc, ROW_H + 20, printHeaderOnNewPage);
+    y = drawTableRow(doc, { x: X, y, widths, values: rowValues, zebra: i % 2 === 1 });
+    doc.y = y; // sincroniza doc.y con y
   });
 
-  // ===== Total destacado mejorado =====
+  // Totales (si hay precios)
+  let descuentoInfo = { tipo: 'monto', valor: 0, monto: 0 };
+  let total = subTotal;
+
   if (showPrices) {
-    y += 10;
-    const totalRow = ['', '', '', '', 'TOTAL ESTIMADO', money(grandTotal)];
-    y = drawRow(doc, { x: startX, y, widths, values: totalRow, isTotal: true });
-    
-    // Nota de disclaimer
+    const d = reserva?.precios?.descuento || reserva?.descuento; // compat
+    descuentoInfo = calcularDescuento(subTotal, d);
+    total = Math.max(0, subTotal - descuentoInfo.monto);
+
+    // filas de totales al pie de la tabla
+    const totalsWidths = widths.slice();
+    const labelColSpan = totalsWidths.length - 2; // deja 2 cols para "label/importe"
+    const labelWidth = sum(totalsWidths.slice(0, labelColSpan));
+    const lastTwo = totalsWidths.slice(labelColSpan);
+    const merged = [labelWidth, ...lastTwo]; // [labelGrande, penúltima, última]
+
+    const subtotalRow = ['', 'SUBTOTAL', money(subTotal)];
+    ensureSpace(doc, ROW_H + 6, printHeaderOnNewPage);
+    y = drawTableRow(doc, { x: X, y: y + 6, widths: merged, values: subtotalRow });
+
+    const descLabel = descuentoInfo.tipo === 'porcentaje'
+      ? `DESCUENTO (${pct(descuentoInfo.valor)})`
+      : 'DESCUENTO';
+    const descRow = ['', descLabel, `-${money(descuentoInfo.monto)}`];
+    ensureSpace(doc, ROW_H + 4, printHeaderOnNewPage);
+    y = drawTableRow(doc, { x: X, y: y, widths: merged, values: descRow });
+
+    const totalRow = ['', 'TOTAL', money(total)];
+    ensureSpace(doc, ROW_H + 10, printHeaderOnNewPage);
+    y = drawTableRow(doc, { x: X, y: y, widths: merged, values: totalRow, isTotal: true });
+
+    doc.y = y + 10;
+
+    // Tarjeta de resumen a la derecha (limpio y visible)
+    const summaryW = 260;
+    const summaryH = 90;
+    const sx = X + CONTENT_W - summaryW;
+    ensureSpace(doc, summaryH + 16, () => {});
+    const s = drawCard(doc, { x: sx, y: doc.y, width: summaryW, height: summaryH });
+    doc.font('Helvetica-Bold').fontSize(FONTS.medium).fillColor(COLORS.primary);
+    doc.text('Resumen de totales', s.x, s.y, { lineBreak: false, ellipsis: true });
+    doc.font('Helvetica').fontSize(FONTS.base).fillColor(COLORS.text);
+
+    const lineY = s.y + 24;
+    doc.text('Subtotal', s.x, lineY, { width: s.w / 2, lineBreak: false, ellipsis: true });
+    doc.text(money(subTotal), s.x + s.w / 2, lineY, { width: s.w / 2, align: 'right', lineBreak: false, ellipsis: true });
+
+    const lineY2 = lineY + 16;
+    const dText = descuentoInfo.tipo === 'porcentaje'
+      ? `Descuento (${pct(descuentoInfo.valor)})`
+      : 'Descuento';
+    doc.text(dText, s.x, lineY2, { width: s.w / 2, lineBreak: false, ellipsis: true });
+    doc.text(`-${money(descuentoInfo.monto)}`, s.x + s.w / 2, lineY2, { width: s.w / 2, align: 'right', lineBreak: false, ellipsis: true });
+
+    const lineY3 = lineY2 + 16;
+    doc.font('Helvetica-Bold');
+    doc.text('Total', s.x, lineY3, { width: s.w / 2, lineBreak: false, ellipsis: true });
+    doc.text(money(total), s.x + s.w / 2, lineY3, { width: s.w / 2, align: 'right', lineBreak: false, ellipsis: true });
+
+    doc.y = s.y + summaryH + 8;
+
+    // Nota
     doc.font('Helvetica').fontSize(FONTS.small).fillColor(COLORS.textMuted);
-    doc.text('* Precios estimados sujetos a confirmación. Pueden aplicar cargos adicionales por servicios extras.', 
-             startX, y + 10, { width: CONTENT_W, align: 'right' });
+    const note = esCotizacion
+      ? '* Esta es una cotización. Precios sujetos a cambio hasta su confirmación.'
+      : '* Precios estimados sujetos a confirmación. Pueden aplicar cargos adicionales por servicios extras.';
+    doc.text(note, X, doc.y, { width: CONTENT_W, align: 'right' });
+    doc.y += 10;
   }
 
-  // ===== Información adicional (más compacta) =====
-doc.y += 25;
+  /** Información y condiciones **/
+  doc.moveDown();
+  const bulletsBase = [
+    '• Confirme su evento con al menos 48 horas de anticipación.',
+    '• Utensilios y equipo deben devolverse en las mismas condiciones.',
+    '• Cambios o cancelaciones: 24 horas de anticipación.',
+  ];
 
-// Construye bullets con la descripción de cada utensilio
-const descBullets = [];
-(lista || []).forEach(u => {
-  const p = u?.itemId ? productosById.get(String(u.itemId)) : null;
-  const desc =
-    (u?.descripcion && String(u.descripcion).trim()) ||
-    (p?.descripcion && String(p.descripcion).trim());
+  // agrega descripciones de línea (sin romper layout de la tabla)
+  const descBullets = [];
+  (lista || []).forEach(u => {
+    const p = u?.itemId ? productosById.get(String(u.itemId)) : null;
+    const d = (u?.descripcion && String(u.descripcion).trim()) || (p?.descripcion && String(p.descripcion).trim());
+    if (d) {
+      const name = u?.nombre || p?.nombre || 'Ítem';
+      descBullets.push(`• ${name}: ${d}`);
+    }
+  });
 
-  if (desc) {
-    const nombre = u?.nombre || p?.nombre || 'Ítem';
-    descBullets.push(`• ${nombre}: ${desc}`);
-  }
-});
+  const infoText = [...bulletsBase, ...descBullets].join('\n');
+  const infoH = Math.max(70, doc.heightOfString(infoText, { width: CONTENT_W - 24 }) + 26);
+  ensureSpace(doc, infoH + 20, () => {});
+  const infoCard = drawCard(doc, { x: X, y: doc.y, width: CONTENT_W, height: infoH });
+  doc.fillColor(COLORS.primaryLight).font('Helvetica-Bold').fontSize(FONTS.medium);
+  doc.text('Información Importante', infoCard.x, infoCard.y, { lineBreak: false, ellipsis: true });
+  doc.font('Helvetica').fontSize(FONTS.small).fillColor(COLORS.text);
+  doc.text(infoText, infoCard.x, infoCard.y + 18, { width: infoCard.w, lineGap: 2 });
 
-const baseBullets = [
-  '• Favor de confirmar su asistencia 48 hrs antes del evento',
-  '• Los utensilios deben ser devueltos en las mismas condiciones',
-  '• Para cambios o cancelaciones, contactar con 24 hrs de anticipación'
-];
-
-// Texto final (base + descripciones)
-const infoText = [...baseBullets, ...descBullets].join('\n');
-
-// Altura dinámica de la tarjeta según contenido
-const infoTextH = doc.heightOfString(infoText, { width: CONTENT_W - 32, lineGap: 2 });
-const infoCardH = Math.max(75, infoTextH + 30); // + título/espacios
-
-const infoCard = drawCard(doc, {
-  x: startX,
-  y: doc.y,
-  width: CONTENT_W,
-  height: infoCardH
-});
-
-doc.save();
-doc.fillColor(COLORS.primaryLight).font('Helvetica-Bold').fontSize(FONTS.h3);
-doc.text('Información Importante', infoCard.x, infoCard.y);
-
-doc.font('Helvetica').fontSize(FONTS.small).fillColor(COLORS.text);
-doc.text(infoText, infoCard.x, infoCard.y + 20, {
-  width: CONTENT_W - 32,
-  lineGap: 2
-});
-doc.restore();
-
-  // ===== Pie de página mejorado (solo una página) =====
-  const footerY = doc.page.height - doc.page.margins.bottom + 15;
-  
-  // Línea decorativa
-  doc.moveTo(startX, footerY - 5).lineTo(startX + CONTENT_W, footerY - 5)
-     .strokeColor(COLORS.primary).lineWidth(2).stroke();
-  
+  /** Pie **/
+  const footerY = doc.page.height - doc.page.margins.bottom + 12;
+  doc.moveTo(X, footerY - 6).lineTo(X + CONTENT_W, footerY - 6)
+    .strokeColor(COLORS.primary).lineWidth(2).stroke();
   doc.font('Helvetica-Bold').fontSize(FONTS.small).fillColor(COLORS.primary);
-  const contacto = brand.footer || 'Nardeli - Salón de Eventos';
-  doc.text(contacto, startX, footerY + 5);
-  
+  doc.text(brand.footer || 'Nardeli - Salón de Eventos', X, footerY + 2, { lineBreak: false, ellipsis: true });
   doc.font('Helvetica').fontSize(FONTS.tiny).fillColor(COLORS.textMuted);
-  doc.text('contacto@nardeli.mx • +52 000 000 0000', startX, footerY + 18);
+  doc.text('contacto@nardeli.mx • +52 000 000 0000', X, footerY + 14, { lineBreak: false, ellipsis: true });
 
   doc.end();
 }
 
 module.exports = { streamReservaPDF };
-
-
-
