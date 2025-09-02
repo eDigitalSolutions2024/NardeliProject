@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
+import dayjs from 'dayjs';
 import './Dashboard.css';
 import Calendario from './Calendario';
 import FormProducto from './FormProducto';
 import TablaProductos from './TablaProductos';
-import API_BASE_URL from '../api'; // ⬅️ ajusta la ruta si tu archivo api está en otro lugar
+import API_BASE_URL from '../api';
 import Clientes from './Clientes';
 import Reserva from './ReservarEvento';
 
@@ -14,17 +15,19 @@ const Dashboard = ({ onLogout }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-
-  // 🔹 NUEVO: estado para KPIs / actividad
+  // KPIs / actividad
   const [loadingDash, setLoadingDash] = useState(false);
   const [kpis, setKpis] = useState({
     eventosMes: 0,
-    //clientesActivos: 0, // si no lo calculas aún, lo dejamos en 0
-    //ingresosMes: 0,
     proximosEventos: 0,
   });
-  const [actividad, setActividad] = useState([]);
+  const [actividad, setActividad] = useState([]); // cotizaciones pendientes
 
+  // === Nuevo: modal de edición de cotización ===
+  const [showEditCot, setShowEditCot] = useState(false);
+  const [cotEdit, setCotEdit] = useState(null);
+
+  // Helpers
   const obtenerIcono = (tipo = '') => {
     switch (String(tipo).toLowerCase()) {
       case 'boda': return '💒';
@@ -36,6 +39,20 @@ const Dashboard = ({ onLogout }) => {
       case 'musica': return '🎶';
       default: return '🎉';
     }
+  };
+
+  const toHHmm = (h) => {
+    if (!h) return '';
+    const s = String(h).trim().toLowerCase();
+    const m = s.match(/^(\d{1,2}):(\d{2})/);
+    if (!m) return String(h);
+    let hh = parseInt(m[1], 10);
+    const mm = m[2];
+    const isPM = /p\s*\.?\s*m\.?/i.test(s) || /\bpm\b/i.test(s);
+    const isAM = /a\s*\.?\s*m\.?/i.test(s) || /\bam\b/i.test(s);
+    if (isPM && hh < 12) hh += 12;
+    if (isAM && hh === 12) hh = 0;
+    return `${String(hh).padStart(2, '0')}:${mm}`;
   };
 
   useEffect(() => {
@@ -50,71 +67,86 @@ const Dashboard = ({ onLogout }) => {
     }
   }, []);
 
-  // 🔹 NUEVO: carga datos del dashboard cuando entras a la sección 'dashboard'
- useEffect(() => {
-  if (activeSection !== 'dashboard') return;
+  // ---- Carga de datos del dashboard (eventos + cotizaciones) ----
+  const cargarDashboardData = async () => {
+    const hoy = new Date();
+    const iniMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59, 999);
 
-  const hoy = new Date();
-  const iniMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-  const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59, 999);
+    const getFecha = (r) => {
+      const ymd = r.fechaLocal || String(r.fecha).slice(0, 10); // "YYYY-MM-DD"
+      return new Date(`${ymd}T12:00:00`);
+    };
+    const getCliente = (r) => r.cliente || r.clienteNombre || 'Sin nombre';
 
-  const getFecha = (r) => {
-    const ymd = r.fechaLocal || String(r.fecha).slice(0, 10); // "YYYY-MM-DD"
-    return new Date(`${ymd}T12:00:00`); // evita desfases por zona
-  };
-  const getCliente = (r) => r.cliente || r.clienteNombre || 'Sin nombre';
-  const getCorreo  = (r) => (r.correo || '').toLowerCase().trim();
+    const soloEventos = (arr) =>
+      (Array.isArray(arr) ? arr : []).filter(
+        r => (r.tipoReserva ?? (r.esCotizacion ? 'cotizacion' : 'evento')) === 'evento'
+      );
+    const soloCotizaciones = (arr) =>
+      (Array.isArray(arr) ? arr : []).filter(
+        r => (r.tipoReserva ?? (r.esCotizacion ? 'cotizacion' : 'evento')) === 'cotizacion'
+      );
 
-  async function cargar() {
     setLoadingDash(true);
     try {
-      // MISMA RUTA QUE USA TU Calendario.jsx
-      const data = await fetch(`${API_BASE_URL}/reservas`).then(r => r.json());
-      const arr = Array.isArray(data) ? data : [];
+      const [rawEventos, rawCots] = await Promise.all([
+        fetch(`${API_BASE_URL}/reservas?tipo=evento`).then(r => r.json()).catch(() => []),
+        fetch(`${API_BASE_URL}/reservas?tipo=cotizacion`).then(r => r.json()).catch(() => []),
+      ]);
 
-      const enMes = arr.filter(r => {
+      const eventos = soloEventos(rawEventos);
+      const cotizaciones = soloCotizaciones(rawCots);
+
+      // KPIs (solo eventos)
+      const enMes = eventos.filter(r => {
         const f = getFecha(r);
         return f >= iniMes && f <= finMes;
       });
-
-      const futuros = arr
+      const futurosEventos = eventos
         .filter(r => getFecha(r) >= new Date())
         .sort((a,b) => getFecha(a) - getFecha(b));
 
-      // hoy no tienes montos/pagos; si luego agregas 'total', cámbialo aquí
-      const ingresosMes = 0;
-
       setKpis({
         eventosMes: enMes.length,
-        clientesActivos: new Set(enMes.map(getCorreo).filter(Boolean)).size || 0,
-        ingresosMes,
-        proximosEventos: futuros.length,
+        proximosEventos: futurosEventos.length,
       });
 
-        // helper opcional
-        const buildPdfUrl = (id) => `${API_BASE_URL}/reservas/${id}/pdf`;
+      // Cotizaciones pendientes (no aceptadas)
+      const pendientes = cotizaciones
+        .filter(r => !(r.cotizacion && r.cotizacion.aceptada))
+        .sort((a,b) => getFecha(a) - getFecha(b));
+
+      const buildPdfUrl = (id) => `${API_BASE_URL}/reservas/${id}/pdf`;
 
       setActividad(
-        futuros.slice(0,5).map(r => ({
+        pendientes.slice(0, 5).map(r => ({
           id: r._id,
-          titulo: `${r.tipoEvento || 'Evento'} - ${getCliente(r)}`,
-          subtitulo: `Programado para el ${getFecha(r).toLocaleDateString()}`,
-          icon: obtenerIcono(r.tipoEvento),
+          titulo: `Cotización - ${getCliente(r)}`,
+          subtitulo: `Para el ${getFecha(r).toLocaleDateString()}`,
+          icon: '📝',
           pdfUrl: buildPdfUrl(r._id),
+          // === datos para editar ===
+          cliente: getCliente(r),
+          tipoEvento: r.tipoEvento || '',
+          ymd: r.fechaLocal || String(r.fecha).slice(0, 10),
+          horaInicio: r.horaInicio || '',
+          horaFin: r.horaFin || r.horaInicio || '',
+          cantidadPersonas: r.cantidadPersonas || 0,
+          descripcion: r.descripcion || '',
         }))
       );
-
-
     } catch (e) {
       console.error('Error cargando reservas para dashboard:', e);
     } finally {
       setLoadingDash(false);
     }
-  }
+  };
 
-  cargar();
-}, [activeSection]);
-
+  useEffect(() => {
+    if (activeSection === 'dashboard') cargarDashboardData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSection]);
 
   const isAdmin = user?.role === 'admin';
 
@@ -129,18 +161,100 @@ const Dashboard = ({ onLogout }) => {
 
   const visibleMenuItems = isAdmin ? menuItems : menuItems;
 
-  /*const formatoMoneda = (n = 0) => {
-    try { return `$${Number(n || 0).toLocaleString()}`; } catch { return `$${n}`; }
-  };*/
+  // ===== Acciones de cotizaciones =====
+  const abrirModalEditarCot = (a) => {
+    setCotEdit({
+      id: a.id,
+      cliente: a.cliente,
+      tipo: a.tipoEvento,
+      fecha: new Date(`${a.ymd}T12:00:00`),
+      horaInicio: toHHmm(a.horaInicio),
+      horaFin: toHHmm(a.horaFin || a.horaInicio),
+      invitados: a.cantidadPersonas,
+      descripcion: a.descripcion || '',
+    });
+    setShowEditCot(true);
+  };
 
-  /*function iconoPorTipo(tipo) {
-    const t = (tipo || '').toLowerCase();
-    if (t.includes('cumple')) return '🎂';
-    if (t.includes('boda')) return '💒';
-    if (t.includes('grad')) return '🎓';
-    if (t.includes('baut')) return '🕊️';
-    return '🎉';
-  }*/
+  const cerrarModalCot = () => {
+    setCotEdit(null);
+    setShowEditCot(false);
+  };
+
+  const onChangeCot = (e) => {
+    const { name, value } = e.target;
+    setCotEdit(prev => ({ ...prev, [name]: value }));
+  };
+
+  const actualizarCotizacion = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        cliente: cotEdit.cliente,
+        tipoEvento: cotEdit.tipo,
+        fecha: dayjs(cotEdit.fecha).format('YYYY-MM-DD'),
+        horaInicio: toHHmm(cotEdit.horaInicio),
+        horaFin: toHHmm(cotEdit.horaFin),
+        cantidadPersonas: Number(cotEdit.invitados || 0),
+        descripcion: cotEdit.descripcion || '',
+        // mantenerla como cotización (no convertir aquí)
+        tipoReserva: 'cotizacion',
+      };
+
+      const r = await fetch(`${API_BASE_URL}/reservas/${cotEdit.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!r.ok) {
+        const err = await r.json().catch(()=>({}));
+        alert(err?.motivo || err?.error || 'No se pudo actualizar la cotización');
+        return;
+      }
+
+      cerrarModalCot();
+      await cargarDashboardData();
+    } catch (err) {
+      console.error('actualizarCotizacion error:', err);
+      alert('Error de conexión');
+    }
+  };
+
+ const convertirACEvento = async (id) => {
+  try {
+    const cleanId = String(id).replace(/['"]/g, '').trim();
+    const url = `${API_BASE_URL}/reservas/${encodeURIComponent(cleanId)}/aceptar-cotizacion`;
+
+    const resp = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})   // <-- importante
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      let errObj;
+      try { errObj = JSON.parse(text); } catch { errObj = { msg: text }; }
+      alert(errObj?.msg || errObj?.motivo || errObj?.error || `Error ${resp.status}`);
+      return;
+    }
+
+    await cargarDashboardData();
+    alert('✅ Cotización convertida a Evento');
+  } catch (e) {
+    console.error('convertirACEvento error:', e);
+    alert('Error de conexión');
+  }
+};
+
+
+
+  const abrirPanelArticulosAdmin = () => {
+    if (!cotEdit?.id) return;
+    const qs = new URLSearchParams({ reservaId: cotEdit.id, mode: 'admin' }).toString();
+    window.open(`/cliente/dashboard?${qs}`, '_blank', 'noopener,noreferrer');
+  };
 
   const renderContent = () => {
     switch (activeSection) {
@@ -149,11 +263,10 @@ const Dashboard = ({ onLogout }) => {
           <div className="dashboard-content">
             <div className="dashboard-header">
               <h1>Bienvenido, Admin{user?.fullname || user?.email}</h1>
-              
               <p>Panel de control - Salón de Eventos Nardeli</p>
             </div>
 
-            {/* KPIs dinámicos */}
+            {/* KPIs */}
             <div className="stats-grid">
               <div className="stat-card">
                 <div className="stat-icon">🎉</div>
@@ -162,22 +275,6 @@ const Dashboard = ({ onLogout }) => {
                   <p className="stat-number">{kpis.eventosMes}</p>
                 </div>
               </div>
-
-              {/*<div className="stat-card">
-                <div className="stat-icon">👥</div>
-                <div className="stat-info">
-                  <h3>Clientes Activos</h3>
-                  <p className="stat-number">{kpis.clientesActivos}</p>
-                </div>
-              </div>*/}
-
-              {/*<div className="stat-card">
-                <div className="stat-icon">💰</div>
-                <div className="stat-info">
-                  <h3>Ingresos del Mes</h3>
-                  <p className="stat-number">{formatoMoneda(kpis.ingresosMes)}</p>
-                </div>
-              </div>*/}
 
               <div className="stat-card">
                 <div className="stat-icon">📅</div>
@@ -188,7 +285,7 @@ const Dashboard = ({ onLogout }) => {
               </div>
             </div>
 
-            {/* Actividad reciente dinámica */}
+            {/* Cotizaciones pendientes */}
             <div className="recent-activity">
               <div className="d-flex align-items-center justify-content-between">
                 <h2>Cotizacion pendiente</h2>
@@ -200,8 +297,8 @@ const Dashboard = ({ onLogout }) => {
                   <div className="activity-item">
                     <span className="activity-icon">ℹ️</span>
                     <div className="activity-details">
-                      <p><strong>Sin actividad reciente</strong></p>
-                      <small>Cuando registres reservas aparecerán aquí.</small>
+                      <p><strong>Sin cotizaciones pendientes</strong></p>
+                      <small>Cuando registres cotizaciones aparecerán aquí.</small>
                     </div>
                   </div>
                 )}
@@ -212,18 +309,108 @@ const Dashboard = ({ onLogout }) => {
                     <div className="activity-details">
                       <p><strong>{a.titulo}</strong></p>
                       <small>{a.subtitulo}</small>
-                      {a.pdfUrl && (
-                        <div style={{ marginTop: 6 }}>
-                          <a className="btn btn-sm btn-outline-primary"
-                            href={a.pdfUrl}
-                            target="_blank" rel="noreferrer">Ver PDF</a>
-                        </div>  
-                      )}
+                      <div className="activity-actions" style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <button className="btn btn-sm btn-outline-secondary" onClick={() => abrirModalEditarCot(a)}>
+                          ✏️ Editar
+                        </button>
+                        <button className="btn btn-sm btn-outline-success" onClick={() => convertirACEvento(a.id)}>
+                          ✅ Convertir a Evento
+                        </button>
+                        {a.pdfUrl && (
+                          <a className="btn btn-sm btn-outline-primary" href={a.pdfUrl} target="_blank" rel="noreferrer">
+                            Ver PDF
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
+
+            {/* Modal de edición de cotización */}
+            {showEditCot && cotEdit && (
+              <div className="modal-overlay">
+                <div className="modal-content">
+                  <h2>Editar Cotización</h2>
+                  <form onSubmit={actualizarCotizacion}>
+                    <input
+                      type="text"
+                      name="cliente"
+                      placeholder="Nombre del cliente"
+                      value={cotEdit.cliente}
+                      onChange={onChangeCot}
+                      required
+                    />
+                    <input
+                      type="text"
+                      name="tipo"
+                      placeholder="Tipo de evento"
+                      value={cotEdit.tipo}
+                      onChange={onChangeCot}
+                      required
+                    />
+                    <input
+                      type="date"
+                      name="fecha"
+                      value={dayjs(cotEdit.fecha).format('YYYY-MM-DD')}
+                      onChange={(e) => setCotEdit(prev => ({ ...prev, fecha: new Date(`${e.target.value}T12:00:00`) }))}
+                      required
+                    />
+
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', fontSize: 12, marginBottom: 4 }}>Hora inicio</label>
+                        <input
+                          type="time"
+                          name="horaInicio"
+                          value={toHHmm(cotEdit.horaInicio)}
+                          onChange={onChangeCot}
+                          required
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', fontSize: 12, marginBottom: 4 }}>Hora fin</label>
+                        <input
+                          type="time"
+                          name="horaFin"
+                          value={toHHmm(cotEdit.horaFin)}
+                          onChange={onChangeCot}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <input
+                      type="number"
+                      name="invitados"
+                      placeholder="Cantidad de personas"
+                      value={cotEdit.invitados}
+                      onChange={onChangeCot}
+                      required
+                    />
+
+                    <textarea
+                      name="descripcion"
+                      placeholder="Observaciones"
+                      value={cotEdit.descripcion}
+                      onChange={onChangeCot}
+                    />
+
+                    <div className="modal-actions" style={{ display: 'flex', gap: 8, justifyContent: 'space-between', marginTop: 8 }}>
+                      <button type="button" className="btn btn-outline-secondary" onClick={abrirPanelArticulosAdmin}>
+                        Abrir panel de artículos (admin)
+                      </button>
+
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button type="submit" className="btn btn-primary">Guardar</button>
+                        <button type="button" className="btn" onClick={cerrarModalCot}>Cancelar</button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </div>
         );
 
@@ -247,15 +434,12 @@ const Dashboard = ({ onLogout }) => {
             <p>Visualiza reportes detallados del negocio.</p>
           </div>
         );
-        case 'reservar':
+      case 'reservar':
         return (
           <div className='dashboard-content'>
-            <h1>Reservar Evento</h1>
             <Reserva />
-           
           </div>
         );
-        
       case 'inventario':
         return (
           <div className='dashboard-content'>
@@ -318,19 +502,7 @@ const Dashboard = ({ onLogout }) => {
               {menuItems.find(item => item.id === activeSection)?.label || 'Dashboard'}
             </h1>
           </div>
-          {/*<div className="header-right">
-            <div className="user-info" onClick={() => setShowDropdown(!showDropdown)} style={{position: 'relative', cursor: 'pointer'}}>
-              <span className="user-avatar">👤</span>
-              <span className="user-name">{user?.fullname || user?.email}</span>
-
-              {showDropdown && (
-                <div className='dropdown-menu'>
-                  <button className='dropdown-item'>Ver perfil</button>
-                  <button className='dropdown-item' onClick={onLogout}>Cerrar sesion</button>
-                </div>
-              )}  
-            </div>
-          </div>     lo comentamos para entregar avance de administrador */}
+          {/* user info dropdown comentado */}
         </header>
 
         <main className="content-area">

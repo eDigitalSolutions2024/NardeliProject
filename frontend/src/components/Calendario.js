@@ -49,31 +49,44 @@ const Calendario = () => {
 
   const obtenerEventos = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/reservas`);
+      // Pide solo EVENTOS; si el backend no filtra, más abajo filtramos en front.
+      const response = await fetch(`${API_BASE_URL}/reservas?tipo=evento`);
       const data = await response.json();
 
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0);
 
-      const formateados = data.map((reserva) => {
-        const ymd = reserva.fechaLocal || String(reserva.fecha).slice(0, 10);
-        return {
-          id: reserva._id,
-          titulo: `${reserva.tipoEvento} - ${reserva.cliente}`,
-          ymd,
-          fecha: new Date(`${ymd}T12:00:00`),
-          hora: reserva.horaInicio, // se normaliza al editar
-          tipo: (reserva.tipoEvento || '').toLowerCase(),
-          icon: obtenerIcono(reserva.tipoEvento),
-          invitados: reserva.cantidadPersonas,
-          cliente: reserva.cliente,
-          tipoEvento: reserva.tipoEvento,
-        };
-      }).filter(evento => {
-        const fechaEvento = new Date(evento.fecha);
-        fechaEvento.setHours(0, 0, 0, 0);
-        return fechaEvento >= hoy;
-      });
+      // Filtro robusto en front por si el backend ignora el query param
+      const arr = Array.isArray(data) ? data : [];
+      const soloEventos = arr.filter(r =>
+        (r.tipoReserva ?? (r.esCotizacion ? 'cotizacion' : 'evento')) === 'evento'
+      );
+
+      const formateados = soloEventos
+        .map((reserva) => {
+          const ymd = reserva.fechaLocal || String(reserva.fecha).slice(0, 10);
+          const hi = reserva.horaInicio || reserva.hora || reserva.horaEntrada || '';
+          const hf = reserva.horaFin || reserva.horaSalida || reserva.hora || '';
+          return {
+            id: reserva._id,
+            titulo: `${reserva.tipoEvento} - ${reserva.cliente}`,
+            ymd,
+            fecha: new Date(`${ymd}T12:00:00`),
+            horaInicio: toHHmm(hi),
+            horaFin: toHHmm(hf || hi), // fallback si no había fin
+            tipo: (reserva.tipoEvento || '').toLowerCase(),
+            icon: obtenerIcono(reserva.tipoEvento),
+            invitados: reserva.cantidadPersonas,
+            cliente: reserva.cliente,
+            tipoEvento: reserva.tipoEvento,
+            tipoReserva: reserva.tipoReserva || 'evento',
+          };
+        })
+        .filter(evento => {
+          const fechaEvento = new Date(evento.fecha);
+          fechaEvento.setHours(0, 0, 0, 0);
+          return fechaEvento >= hoy; // solo próximos
+        });
 
       setEventos(formateados);
     } catch (error) {
@@ -100,8 +113,9 @@ const Calendario = () => {
       id: evento.id,
       cliente: evento.cliente,
       tipo: evento.tipoEvento || evento.tipo,
-      fecha: new Date(`${evento.ymd}T12:00:00`),         // ← corregido (antes “decha”)
-      hora: toHHmm(evento.hora || evento.horaInicio),    // ← normaliza a HH:mm
+      fecha: new Date(`${evento.ymd}T12:00:00`),
+      horaInicio: toHHmm(evento.horaInicio || evento.hora),
+      horaFin: toHHmm(evento.horaFin || evento.hora),
       invitados: evento.invitados || evento.cantidadPersonas
     });
     setMostrarModal(true);
@@ -117,44 +131,37 @@ const Calendario = () => {
     setReservaEditando(prev => ({ ...prev, [name]: value }));
   };
 
+  const rangoIgual = (hi, hf) => toHHmm(hi) === toHHmm(hf);
+
   const actualizarReserva = async (e) => {
     e.preventDefault();
+
+    if (rangoIgual(reservaEditando.horaInicio, reservaEditando.horaFin)) {
+      const seguir = window.confirm('La hora de inicio y fin son iguales. ¿Deseas continuar?');
+      if (!seguir) return;
+    }
+
     try {
+      const payload = {
+        cliente: reservaEditando.cliente,
+        tipoEvento: reservaEditando.tipo,
+        fecha: dayjs(reservaEditando.fecha).format('YYYY-MM-DD'),
+        horaInicio: toHHmm(reservaEditando.horaInicio),
+        horaFin: toHHmm(reservaEditando.horaFin),
+        cantidadPersonas: Number(reservaEditando.invitados || 0),
+        telefono: "N/A"
+      };
+
       const response = await fetch(`${API_BASE_URL}/reservas/${reservaEditando.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cliente: reservaEditando.cliente,
-          tipoEvento: reservaEditando.tipo,
-          fecha: dayjs(reservaEditando.fecha).format('YYYY-MM-DD'),
-          horaInicio: toHHmm(reservaEditando.hora),
-          horaFin: toHHmm(reservaEditando.hora),
-          cantidadPersonas: Number(reservaEditando.invitados || 0),
-          telefono: "N/A"
-        })
+        body: JSON.stringify(payload)
       });
 
       if (response.ok) {
-        const updated = await response.json();
+        // Refrescamos desde el servidor para mantener consistencia
         cerrarModal();
         await obtenerEventos();
-        setEventos(prev =>
-          prev.map(ev =>
-            ev.id === reservaEditando.id
-              ? {
-                  ...ev,
-                  id: updated._id,
-                  cliente: updated.cliente,
-                  tipo: (updated.tipoEvento || '').toLowerCase(),
-                  fecha: new Date(`${String(updated.fecha).slice(0,10)}T12:00:00`),
-                  hora: updated.horaInicio,
-                  invitados: updated.cantidadPersonas,
-                  icon: obtenerIcono(updated.tipoEvento),
-                  titulo: `${updated.tipoEvento} - ${updated.cliente}`,
-                }
-              : ev
-          )
-        );
       } else {
         alert('Error al actualizar');
       }
@@ -182,17 +189,16 @@ const Calendario = () => {
 
   const eventosDelDia = getEventosDelDia(date);
 
-  // ➜ NUEVO: botón para ir al Panel (DashboardCliente) con reservaId y modo admin
+  // Botón para ir al Panel (DashboardCliente) con reservaId y modo admin
   const irAlPanelAdmin = () => {
-  if (!reservaEditando?.id) return;
-  const qs = new URLSearchParams({
-    reservaId: reservaEditando.id,   // 👈 nombre correcto
-    mode: 'admin'
-  }).toString();
-  //navigate(`/cliente/dashboard?${qs}`);    // 👈 coincide con tu panel
-  // si quieres nueva pestaña:
-   window.open(`/cliente/dashboard?${qs}`, '_blank', 'noopener,noreferrer');
-};
+    if (!reservaEditando?.id) return;
+    const qs = new URLSearchParams({
+      reservaId: reservaEditando.id,
+      mode: 'admin'
+    }).toString();
+    // navigate(`/cliente/dashboard?${qs}`);
+    window.open(`/cliente/dashboard?${qs}`, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <div className="calendario-container">
@@ -211,7 +217,7 @@ const Calendario = () => {
                 <h3 className="evento-titulo">{evento.titulo}</h3>
                 <p className="evento-fecha">{formatearFecha(evento.ymd)}</p>
                 <div className="evento-detalles">
-                  <span className="evento-hora">⏰ {evento.hora}</span>
+                  <span className="evento-hora">⏰ {toHHmm(evento.horaInicio)} – {toHHmm(evento.horaFin)}</span>
                   <span className="evento-invitados">👥 {evento.invitados}</span>
                 </div>
                 <div className="evento-acciones">
@@ -251,13 +257,31 @@ const Calendario = () => {
                   onChange={handleEditarChange}
                   required
                 />
-                <input
-                  type="time"
-                  name="hora"
-                  value={toHHmm(reservaEditando.hora)}
-                  onChange={handleEditarChange}
-                  required
-                />
+
+                {/* Horas separadas */}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: 12, marginBottom: 4 }}>Hora inicio</label>
+                    <input
+                      type="time"
+                      name="horaInicio"
+                      value={toHHmm(reservaEditando.horaInicio)}
+                      onChange={handleEditarChange}
+                      required
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: 12, marginBottom: 4 }}>Hora fin</label>
+                    <input
+                      type="time"
+                      name="horaFin"
+                      value={toHHmm(reservaEditando.horaFin)}
+                      onChange={handleEditarChange}
+                      required
+                    />
+                  </div>
+                </div>
+
                 <input
                   type="number"
                   name="invitados"
@@ -268,7 +292,6 @@ const Calendario = () => {
                 />
 
                 <div className="modal-actions" style={{ display: 'flex', gap: 8, justifyContent: 'space-between' }}>
-                  {/* Botón nuevo: abre el panel con items en modo admin */}
                   <button type="button" className="btn btn-outline-secondary" onClick={irAlPanelAdmin}>
                     Abrir panel de artículos (admin)
                   </button>
@@ -320,7 +343,9 @@ const Calendario = () => {
                     <span className="evento-dia-icon">{evento.icon}</span>
                     <div className="evento-dia-info">
                       <strong>{evento.titulo}</strong>
-                      <small>{evento.hora} - {evento.invitados} invitados</small>
+                      <small>
+                        {toHHmm(evento.horaInicio)} – {toHHmm(evento.horaFin)} · {evento.invitados} invitados
+                      </small>
                     </div>
                   </div>
                 ))}
