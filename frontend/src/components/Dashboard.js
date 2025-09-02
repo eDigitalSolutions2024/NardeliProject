@@ -14,6 +14,7 @@ const Dashboard = ({ onLogout }) => {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [showDropdown, setShowDropdown] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [inventarioTick, setInventarioTick] = useState(0);
 
   // KPIs / actividad
   const [loadingDash, setLoadingDash] = useState(false);
@@ -444,8 +445,8 @@ const Dashboard = ({ onLogout }) => {
         return (
           <div className='dashboard-content'>
             <h1>Inventario</h1>
-            <FormProducto />
-            <TablaProductos />
+      <FormProducto onProductoAgregado={() => setInventarioTick(t => t + 1)} />
+      <TablaProductos refresh={inventarioTick} />
           </div>
         );
       case 'configuracion':

@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import './TablaProductos.css';
-import API_BASE_URL from '../api';
-
+import API_BASE_URL, { API_ORIGIN } from '../api';   // <-- usa API_ORIGIN para imágenes
 const fntMXN = new Intl.NumberFormat('es-MX', {
   style: 'currency',
   currency: 'MXN',
@@ -11,7 +10,7 @@ const fntMXN = new Intl.NumberFormat('es-MX', {
 });
 const formatMXN = (v) => fntMXN.format(Number(v|| 0));
 
-export default function TablaProductos() {
+export default function TablaProductos({ refresh = 0 } ) {
   const [productos, setProductos] = useState([]);
   const [cargando, setCargando] = useState(false);
 
@@ -29,19 +28,22 @@ export default function TablaProductos() {
   const [imagenFile, setImagenFile] = useState(null);
   const [preview, setPreview] = useState(''); // preview de imagen
 
-  useEffect(() => {
-    (async () => {
-      try {
-        setCargando(true);
-        const { data } = await axios.get(`${API_BASE_URL}/productos`);
-        setProductos(data || []);
-      } catch (e) {
-        console.error('Error al cargar productos:', e);
-      } finally {
-        setCargando(false);
-      }
-    })();
-  }, []);
+   const cargar = async () => {                          // <-- NUEVO helper
+    try {
+      setCargando(true);
+      const { data } = await axios.get(`${API_BASE_URL}/productos`);
+      const rows = Array.isArray(data) ? data : (data.items || []);
+      setProductos(rows);
+    } catch (e) {
+      console.error('Error al cargar productos:', e);
+    } finally {
+      setCargando(false);
+    }
+  };
+  
+  useEffect(() => { cargar(); }, []);                   // al montar
+  useEffect(() => { cargar(); }, [refresh]);            // <-- NUEVO: cuando cambia refresh
+
 
   const abrirEdicion = (p) => {
     setForm({
@@ -54,10 +56,9 @@ export default function TablaProductos() {
       descripcion: p.descripcion || '',
     });
     setImagenFile(null);
-    setPreview(p.imagen ? `${API_BASE_URL}${p.imagen}` : '');
+    setPreview(p.imagen ? `${API_ORIGIN}${p.imagen}` : ''); // <-- usa API_ORIGIN
     setShowEdit(true);
   };
-
   const cerrarEdicion = () => {
     setShowEdit(false);
     setImagenFile(null);
@@ -132,7 +133,7 @@ export default function TablaProductos() {
                 <td>
                   {producto.imagen ? (
                     <img
-                       src={`http://localhost:8010${producto.imagen}`}
+                       src={`${API_ORIGIN}${producto.imagen}`}   // <-- evita hardcodear localhost
                       alt={producto.nombre}
                       width="60"
                       height="60"
