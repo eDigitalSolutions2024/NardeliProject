@@ -8,21 +8,19 @@ const Reserva = require('../models/Reservas');
 const Producto = require('../models/Producto');
 const { streamReservaPDF } = require('../services/reservaPdf');
 const jwt = require('jsonwebtoken');
-const TZ = process.env.APP_TIMEZONE || 'America/Ciudad_Juarez';
+const Accesorio = require('../models/Accesorio');
 
+const isId = (v) => mongoose.isValidObjectId(String(v));
+const TZ = process.env.APP_TIMEZONE || 'America/Ciudad_Juarez';
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto-temporal';
 
-// ===== Auth muy simple (usa el tuyo si ya tienes uno) =====
+// ===== Auth muy simple =====
 function auth(req, res, next) {
   const h = req.headers.authorization || '';
   const t = h.startsWith('Bearer ') ? h.slice(7) : null;
   if (!t) return res.status(401).json({ ok: false, msg: 'No token' });
-  try {
-    req.user = jwt.verify(t, JWT_SECRET); // { sub, email, role }
-    next();
-  } catch {
-    return res.status(401).json({ ok: false, msg: 'Token inválido' });
-  }
+  try { req.user = jwt.verify(t, JWT_SECRET); next(); }
+  catch { return res.status(401).json({ ok: false, msg: 'Token inválido' }); }
 }
 
 // ===== Helpers de totales =====
@@ -158,7 +156,7 @@ router.post('/public', async (req, res) => {
   }
 });
 
-// ===== Disponibilidad general (EVENTOS y COTIZACIONES, uso genérico) =====
+// ===== Disponibilidad general =====
 async function checarDisponibilidad({ fecha, horaInicio, horaFin, excluirId = null }) {
   const fechaStr = ymd(fecha);
   if (!fechaStr || !horaInicio || !horaFin) return { disponible: false, motivo: 'Datos incompletos' };
@@ -520,22 +518,18 @@ router.put('/:id/aceptar-cotizacion', async (req, res) => {
   try {
     const { id } = req.params;
 
-    // 1) ID válido
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({ msg: 'ID inválido', debug: { id } });
     }
 
-    // 2) Cargar reserva
     const r = await Reserva.findById(id);
     if (!r) return res.status(404).json({ msg: 'Reserva no encontrada' });
 
-    // 3) Determinar si es cotización (soporte a docs viejos/sin campo)
     const tipo = String(r.tipoReserva ?? '').toLowerCase().trim();
     const esCotizacion =
       tipo === 'cotizacion' ||
       (!!r.cotizacion && r.cotizacion.aceptada !== true);
 
-    // Si ya es evento, no rompas: devuelve OK idempotente
     if (!esCotizacion && tipo === 'evento') {
       return res.json({ ok: true, reserva: r, alreadyEvent: true });
     }
@@ -547,12 +541,10 @@ router.put('/:id/aceptar-cotizacion', async (req, res) => {
       });
     }
 
-    // 4) Revalidar disponibilidad SOLO contra EVENTOS (o docs sin tipoReserva)
     const fechaStr = ymd(r.fecha) || ymd(new Date());
     const ini = timeToMinutes(r.horaInicio);
     let fin = timeToMinutes(r.horaFin);
 
-    // Fallbacks de horas por si vienen vacías o mal formateadas
     const iniOK = Number.isFinite(ini) ? ini : 9 * 60;     // 09:00
     const finOK = Number.isFinite(fin) ? fin : iniOK + 60; // +1h
 
@@ -582,7 +574,6 @@ router.put('/:id/aceptar-cotizacion', async (req, res) => {
       });
     }
 
-    // 5) Convertir
     r.tipoReserva = 'evento';
     r.cotizacion = {
       ...(r.cotizacion || {}),
@@ -598,14 +589,12 @@ router.put('/:id/aceptar-cotizacion', async (req, res) => {
   }
 });
 
-
-// Alias: PATCH /reservas/:id/precios  → guarda descuento igual que /:id/descuento
+// ===== Alias: PATCH /reservas/:id/precios =====
 router.patch('/:id/precios', async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.isValidObjectId(id)) return res.status(400).json({ msg: 'ID inválido' });
 
-    // Espera { descuento: { tipo, valor, motivo? } }
     const nuevoDesc = req.body?.descuento || {};
     const tipo = (nuevoDesc.tipo === 'porcentaje') ? 'porcentaje' : 'monto';
     let valor = Number(nuevoDesc.valor || 0);
@@ -624,7 +613,6 @@ router.patch('/:id/precios', async (req, res) => {
       : Math.min(subTotal, Math.max(0, valor));
     const total = Math.max(0, subTotal - descuento);
 
-    // si quieres mantener todo en precios:
     r.precios.subtotal = subTotal;
     r.precios.total = total;
 
@@ -633,6 +621,142 @@ router.patch('/:id/precios', async (req, res) => {
   } catch (e) {
     console.error('PATCH /reservas/:id/precios', e);
     return res.status(500).json({ msg: 'Error al guardar descuento' });
+  }
+});
+
+/* ============================================================
+   ACCESORIOS → SOLO RESUMEN (NO toca 'utensilios')
+   ============================================================ */
+
+// Normalizador de objetos de resumen
+function normalizeResumenAccesorios(inArr = []) {
+  const arr = Array.isArray(inArr) ? inArr : [];
+  return arr
+    .map(a => ({
+      accesorioId: String(a.accesorioId || a._id || ''),
+      nombre: String(a.nombre || ''),
+      categoria: String(a.categoria || 'Accesorio'),
+      unidad: String(a.unidad || 'pza'),
+      cantidad: Number(a.cantidad || 0),
+      precioReposicion: Number(a.precioReposicion || 0),
+      descripcion: String(a.descripcion || ''),
+      imagen: String(a.imagen || ''),
+      esPrestamo: true
+    }))
+    .filter(a => a.accesorioId && a.cantidad > 0);
+}
+
+// GET: devolver resumen (array)
+router.get('/:id/resumen-accesorios', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!isId(id)) return res.status(400).json({ ok: false, msg: 'ID de reserva inválido' });
+    const r = await Reserva.findById(id).lean();
+    if (!r) return res.status(404).json({ ok: false, msg: 'Reserva no encontrada' });
+    const out = r?.resumenSeleccion?.accesorios || [];
+    res.json(out);
+  } catch (e) {
+    console.error('GET /reservas/:id/resumen-accesorios', e);
+    res.status(500).json({ ok: false, msg: 'Error al obtener resumen de accesorios' });
+  }
+});
+
+// PUT: guardar resumen (array de objetos ya completos)
+router.put('/:id/resumen-accesorios', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!isId(id)) return res.status(400).json({ ok: false, msg: 'ID de reserva inválido' });
+
+    const reserva = await Reserva.findById(id);
+    if (!reserva) return res.status(404).json({ ok: false, msg: 'Reserva no encontrada' });
+
+    const accesorios = normalizeResumenAccesorios(req.body?.accesorios);
+    reserva.resumenSeleccion = reserva.resumenSeleccion || {};
+    reserva.resumenSeleccion.accesorios = accesorios;
+
+    await reserva.save();
+    res.json({ ok: true, resumenSeleccion: reserva.resumenSeleccion });
+  } catch (e) {
+    console.error('PUT /reservas/:id/resumen-accesorios', e);
+    res.status(500).json({ ok: false, msg: 'Error al guardar resumen de accesorios' });
+  }
+});
+
+// Alias legacy (compat): PUT /:id/resumen-seleccion  → guarda exactamente lo mismo
+router.put('/:id/resumen-seleccion', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!isId(id)) return res.status(400).json({ ok: false, msg: 'ID de reserva inválido' });
+
+    const reserva = await Reserva.findById(id);
+    if (!reserva) return res.status(404).json({ ok: false, msg: 'Reserva no encontrada' });
+
+    const accesorios = normalizeResumenAccesorios(req.body?.accesorios);
+    reserva.resumenSeleccion = reserva.resumenSeleccion || {};
+    reserva.resumenSeleccion.accesorios = accesorios;
+
+    await reserva.save();
+    res.json({ ok: true, resumenSeleccion: reserva.resumenSeleccion });
+  } catch (e) {
+    console.error('PUT /reservas/:id/resumen-seleccion', e);
+    res.status(500).json({ ok: false, msg: 'Error al guardar resumen de accesorios' });
+  }
+});
+
+/**
+ * COMPATIBILIDAD: POST /reservas/:id/accesorios/apply
+ * Recibe { seleccion: [{ accesorioId, cantidad }] } y guarda SOLO el resumen.
+ * NO modifica la colección 'utensilios'.
+ */
+router.post('/:id/accesorios/apply', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!isId(id)) return res.status(400).json({ ok: false, msg: 'ID de reserva inválido' });
+
+    const reserva = await Reserva.findById(id);
+    if (!reserva) return res.status(404).json({ ok: false, msg: 'Reserva no encontrada' });
+
+    const seleccion = Array.isArray(req.body?.seleccion) ? req.body.seleccion : [];
+    if (seleccion.length === 0) {
+      // no cambiamos nada; devolvemos el resumen actual
+      return res.json({ ok: true, resumenSeleccion: reserva.resumenSeleccion || { accesorios: [] } });
+    }
+
+    // cargar accesorios para completar nombre, unidad, etc.
+    const ids = seleccion.map(s => s?.accesorioId).filter(isId);
+    const accs = ids.length
+      ? await Accesorio.find({ _id: { $in: ids }, activo: { $ne: false } }).lean()
+      : [];
+    const byId = new Map(accs.map(a => [String(a._id), a]));
+    const qtyById = new Map(seleccion.map(s => [String(s.accesorioId), Math.max(0, Number(s.cantidad || 0))]));
+
+    const resumen = [];
+    for (const idStr of ids.map(String)) {
+      const qty = qtyById.get(idStr) || 0;
+      const acc = byId.get(idStr);
+      if (!acc || qty <= 0) continue;
+
+      resumen.push({
+        accesorioId: idStr,
+        nombre: acc.nombre,
+        categoria: acc.categoria || 'Accesorio',
+        unidad: acc.unidad || 'pza',
+        cantidad: qty,
+        precioReposicion: Number(acc.precioReposicion || 0),
+        descripcion: acc.descripcion || '',
+        imagen: acc.imagen || '',
+        esPrestamo: true
+      });
+    }
+
+    reserva.resumenSeleccion = reserva.resumenSeleccion || {};
+    reserva.resumenSeleccion.accesorios = resumen;
+
+    await reserva.save();
+    res.json({ ok: true, resumenSeleccion: reserva.resumenSeleccion });
+  } catch (e) {
+    console.error('POST /reservas/:id/accesorios/apply', e);
+    res.status(500).json({ ok: false, msg: 'Error al aplicar accesorios (resumen)' });
   }
 });
 

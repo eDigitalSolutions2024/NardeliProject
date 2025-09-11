@@ -17,6 +17,22 @@ const utensilioSchema = new mongoose.Schema(
   { _id: true } // <- necesario para editar líneas por ID
 );
 
+const ResumenAccesorio = new mongoose.Schema({
+  accesorioId: String,
+  nombre: String,
+  categoria: String,
+  unidad: String,
+  cantidad: Number,
+  precioReposicion: Number,
+  descripcion: String,
+  imagen: String,
+  esPrestamo: { type: Boolean, default: true }
+}, { _id: false });
+
+
+
+
+
 // -------- Esquema principal de Reserva --------
 const reservaSchema = new mongoose.Schema(
   {
@@ -38,6 +54,10 @@ const reservaSchema = new mongoose.Schema(
 
     // Ítems seleccionados
     utensilios: { type: [utensilioSchema], default: [] },
+
+    resumenSeleccion: {
+    accesorios: { type: [ResumenAccesorio], default: [] } // ✅ tipado y con default correcto
+  },
 
     // Estado de la reserva de flujo interno (para /reservas/activa)
     estado: {

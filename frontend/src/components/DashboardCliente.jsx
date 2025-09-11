@@ -42,9 +42,17 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
   // Snapshot de utensilios guardados en la BD
   const [utensiliosBD, setUtensiliosBD] = useState([]); // [{ itemId, nombre, precio, descripcion, ... }]
 
-  // ▼ NUEVO: descuento de la reserva (admin)
-  const [descTipo, setDescTipo] = useState('monto');       // 'monto' | 'porcentaje'
+  // Descuento de la reserva (admin)
+  const [descTipo, setDescTipo] = useState('monto'); // 'monto' | 'porcentaje'
   const [descValor, setDescValor] = useState(0);
+
+  // ACCESORIOS
+  const [accesorios, setAccesorios] = useState([]); // lista desde /accesorios
+  const [loadingAcc, setLoadingAcc] = useState(false);
+  const [selAccesorios, setSelAccesorios] = useState({}); // { [accesorioId]: qty }
+
+  // MODAL "Ver accesorios"
+  const [showAccModal, setShowAccModal] = useState(false);
 
   const { search } = useLocation();
   const { reservaId: reservaIdParam } = useParams();
@@ -69,9 +77,9 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
   useEffect(() => {
     if (reservaId) return; // ya la tenemos
     const token = localStorage.getItem('token');
-    if (!token) { 
+    if (!token) {
       window.location.href = '/login';
-      return; 
+      return;
     }
 
     (async () => {
@@ -97,7 +105,7 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reservaId]);
 
-  // ===== 1) Cargar inventario (incluye precio como fallback)
+  // 1) Cargar inventario (incluye precio como fallback)
   useEffect(() => {
     let alive = true;
     const load = async () => {
@@ -116,8 +124,8 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
           stock: Number(x.stock ?? x.cantidad ?? 0),
           unidad: x.unidad || 'pza',
           imagen: x.imagen || '',
-          precio: toPrice(x.precio ?? 0),       // fallback visual
-          descripcion: x.descripcion || ''       // descripción desde inventario
+          precio: toPrice(x.precio ?? 0), // fallback visual
+          descripcion: x.descripcion || '' // descripción desde inventario
         }));
         if (alive) setItems(normalizados);
       } catch (e) {
@@ -131,25 +139,62 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
     return () => { alive = false; };
   }, [API_BASE_URL]);
 
-  // ===== 2) Cargar snapshot de utensilios desde la BD
+  // 1b) Cargar ACCESORIOS
   useEffect(() => {
-    if (!reservaId) return;
     let alive = true;
     (async () => {
       try {
-        const r = await fetch(`${API_BASE_URL}/reservas/${reservaId}/utensilios`);
-        if (r.ok) {
-          const arr = await r.json();
-          if (alive) setUtensiliosBD(Array.isArray(arr) ? arr : []);
-        }
+        setLoadingAcc(true);
+        const r = await fetch(`${API_BASE_URL}/accesorios`);
+        const list = r.ok ? await r.json() : [];
+        if (alive) setAccesorios(Array.isArray(list) ? list : []);
       } catch (e) {
-        console.error('utensilios GET:', e);
+        console.error('accesorios GET:', e);
+      } finally {
+        if (alive) setLoadingAcc(false);
       }
     })();
     return () => { alive = false; };
-  }, [reservaId, API_BASE_URL]);
+  }, [API_BASE_URL]);
 
-  // ===== 2b) Cargar descuento existente desde la reserva
+  // 2) Cargar snapshot de utensilios desde la BD
+  // 2b) Cargar descuento existente y (NUEVO) accesorios guardados en la reserva
+useEffect(() => {
+  if (!reservaId) return;
+  (async () => {
+    try {
+      const r = await fetch(`${API_BASE_URL}/reservas/${reservaId}`);
+      if (!r.ok) return;
+      const d = await r.json();
+
+      // Descuento (igual que ya tenías)
+      const des = d?.precios?.descuento || d?.descuento;
+      if (des) {
+        setDescTipo(des.tipo || 'monto');
+        setDescValor(Number(des.valor || 0));
+      }
+
+      // ⬇️ NUEVO: hidratar accesorios desde resumenSeleccion.accesorios
+      // (solo si aún no hay selección en memoria para no pisar cambios locales)
+      if (Object.keys(selAccesorios || {}).length === 0) {
+        const accResumen = d?.resumenSeleccion?.accesorios || [];
+        if (Array.isArray(accResumen) && accResumen.length) {
+          const pre = {};
+          accResumen.forEach(a => {
+            if (a?.accesorioId) pre[String(a.accesorioId)] = Number(a?.cantidad || 0);
+          });
+          if (Object.keys(pre).length) setSelAccesorios(pre);
+        }
+      }
+    } catch (err) {
+      console.error('GET reserva (descuento + accesorios):', err);
+    }
+  })();
+  // importante: incluir selAccesorios para que el "guard" funcione
+}, [reservaId, API_BASE_URL, selAccesorios]);
+
+
+  // 2b) Cargar descuento existente desde la reserva
   useEffect(() => {
     if (!reservaId) return;
     (async () => {
@@ -165,6 +210,35 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
       } catch {}
     })();
   }, [reservaId]);
+
+  // 2c) Prefill de accesorios desde BD (si ya hay guardados como préstamo)
+  useEffect(() => {
+    if (!accesorios.length || !utensiliosBD.length) return;
+    const pre = {};
+    utensiliosBD.forEach(u => {
+      if (u?.esPrestamo && (u?.accesorioOrigenId || u?.itemId)) {
+        const key = String(u.accesorioOrigenId || u.itemId);
+        pre[key] = Number(u.cantidad || 0);
+      }
+    });
+    if (Object.keys(pre).length) setSelAccesorios(pre);
+  }, [accesorios, utensiliosBD]);
+
+  // 2d) Cargar accesorios desde localStorage si no había en BD
+  useEffect(() => {
+    if (!reservaId || !accesorios.length) return;
+    if (Object.keys(selAccesorios).length > 0) return;
+    const raw = localStorage.getItem(`acc_${reservaId}`);
+    if (raw) {
+      try { setSelAccesorios(JSON.parse(raw)); } catch {}
+    }
+  }, [reservaId, accesorios]); // eslint-disable-line
+
+  // Persistir selección de accesorios en localStorage
+  useEffect(() => {
+    if (!reservaId) return;
+    localStorage.setItem(`acc_${reservaId}`, JSON.stringify(selAccesorios));
+  }, [selAccesorios, reservaId]);
 
   // Mapas rápidos
   const reservedPriceById = useMemo(() => {
@@ -186,13 +260,13 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
   const priceFor = (productId) => {
     const id = String(productId);
     const r = reservedPriceById.get(id);
-    if (Number.isFinite(r) && r > 0) return r;          // snapshot válido
+    if (Number.isFinite(r) && r > 0) return r; // snapshot válido
     const i = invPriceById.get(id);
-    if (Number.isFinite(i) && i > 0) return i;          // fallback inventario
-    return Number.isFinite(r) ? r : 0;                  // si el 0 es intencional, muéstralo
+    if (Number.isFinite(i) && i > 0) return i; // fallback inventario
+    return Number.isFinite(r) ? r : 0; // si el 0 es intencional, muéstralo
   };
 
-  // ===== 3) Cargar selección (BD o localStorage)
+  // 3) Cargar selección (BD o localStorage)
   useEffect(() => {
     if (!reservaId || items.length === 0) return;
 
@@ -210,9 +284,8 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
           imagen: s.imagen || '',
           stock: Number(s.stock ?? 0),
           precio: toPrice(s.precio),
-          descripcion: s.descripcion || ''      // preserva descripción desde BD/localStorage
+          descripcion: s.descripcion || ''
         };
-        // si existe en inventario y no tiene descripción en saved, usa la del inventario
         if (!base.descripcion && byId.get(sid)?.descripcion) {
           base.descripcion = byId.get(sid).descripcion;
         }
@@ -223,14 +296,12 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
 
     (async () => {
       try {
-        // a) /reservas/:id/utensilios
         let saved = null;
         const r1 = await fetch(`${API_BASE_URL}/reservas/${reservaId}/utensilios`);
         if (r1.ok) {
           const d1 = await r1.json();
           saved = Array.isArray(d1) ? d1 : d1.items;
         } else {
-          // b) /reservas/:id (por compatibilidad)
           const r2 = await fetch(`${API_BASE_URL}/reservas/${reservaId}`);
           if (r2.ok) {
             const d2 = await r2.json();
@@ -243,7 +314,6 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
           return;
         }
 
-        // c) Fallback: localStorage
         const raw = localStorage.getItem(`sel_${reservaId}`);
         if (raw) {
           const arr = JSON.parse(raw);
@@ -262,7 +332,7 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
     })();
   }, [reservaId, items, API_BASE_URL]);
 
-  // ===== 4) Persistir selección en localStorage (con precio mostrado)
+  // 4) Persistir selección en localStorage (con precio mostrado)
   useEffect(() => {
     if (!reservaId) return;
     const arr = Object.values(seleccion).map(({ item, qty }) => ({
@@ -271,8 +341,8 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
       cantidad: qty,
       unidad: item.unidad,
       categoria: item.categoria,
-      precio: priceFor(item.id), // precio que ve la UI
-      descripcion: item.descripcion || ''      // guarda descripción en localStorage
+      precio: priceFor(item.id),
+      descripcion: item.descripcion || ''
     }));
     localStorage.setItem(`sel_${reservaId}`, JSON.stringify(arr));
   }, [seleccion, reservaId, reservedPriceById, invPriceById]);
@@ -303,9 +373,20 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
       if (qty === 0){
         delete next[item.id];
       } else {
-        const snapshotItem = { ...item }; // incluye descripcion si existe en item
+        const snapshotItem = { ...item };
         next[item.id] = { item: snapshotItem, qty };
       }
+      return next;
+    });
+  };
+
+  const setQtyAcc = (acc, qty) => {
+    const stock = Number(acc.stock ?? 0);
+    qty = Math.max(0, Math.min(qty, stock));
+    setSelAccesorios(prev => {
+      const next = { ...prev };
+      if (qty === 0) delete next[acc._id];
+      else next[acc._id] = qty;
       return next;
     });
   };
@@ -322,10 +403,8 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
     [seleccion, reservedPriceById, invPriceById]
   );
 
-  // Subtotal que ya calculas (solo admin lo ve):
   const subTotalUI = totalMonto;
 
-  // ▼ NUEVO: aplica el descuento al subtotal para mostrar el total con descuento
   const descuentoMonto = useMemo(() => {
     const v = Number(descValor) || 0;
     if (descTipo === 'porcentaje') {
@@ -339,7 +418,7 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
     [subTotalUI, descuentoMonto]
   );
 
-  // ====== Guardar selección (persiste precio que se muestra)
+  // ====== Guardar selección (persiste productos/utensilios)
   const guardarSeleccion = async () => {
     if (!reservaId) {
       alert('No se encontró el ID de la reserva.');
@@ -354,10 +433,8 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
         cantidad: qty,
         unidad: item.unidad,
         categoria: item.categoria,
-        descripcion: item.descripcion || '' // enviar descripción al backend
+        descripcion: item.descripcion || ''
       };
-
-      // No envíes precio en el primer guardado; sí si ya existe snapshot
       if (reservedPriceById.has(id)) {
         base.precio = priceFor(id);
       }
@@ -390,24 +467,42 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
     }
   };
 
-  // ▼ NUEVO: persistir descuento en la reserva
-  const guardarDescuento = async () => {
-    if (!reservaId) return alert('No hay reservaId');
+  // ====== Aplicar accesorios como préstamo (precio $0) a la reserva
+  const aplicarAccesorios = async () => {
+    if (!reservaId) return;
+    const seleccionAcc = Object.entries(selAccesorios)
+      .map(([accesorioId, cantidad]) => ({ accesorioId, cantidad: Number(cantidad || 0) }))
+      .filter(x => x.cantidad > 0);
+
+    if (seleccionAcc.length === 0) return; // no hay accesorios, saltar
+
     try {
-      const res = await fetch(`${API_BASE_URL}/reservas/${reservaId}/precios`, {
-        method: 'PATCH',
+      const r = await fetch(`${API_BASE_URL}/reservas/${reservaId}/accesorios/apply`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ descuento: { tipo: descTipo, valor: Number(descValor) || 0 } })
+        body: JSON.stringify({ seleccion: seleccionAcc }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.msg || `HTTP ${res.status}`);
+      if (!r.ok) {
+        const t = await r.text().catch(()=> '');
+        throw new Error(t || `HTTP ${r.status}`);
       }
-      alert('Descuento guardado');
+      // refrescar snapshot opcional
+      try {
+        const r2 = await fetch(`${API_BASE_URL}/reservas/${reservaId}/utensilios`);
+        if (r2.ok) setUtensiliosBD(await r2.json());
+      } catch {}
+      alert('Accesorios guardados en la reserva');
+      setShowAccModal(false);
     } catch (e) {
-      console.error(e);
-      alert('No se pudo guardar el descuento');
+      console.error('aplicarAccesorios', e);
+      alert('No se pudieron aplicar los accesorios a la reserva');
     }
+  };
+
+  // ====== Finalizar: guarda productos + aplica accesorios
+  const finalizarReserva = async () => {
+    await guardarSeleccion();
+    await aplicarAccesorios();
   };
 
   // ====== Editar precio (solo admin) — modifica SOLO el snapshot de utensilios
@@ -471,6 +566,26 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
       );
     }
   };
+
+  // Derivado: accesorios seleccionados con sus datos (para el modal)
+  const accesoriosSeleccionados = useMemo(() => {
+    return Object.entries(selAccesorios)
+      .map(([accesorioId, cantidad]) => {
+        const acc = (accesorios || []).find(a => String(a._id) === String(accesorioId));
+        if (!acc) return null;
+        return {
+          accesorioId: String(acc._id),
+          nombre: acc.nombre,
+          categoria: acc.categoria || 'Accesorio',
+          unidad: acc.unidad || 'pza',
+          cantidad: Number(cantidad || 0),
+          precioReposicion: Number(acc.precioReposicion || 0),
+          descripcion: acc.descripcion || '',
+          imagen: acc.imagen || ''
+        };
+      })
+      .filter(Boolean);
+  }, [selAccesorios, accesorios]);
 
   return (
     <div className="cliente-dashboard">
@@ -588,9 +703,20 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
           )}
         </div>
 
-        {/* Resumen */}
+        {/* Resumen (productos) */}
         <div className="cd-card summary">
-          <h3>Resumen de selección</h3>
+          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+            <h3>Resumen de selección</h3>
+            <button
+              type="button"
+              className="cd-btn"
+              onClick={() => setShowAccModal(true)}
+              title="Ver accesorios seleccionados"
+            >
+              Ver accesorios
+            </button>
+          </div>
+
           <div className="sel-list">
             {Object.values(seleccion).length === 0 ? (
               <div className="empty">Aún no has agregado artículos.</div>
@@ -624,69 +750,83 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
             <strong>{totalUnidades}</strong>
           </div>
 
-  {/* Totales con descuento (solo admin) */}
-  {isAdmin && (
-    <>
-      <div style={{display:'flex', justifyContent:'space-between', marginBottom:12}}>
-        <strong>Subtotal $</strong>
-        <strong>${subTotalUI.toFixed(2)}</strong>
-      </div>
+          {isAdmin && (
+            <>
+              <div style={{display:'flex', justifyContent:'space-between', marginBottom:12}}>
+                <strong>Subtotal $</strong>
+                <strong>${subTotalUI.toFixed(2)}</strong>
+              </div>
 
-      <hr style={{ margin: '12px 0', borderColor: '#eee' }} />
+              <hr style={{ margin: '12px 0', borderColor: '#eee' }} />
 
-      <h4 style={{ marginBottom: 8 }}>Descuento</h4>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-        <select
-          className="cd-select"
-          value={descTipo}
-          onChange={(e) => setDescTipo(e.target.value)}
-          style={{ maxWidth: 160 }}
-        >
-          <option value="monto">Monto ($)</option>
-          <option value="porcentaje">% Porcentaje</option>
-        </select>
+              <h4 style={{ marginBottom: 8 }}>Descuento</h4>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                <select
+                  className="cd-select"
+                  value={descTipo}
+                  onChange={(e) => setDescTipo(e.target.value)}
+                  style={{ maxWidth: 160 }}
+                >
+                  <option value="monto">Monto ($)</option>
+                  <option value="porcentaje">% Porcentaje</option>
+                </select>
 
-        <input
-          className="cd-input"
-          type="number"
-          min="0"
-          step={descTipo === 'porcentaje' ? '0.01' : '0.01'}
-          value={descValor}
-          onChange={(e) => setDescValor(e.target.value)}
-          placeholder={descTipo === 'porcentaje' ? 'Ej. 10 = 10%' : 'Ej. 500 = $500'}
-          style={{ maxWidth: 160 }}
-        />
+                <input
+                  className="cd-input"
+                  type="number"
+                  min="0"
+                  step={descTipo === 'porcentaje' ? '0.01' : '0.01'}
+                  value={descValor}
+                  onChange={(e) => setDescValor(e.target.value)}
+                  placeholder={descTipo === 'porcentaje' ? 'Ej. 10 = 10%' : 'Ej. 500 = $500'}
+                  style={{ maxWidth: 160 }}
+                />
 
-        <button className="cd-btn" type="button" onClick={guardarDescuento}>
-          Guardar descuento
-        </button>
-      </div>
+                <button className="cd-btn" type="button" onClick={() => {
+                  (async () => {
+                    if (!reservaId) return alert('No hay reservaId');
+                    try {
+                      const res = await fetch(`${API_BASE_URL}/reservas/${reservaId}/precios`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ descuento: { tipo: descTipo, valor: Number(descValor) || 0 } })
+                      });
+                      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                      alert('Descuento guardado');
+                    } catch (e) {
+                      console.error(e); alert('No se pudo guardar el descuento');
+                    }
+                  })();
+                }}>
+                  Guardar descuento
+                </button>
+              </div>
 
-      <div style={{ display: 'grid', rowGap: 6, marginBottom: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span>Subtotal</span>
-          <strong>${subTotalUI.toFixed(2)}</strong>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#dc2626' }}>
-          <span>
-            {descTipo === 'porcentaje'
-              ? `Descuento (${Number(descValor) || 0}%)`
-              : 'Descuento'}
-          </span>
-          <strong>- ${descuentoMonto.toFixed(2)}</strong>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16 }}>
-          <span>Total</span>
-          <strong>${totalConDescuento.toFixed(2)}</strong>
-        </div>
-      </div>
-    </>
-  )}
+              <div style={{ display: 'grid', rowGap: 6, marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Subtotal</span>
+                  <strong>${subTotalUI.toFixed(2)}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#dc2626' }}>
+                  <span>
+                    {descTipo === 'porcentaje'
+                      ? `Descuento (${Number(descValor) || 0}%)`
+                      : 'Descuento'}
+                  </span>
+                  <strong>- ${descuentoMonto.toFixed(2)}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16 }}>
+                  <span>Total</span>
+                  <strong>${totalConDescuento.toFixed(2)}</strong>
+                </div>
+              </div>
+            </>
+          )}
 
           <button
             className="save"
             disabled={saving || Object.values(seleccion).length === 0}
-            onClick={guardarSeleccion}
+            onClick={finalizarReserva}
           >
             {saving ? 'Guardando…' : 'Finalizar Reserva'}
           </button>
@@ -703,7 +843,121 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
             Descargar PDF
           </button>
         </div>
+
+        {/* ACCESORIOS */}
+        <div className="cd-card">
+          <h3>Accesorios (préstamo)</h3>
+          {loadingAcc ? (
+            <div className="empty">Cargando accesorios…</div>
+          ) : accesorios.length === 0 ? (
+            <div className="empty">No hay accesorios disponibles.</div>
+          ) : (
+            <div className="inventory-grid">
+              {accesorios.map(acc => {
+                const qty = selAccesorios[acc._id] || 0;
+                const stock = Number(acc.stock ?? 0);
+                const agotado = stock <= 0;
+                return (
+                  <div key={acc._id} className="item-card">
+                    <img
+                      className="item-img"
+                      src={resolveImg(acc.imagen)}
+                      alt={acc.nombre}
+                      onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}
+                    />
+                    <div>
+                      <h4 className="item-title">{acc.nombre}</h4>
+                      <div className="item-meta">
+                        <span className="badge">{acc.categoria || 'Accesorio'}</span>
+                        <span className={`badge ${agotado ? 'out' : stock < 10 ? 'warn' : 'ok'}`}>
+                          Stock: {stock} {acc.unidad || 'pza'}
+                        </span>
+                      </div>
+
+                      <div className="item-actions">
+                        <div className="qty">
+                          <button onClick={() => setQtyAcc(acc, Math.max(0, qty - 1))} disabled={qty <= 0}>−</button>
+                          <input
+                            type="number"
+                            min="0"
+                            max={stock}
+                            value={qty}
+                            onChange={(e) => setQtyAcc(acc, Number(e.target.value))}
+                          />
+                          <button onClick={() => setQtyAcc(acc, Math.min(qty + 1, stock))} disabled={qty >= stock}>+</button>
+                        </div>
+                        <button
+                          className="add-btn"
+                          onClick={() => setQtyAcc(acc, Math.min((qty || 0) + 1, stock))}
+                          disabled={agotado}
+                        >
+                          Añadir
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* MODAL SOLO ACCESORIOS */}
+      {showAccModal && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+          }}
+          onClick={() => setShowAccModal(false)}
+        >
+          <div
+            style={{ background: '#fff', width: 'min(720px, 96%)', borderRadius: 12, padding: 16, maxHeight: '80vh', overflow: 'auto' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 8 }}>
+              <h3 style={{ margin: 0 }}>Accesorios seleccionados</h3>
+              <button className="del" onClick={() => setShowAccModal(false)}>Cerrar</button>
+            </div>
+
+            {accesoriosSeleccionados.length === 0 ? (
+              <div className="empty">Sin accesorios seleccionados.</div>
+            ) : (
+              <div style={{ display:'grid', rowGap:10 }}>
+                {accesoriosSeleccionados.map(acc => (
+                  <div key={acc.accesorioId} className="sel-item">
+                    <div style={{ display:'flex', gap:12, alignItems:'center' }}>
+                      <img
+                        src={resolveImg(acc.imagen)}
+                        alt=""
+                        style={{ width:44, height:44, objectFit:'cover', borderRadius:8 }}
+                        onError={(e)=>{e.currentTarget.src=PLACEHOLDER;}}
+                      />
+                      <div>
+                        <strong>{acc.nombre}</strong>
+                        <div className="small">
+                          <small>
+                            {acc.cantidad} {acc.unidad} • {acc.categoria} • préstamo ($0)
+                          </small>
+                          {Number(acc.precioReposicion) > 0 && (
+                            <div><small>Reposición: ${acc.precioReposicion.toFixed(2)}</small></div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:16 }}>
+              <button className="cd-btn cd-btn-clear" onClick={()=>setShowAccModal(false)}>Cancelar</button>
+              <button className="cd-btn" onClick={aplicarAccesorios}>Guardar en reserva</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

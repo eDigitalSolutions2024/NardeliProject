@@ -38,6 +38,10 @@ app.use('/api', require('./routes/login'));
 app.use('/api/usuarios', require('./routes/usuarios'));
 app.use('/api/reservas', require('./routes/reservas'));
 app.use('/api/productos', require('./routes/productos'));
+
+// server.js
+app.use('/api/accesorios', require('./routes/accesorios'));
+
 // Si tienes inventario por separado:
 // app.use('/api/inventario', require('./routes/inventario'));
 

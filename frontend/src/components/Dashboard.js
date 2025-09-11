@@ -8,6 +8,9 @@ import TablaProductos from './TablaProductos';
 import API_BASE_URL from '../api';
 import Clientes from './Clientes';
 import Reserva from './ReservarEvento';
+// imports nuevos arriba
+import FormAccesorio from './FormAccesorio';
+import TablaAccesorios from './TablaAccesorios';
 
 const Dashboard = ({ onLogout }) => {
   const [user, setUser] = useState(null);
@@ -15,6 +18,8 @@ const Dashboard = ({ onLogout }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [inventarioTick, setInventarioTick] = useState(0);
+  const [accesorioTick, setAccesorioTick] = useState(0);
+const [inventarioTab, setInventarioTab] = useState('producto'); // 'producto' | 'accesorio'
 
   // KPIs / actividad
   const [loadingDash, setLoadingDash] = useState(false);
@@ -443,12 +448,38 @@ const Dashboard = ({ onLogout }) => {
         );
       case 'inventario':
         return (
-          <div className='dashboard-content'>
-            <h1>Inventario</h1>
-      <FormProducto onProductoAgregado={() => setInventarioTick(t => t + 1)} />
-      <TablaProductos refresh={inventarioTick} />
-          </div>
-        );
+    <div className='dashboard-content'>
+      <h1>Inventario</h1>
+
+      {/* Selector de formulario */}
+      <div style={{ display:'flex', gap:8, margin:'8px 0 16px' }}>
+        <button
+          className={`cd-btn ${inventarioTab === 'producto' ? '' : 'cd-btn-clear'}`}
+          onClick={() => setInventarioTab('producto')}
+        >
+          Productos
+        </button>
+        <button
+          className={`cd-btn ${inventarioTab === 'accesorio' ? '' : 'cd-btn-clear'}`}
+          onClick={() => setInventarioTab('accesorio')}
+        >
+          Accesorios
+        </button>
+      </div>
+
+      {inventarioTab === 'producto' ? (
+        <>
+          <FormProducto onProductoAgregado={() => setInventarioTick(t => t + 1)} />
+          <TablaProductos refresh={inventarioTick} />
+        </>
+      ) : (
+        <>
+          <FormAccesorio onAccesorioAgregado={() => setAccesorioTick(t => t + 1)} />
+          <TablaAccesorios refresh={accesorioTick} />
+        </>
+      )}
+    </div>
+  );
       case 'configuracion':
         return (
           <div className="dashboard-content">

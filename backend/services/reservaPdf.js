@@ -11,9 +11,11 @@ function money(n) {
 function pct(n) {
   const v = Number(n);
   if (!Number.isFinite(v)) return '0%';
-  // muestra máximo 2 decimales si aplica
   const s = Math.round(v * 100) % 100 === 0 ? v.toFixed(0) : v.toFixed(2);
   return `${s}%`;
+}
+function ymd(d) {
+  try { return new Date(d).toISOString().slice(0,10); } catch { return ''; }
 }
 
 /** === Paleta / fuentes === **/
@@ -120,7 +122,6 @@ function drawTableRow(doc, { x, y, widths, values, zebra = false, isTotal = fals
   const w = sum(widths);
   doc.save();
 
-  // fondo
   if (isTotal) {
     doc.roundedRect(x, y, w, ROW_H, 6).fill(COLORS.primary);
     doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(FONTS.medium);
@@ -131,7 +132,6 @@ function drawTableRow(doc, { x, y, widths, values, zebra = false, isTotal = fals
     doc.fillColor(COLORS.text).font('Helvetica').fontSize(FONTS.base);
   }
 
-  // celdas (una línea con elipsis)
   let cx = x;
   values.forEach((v, i) => {
     const align = i >= values.length - 2 ? 'right' : 'left';
@@ -176,9 +176,36 @@ function calcularDescuento(subTotal, descuento) {
     const monto = Math.min(subTotal, subTotal * (pctVal / 100));
     return { tipo, valor: pctVal, monto };
   }
-  // monto
   const monto = Math.min(subTotal, Math.max(0, valor));
   return { tipo, valor, monto };
+}
+
+/** === Accesorios seleccionados (para contrato) === **/
+function getAccesoriosSeleccionados(reserva) {
+  const a1 = Array.isArray(reserva?.resumenSeleccion?.accesorios)
+    ? reserva.resumenSeleccion.accesorios
+    : [];
+  if (a1.length) {
+    return a1.map(a => ({
+      nombre: a.nombre || 'Accesorio',
+      categoria: a.categoria || 'Accesorio',
+      unidad: a.unidad || 'pza',
+      cantidad: Number(a.cantidad || 0),
+      precioReposicion: Number(a.precioReposicion || 0),
+    })).filter(x => x.cantidad > 0);
+  }
+  // Fallback: líneas de préstamo en utensilios
+  const a2 = (reserva?.utensilios || [])
+    .filter(u => u?.esPrestamo === true || String(u?.categoria || '').toLowerCase() === 'accesorio')
+    .map(u => ({
+      nombre: u.nombre || 'Accesorio',
+      categoria: u.categoria || 'Accesorio',
+      unidad: u.unidad || 'pza',
+      cantidad: Number(u.cantidad || 0),
+      precioReposicion: Number(u.precioReposicion || 0),
+    }))
+    .filter(x => x.cantidad > 0);
+  return a2;
 }
 
 /** === Documento principal === **/
@@ -260,20 +287,16 @@ function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} 
 
   const lista = Array.isArray(reserva?.utensilios) ? reserva.utensilios : [];
 
-  // ¿Hay precios para mostrar totales?
   const showPrices = lista.some((u) => Number.isFinite(precioFila(u, productosById)));
 
-  // Anchos de columnas
-  // Ajustados para evitar saltos; elipsis si no caben
   const widths = showPrices
-    ? [200, 90, 60, 55, 85, 85]  // Nombre, Categoría, Unidad, Cant., P.Unit., Importe
+    ? [200, 90, 60, 55, 85, 85]
     : [280, 120, 80, 85];
 
   const headers = showPrices
     ? ['Nombre', 'Categoría', 'Unidad', 'Cant.', 'P. Unit.', 'Importe']
     : ['Nombre', 'Categoría', 'Unidad', 'Cant.'];
 
-  // Si el ancho total no coincide con CONTENT_W, hace un pequeño ajuste en la 1a col
   const gap = CONTENT_W - sum(widths);
   if (Math.abs(gap) > 1) widths[0] += gap;
 
@@ -304,24 +327,22 @@ function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} 
 
     ensureSpace(doc, ROW_H + 20, printHeaderOnNewPage);
     y = drawTableRow(doc, { x: X, y, widths, values: rowValues, zebra: i % 2 === 1 });
-    doc.y = y; // sincroniza doc.y con y
+    doc.y = y;
   });
 
-  // Totales (si hay precios)
   let descuentoInfo = { tipo: 'monto', valor: 0, monto: 0 };
   let total = subTotal;
 
   if (showPrices) {
-    const d = reserva?.precios?.descuento || reserva?.descuento; // compat
+    const d = reserva?.precios?.descuento || reserva?.descuento;
     descuentoInfo = calcularDescuento(subTotal, d);
     total = Math.max(0, subTotal - descuentoInfo.monto);
 
-    // filas de totales al pie de la tabla
     const totalsWidths = widths.slice();
-    const labelColSpan = totalsWidths.length - 2; // deja 2 cols para "label/importe"
+    const labelColSpan = totalsWidths.length - 2;
     const labelWidth = sum(totalsWidths.slice(0, labelColSpan));
     const lastTwo = totalsWidths.slice(labelColSpan);
-    const merged = [labelWidth, ...lastTwo]; // [labelGrande, penúltima, última]
+    const merged = [labelWidth, ...lastTwo];
 
     const subtotalRow = ['', 'SUBTOTAL', money(subTotal)];
     ensureSpace(doc, ROW_H + 6, printHeaderOnNewPage);
@@ -332,15 +353,14 @@ function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} 
       : 'DESCUENTO';
     const descRow = ['', descLabel, `-${money(descuentoInfo.monto)}`];
     ensureSpace(doc, ROW_H + 4, printHeaderOnNewPage);
-    y = drawTableRow(doc, { x: X, y: y, widths: merged, values: descRow });
+    y = drawTableRow(doc, { x: X, y, widths: merged, values: descRow });
 
     const totalRow = ['', 'TOTAL', money(total)];
     ensureSpace(doc, ROW_H + 10, printHeaderOnNewPage);
-    y = drawTableRow(doc, { x: X, y: y, widths: merged, values: totalRow, isTotal: true });
+    y = drawTableRow(doc, { x: X, y, widths: merged, values: totalRow, isTotal: true });
 
     doc.y = y + 10;
 
-    // Tarjeta de resumen a la derecha (limpio y visible)
     const summaryW = 260;
     const summaryH = 90;
     const sx = X + CONTENT_W - summaryW;
@@ -368,7 +388,6 @@ function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} 
 
     doc.y = s.y + summaryH + 8;
 
-    // Nota
     doc.font('Helvetica').fontSize(FONTS.small).fillColor(COLORS.textMuted);
     const note = esCotizacion
       ? '* Esta es una cotización. Precios sujetos a cambio hasta su confirmación.'
@@ -385,7 +404,6 @@ function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} 
     '• Cambios o cancelaciones: 24 horas de anticipación.',
   ];
 
-  // agrega descripciones de línea (sin romper layout de la tabla)
   const descBullets = [];
   (lista || []).forEach(u => {
     const p = u?.itemId ? productosById.get(String(u.itemId)) : null;
@@ -401,9 +419,98 @@ function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} 
   ensureSpace(doc, infoH + 20, () => {});
   const infoCard = drawCard(doc, { x: X, y: doc.y, width: CONTENT_W, height: infoH });
   doc.fillColor(COLORS.primaryLight).font('Helvetica-Bold').fontSize(FONTS.medium);
-  doc.text('Información Importante', infoCard.x, infoCard.y, { lineBreak: false, ellipsis: true });
+  doc.text('Información Importante', infoCard.x, infoCard.y -15 , { lineBreak: false, ellipsis: true });
   doc.font('Helvetica').fontSize(FONTS.small).fillColor(COLORS.text);
-  doc.text(infoText, infoCard.x, infoCard.y + 18, { width: infoCard.w, lineGap: 2 });
+  doc.text(infoText, infoCard.x, infoCard.y + 5, { width: infoCard.w, lineGap: 2 });
+
+  // === NUEVO: Contrato de accesorios en préstamo ===
+  doc.y = infoCard.y + infoH + 14;
+
+  const accSel = getAccesoriosSeleccionados(reserva);
+  if (accSel.length > 0) {
+    // Título
+    ensureSpace(doc, 40, () => {});
+    sectionTitle(doc, 'Accesorios en préstamo (Contrato)', X, doc.y, '🧾');
+    doc.y += 14;
+
+    // Tabla de accesorios
+    const hasRepos = accSel.some(a => Number(a.precioReposicion) > 0);
+    let accHeaders = hasRepos
+      ? ['Accesorio','Cant.', 'Unidad', 'Reposición']
+      : ['Accesorio', 'Cant.', 'Unidad' ];
+    let accWidths = hasRepos
+      ? [CONTENT_W - 240, 60, 80, 100]
+      : [CONTENT_W - 160, 60, 80];
+
+    const gapAcc = CONTENT_W - sum(accWidths);
+    if (Math.abs(gapAcc) > 1) accWidths[0] += gapAcc;
+
+    const printAccHeader = () => {
+      doc.y = doc.page.margins.top;
+      sectionTitle(doc, 'Accesorios en préstamo (Contrato)', X, doc.y, '🧾');
+      doc.y += 14;
+      yAcc = drawTableHeader(doc, { x: X, y: doc.y, widths: accWidths, headers: accHeaders });
+    };
+
+    let yAcc = drawTableHeader(doc, { x: X, y: doc.y, widths: accWidths, headers: accHeaders });
+
+    accSel.forEach((a, i) => {
+      const values = hasRepos
+        ? [a.nombre, String(a.cantidad),a.unidad || 'pza',  Number(a.precioReposicion) > 0 ? money(a.precioReposicion) : '—']
+        : [a.nombre, String(a.cantidad),a.unidad || 'pza' ];
+      ensureSpace(doc, ROW_H + 10, printAccHeader);
+      yAcc = drawTableRow(doc, { x: X, y: yAcc, widths: accWidths, values, zebra: i % 2 === 1 });
+      doc.y = yAcc;
+    });
+
+    // Texto legal de responsabilidad
+    const contratoText =
+      'Declaro haber recibido los accesorios arriba listados en calidad de préstamo, sin costo de renta. ' +
+      'Me comprometo a devolverlos en el mismo estado en que fueron entregados. ' +
+      'En caso de daño, pérdida o faltante, AUTORIZO el cobro del costo de reposición correspondiente ' +
+      'según precios vigentes, así como cualquier gasto derivado de su sustitución o reparación.';
+
+    const contratoH = Math.max(70, doc.heightOfString(contratoText, { width: CONTENT_W - 24 }) + 26);
+    ensureSpace(doc, contratoH + 20, () => {});
+    const contratoCard = drawCard(doc, { x: X, y: doc.y + 8, width: CONTENT_W, height: contratoH });
+    doc.font('Helvetica-Bold').fontSize(FONTS.medium).fillColor(COLORS.primary);
+    doc.text('Acuerdo de Responsabilidad', contratoCard.x, contratoCard.y -15, { lineBreak: false, ellipsis: true });
+    doc.font('Helvetica').fontSize(FONTS.base).fillColor(COLORS.text);
+    doc.text(contratoText, contratoCard.x, contratoCard.y + 5, { width: contratoCard.w, lineGap: 2 });
+
+    // Bloque de firmas
+    const firmasH = 120;
+    ensureSpace(doc, firmasH + 10, () => {});
+    const fy = contratoCard.y + contratoH + 16;
+    const colW = (CONTENT_W - 40) / 2;
+
+    // Línea cliente
+    const clienteX = X;
+    const clienteLineW = colW;
+    const lineY = fy + 50;
+    doc.moveTo(clienteX, lineY).lineTo(clienteX + clienteLineW, lineY)
+      .strokeColor(COLORS.border).lineWidth(1).stroke();
+    doc.font('Helvetica').fontSize(FONTS.small).fillColor(COLORS.text);
+    doc.text('Nombre y firma del cliente', clienteX, lineY + 4, { width: clienteLineW, align: 'center' });
+
+    // Línea empresa
+    const empX = X + colW + 40;
+    doc.moveTo(empX, lineY).lineTo(empX + clienteLineW, lineY)
+      .strokeColor(COLORS.border).lineWidth(1).stroke();
+    doc.font('Helvetica').fontSize(FONTS.small);
+    doc.text('Representante de Nardeli', empX, lineY + 4, { width: clienteLineW, align: 'center' });
+
+    // Fecha
+    const fechaLblY = lineY + 34;
+    const fechaW = 160;
+    doc.text(`Fecha: ${ymd(new Date())}`, clienteX, fechaLblY, { width: 40 });
+    doc.moveTo(clienteX + 40, fechaLblY + 10).lineTo(clienteX + 40 + fechaW, fechaLblY + 10)
+      .strokeColor(COLORS.border).lineWidth(1).stroke();
+    doc.font('Helvetica').fontSize(FONTS.small).fillColor(COLORS.textMuted);
+    doc.text(`Sugerido: ${ymd(new Date())}`, clienteX + 42, fechaLblY + 12, { width: fechaW });
+
+    doc.y = fechaLblY + 36;
+  }
 
   /** Pie **/
   const footerY = doc.page.height - doc.page.margins.bottom + 12;
