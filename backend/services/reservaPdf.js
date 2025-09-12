@@ -1,5 +1,7 @@
 // services/reservaPdf.js
 const PDFDocument = require('pdfkit');
+const path = require('path');
+const fs = require('fs');
 
 /** === Helpers numéricos/formatos === **/
 function money(n) {
@@ -208,6 +210,17 @@ function getAccesoriosSeleccionados(reserva) {
   return a2;
 }
 
+/** === Resolver logo === **/
+function resolveLogoPath(brand) {
+  if (brand?.logoPath && fs.existsSync(brand.logoPath)) return brand.logoPath;
+  const candidates = [
+    path.join(__dirname, '..', 'uploads', 'logos', 'nardeli_logo.png'),
+    path.join(__dirname, '..', 'uploads', 'N12.png'),
+    path.join(__dirname, '..', 'uploads', 'logo.png'),
+  ];
+  return candidates.find(p => fs.existsSync(p)) || null;
+}
+
 /** === Documento principal === **/
 function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} }) {
   const MARGIN = 40;
@@ -221,18 +234,34 @@ function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} 
   const doc = new PDFDocument({ size: 'A4', margin: MARGIN, bufferPages: true });
   doc.pipe(res);
 
-  /** Encabezado **/
+  /** Encabezado con logo **/
   const headerH = 64;
   const topY = doc.y - 20;
+  const LOGO_W = 56;
+
+  const logoPath = resolveLogoPath(brand);
+  const hasLogo = !!logoPath;
+
   doc.save();
   doc.roundedRect(X - 20, topY, CONTENT_W + 40, headerH, 12).fill(COLORS.primary);
+
+  if (hasLogo) {
+    try {
+      doc.image(logoPath, X - 10, topY + 5, { width: LOGO_W });
+    } catch (e) {
+      console.error('No se pudo embebir el logo en PDF:', e.message);
+    }
+  }
+
+  const textX = hasLogo ? (X + LOGO_W + 10) : X;
+
   doc.fill('#ffffff').font('Helvetica-Bold').fontSize(FONTS.title);
-  doc.text(brand.title || 'Nardeli', X, topY + 10);
+  doc.text(brand.title || 'Nardeli', textX, topY + 10);
   doc.font('Helvetica').fontSize(FONTS.h2);
 
   const esCotizacion = (reserva?.tipoReserva || 'evento') === 'cotizacion';
   const subtitulo = esCotizacion ? 'Cotización' : 'Confirmación de Reserva';
-  doc.text(subtitulo, X, topY + 36);
+  doc.text(subtitulo, textX, topY + 36);
   doc.restore();
 
   doc.moveDown();
@@ -286,7 +315,6 @@ function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} 
   doc.y += 14;
 
   const lista = Array.isArray(reserva?.utensilios) ? reserva.utensilios : [];
-
   const showPrices = lista.some((u) => Number.isFinite(precioFila(u, productosById)));
 
   const widths = showPrices
@@ -419,11 +447,11 @@ function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} 
   ensureSpace(doc, infoH + 20, () => {});
   const infoCard = drawCard(doc, { x: X, y: doc.y, width: CONTENT_W, height: infoH });
   doc.fillColor(COLORS.primaryLight).font('Helvetica-Bold').fontSize(FONTS.medium);
-  doc.text('Información Importante', infoCard.x, infoCard.y -15 , { lineBreak: false, ellipsis: true });
+  doc.text('Información Importante', infoCard.x, infoCard.y - 15, { lineBreak: false, ellipsis: true });
   doc.font('Helvetica').fontSize(FONTS.small).fillColor(COLORS.text);
   doc.text(infoText, infoCard.x, infoCard.y + 5, { width: infoCard.w, lineGap: 2 });
 
-  // === NUEVO: Contrato de accesorios en préstamo ===
+  // === Contrato de accesorios en préstamo ===
   doc.y = infoCard.y + infoH + 14;
 
   const accSel = getAccesoriosSeleccionados(reserva);
@@ -456,8 +484,8 @@ function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} 
 
     accSel.forEach((a, i) => {
       const values = hasRepos
-        ? [a.nombre, String(a.cantidad),a.unidad || 'pza',  Number(a.precioReposicion) > 0 ? money(a.precioReposicion) : '—']
-        : [a.nombre, String(a.cantidad),a.unidad || 'pza' ];
+        ? [a.nombre, String(a.cantidad), a.unidad || 'pza', Number(a.precioReposicion) > 0 ? money(a.precioReposicion) : '—']
+        : [a.nombre, String(a.cantidad), a.unidad || 'pza' ];
       ensureSpace(doc, ROW_H + 10, printAccHeader);
       yAcc = drawTableRow(doc, { x: X, y: yAcc, widths: accWidths, values, zebra: i % 2 === 1 });
       doc.y = yAcc;
@@ -474,7 +502,7 @@ function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} 
     ensureSpace(doc, contratoH + 20, () => {});
     const contratoCard = drawCard(doc, { x: X, y: doc.y + 8, width: CONTENT_W, height: contratoH });
     doc.font('Helvetica-Bold').fontSize(FONTS.medium).fillColor(COLORS.primary);
-    doc.text('Acuerdo de Responsabilidad', contratoCard.x, contratoCard.y -15, { lineBreak: false, ellipsis: true });
+    doc.text('Acuerdo de Responsabilidad', contratoCard.x, contratoCard.y - 15, { lineBreak: false, ellipsis: true });
     doc.font('Helvetica').fontSize(FONTS.base).fillColor(COLORS.text);
     doc.text(contratoText, contratoCard.x, contratoCard.y + 5, { width: contratoCard.w, lineGap: 2 });
 
