@@ -15,12 +15,12 @@ router.post('/login', async (req, res) => {
     const usuario = await Usuario.findOne({ email });
 
     if (!usuario) {
-      return res.status(401).json({ success: false, message: 'Usuario o contraseña inválidos' });
+      return res.status(401).json({ success: false, message: 'Usuario inválidos' });
     }
 
     const passwordValida = await bcrypt.compare(password, usuario.password); // ← compara plain vs HASH
     if (!passwordValida) {
-      return res.status(401).json({ success: false, message: 'Usuario o contraseña inválidos' });
+      return res.status(401).json({ success: false, message: ' contraseña inválidos' });
     }
 
     const token = jwt.sign(
