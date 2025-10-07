@@ -19,7 +19,7 @@ const Dashboard = ({ onLogout }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [inventarioTick, setInventarioTick] = useState(0);
   const [accesorioTick, setAccesorioTick] = useState(0);
-const [inventarioTab, setInventarioTab] = useState('producto'); // 'producto' | 'accesorio'
+  const [inventarioTab, setInventarioTab] = useState('producto'); // 'producto' | 'accesorio'
 
   // KPIs / actividad
   const [loadingDash, setLoadingDash] = useState(false);
@@ -155,6 +155,7 @@ const [inventarioTab, setInventarioTab] = useState('producto'); // 'producto' | 
   }, [activeSection]);
 
   const isAdmin = user?.role === 'admin';
+  const isAsistente = user?.role === 'asistente'; // ← añadido
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
@@ -165,7 +166,10 @@ const [inventarioTab, setInventarioTab] = useState('producto'); // 'producto' | 
     { id: 'reservar', label: 'Reservar', icon: '✅'},
   ];
 
-  const visibleMenuItems = isAdmin ? menuItems : menuItems;
+  // ocultar solo a asistentes: clientes, reportes, inventario (sin tocar diseño del resto)
+  const visibleMenuItems = isAsistente
+    ? menuItems.filter(i => !['clientes','reportes','inventario'].includes(i.id))
+    : menuItems;
 
   // ===== Acciones de cotizaciones =====
   const abrirModalEditarCot = (a) => {
@@ -227,34 +231,32 @@ const [inventarioTab, setInventarioTab] = useState('producto'); // 'producto' | 
     }
   };
 
- const convertirACEvento = async (id) => {
-  try {
-    const cleanId = String(id).replace(/['"]/g, '').trim();
-    const url = `${API_BASE_URL}/reservas/${encodeURIComponent(cleanId)}/aceptar-cotizacion`;
+  const convertirACEvento = async (id) => {
+    try {
+      const cleanId = String(id).replace(/['"]/g, '').trim();
+      const url = `${API_BASE_URL}/reservas/${encodeURIComponent(cleanId)}/aceptar-cotizacion`;
 
-    const resp = await fetch(url, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({})   // <-- importante
-    });
+      const resp = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})   // <-- importante
+      });
 
-    if (!resp.ok) {
-      const text = await resp.text();
-      let errObj;
-      try { errObj = JSON.parse(text); } catch { errObj = { msg: text }; }
-      alert(errObj?.msg || errObj?.motivo || errObj?.error || `Error ${resp.status}`);
-      return;
+      if (!resp.ok) {
+        const text = await resp.text();
+        let errObj;
+        try { errObj = JSON.parse(text); } catch { errObj = { msg: text }; }
+        alert(errObj?.msg || errObj?.motivo || errObj?.error || `Error ${resp.status}`);
+        return;
+      }
+
+      await cargarDashboardData();
+      alert('✅ Cotización convertida a Evento');
+    } catch (e) {
+      console.error('convertirACEvento error:', e);
+      alert('Error de conexión');
     }
-
-    await cargarDashboardData();
-    alert('✅ Cotización convertida a Evento');
-  } catch (e) {
-    console.error('convertirACEvento error:', e);
-    alert('Error de conexión');
-  }
-};
-
-
+  };
 
   const abrirPanelArticulosAdmin = () => {
     if (!cotEdit?.id) return;
@@ -268,7 +270,7 @@ const [inventarioTab, setInventarioTab] = useState('producto'); // 'producto' | 
         return (
           <div className="dashboard-content">
             <div className="dashboard-header">
-              <h1>Bienvenido, Admin{user?.fullname || user?.email}</h1>
+              <h1>Bienvenido, {user?.fullname || user?.email}</h1>
               <p>Panel de control - Salón de Eventos Nardeli</p>
             </div>
 
@@ -510,7 +512,11 @@ const [inventarioTab, setInventarioTab] = useState('producto'); // 'producto' | 
             <button
               key={item.id}
               className={`nav-item ${activeSection === item.id ? 'active' : ''}`}
-              onClick={() => setActiveSection(item.id)}
+              onClick={() => {
+                // bloqueo suave solo para asistentes en secciones prohibidas
+                if (isAsistente && ['clientes','reportes','inventario'].includes(item.id)) return;
+                setActiveSection(item.id);
+              }}
             >
               <span className="nav-icon">{item.icon}</span>
               <span className="nav-label">{item.label}</span>

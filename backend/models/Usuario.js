@@ -7,7 +7,7 @@ const UsuarioSchema = new mongoose.Schema({
   password: { type: String },   // Login tradicional (opcional): guarda aquí el HASH (bcrypt) si lo usas
   googleId: { type: String, index: true },  // Login con Google (opcional)
   foto: { type: String },
-  role: { type: String, enum: ['admin', 'user'], default: 'user' },
+  role: { type: String, enum: ['admin', 'user','asistente'], default: 'user' },
   emailVerified: { type: Boolean, default: true },   // Estado del correo (si manejas verificación)
 
   // === Acceso por código/enlace mágico ===
