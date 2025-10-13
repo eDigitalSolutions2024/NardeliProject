@@ -168,7 +168,7 @@ const Dashboard = ({ onLogout }) => {
 
   // ocultar solo a asistentes: clientes, reportes, inventario (sin tocar diseño del resto)
   const visibleMenuItems = isAsistente
-    ? menuItems.filter(i => !['clientes','reportes','inventario'].includes(i.id))
+    ? menuItems.filter(i => !['reportes','inventario'].includes(i.id))
     : menuItems;
 
   // ===== Acciones de cotizaciones =====
@@ -514,7 +514,7 @@ const Dashboard = ({ onLogout }) => {
               className={`nav-item ${activeSection === item.id ? 'active' : ''}`}
               onClick={() => {
                 // bloqueo suave solo para asistentes en secciones prohibidas
-                if (isAsistente && ['clientes','reportes','inventario'].includes(item.id)) return;
+                if (isAsistente && ['reportes','inventario'].includes(item.id)) return;
                 setActiveSection(item.id);
               }}
             >

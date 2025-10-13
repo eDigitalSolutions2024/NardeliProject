@@ -89,6 +89,7 @@ export default function TablaProductos({ refresh = 0 } ) {
       fd.append('categoria', form.categoria);
       fd.append('cantidad', String(form.cantidad));
       fd.append('precio', String(form.precio));
+      fd.append('descripcion', form.descripcion); // <-- FALTABA
       // solo si cambió la imagen
       if (imagenFile) fd.append('imagen', imagenFile);
 

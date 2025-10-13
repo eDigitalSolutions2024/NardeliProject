@@ -20,6 +20,29 @@ function ymd(d) {
   try { return new Date(d).toISOString().slice(0,10); } catch { return ''; }
 }
 
+function time12(hhmmOrDate) {
+  if (!hhmmOrDate) return '—';
+  // Si viene "HH:mm"
+  const m = String(hhmmOrDate).match(/^(\d{1,2}):(\d{2})$/);
+  let d;
+  if (m) {
+    const h = Number(m[1]), min = Number(m[2]);
+    d = new Date();
+    d.setHours(h, min, 0, 0);
+  } else {
+    // Si viene fecha/hora parseable
+    const dt = new Date(hhmmOrDate);
+    d = isNaN(dt) ? null : dt;
+  }
+  if (!d) return String(hhmmOrDate);
+  return new Intl.DateTimeFormat('es-MX', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(d);
+}
+
+
 /** === Paleta / fuentes === **/
 const COLORS = {
   primary: '#7c3aed',
@@ -155,6 +178,78 @@ function drawTableRow(doc, { x, y, widths, values, zebra = false, isTotal = fals
   return y + ROW_H;
 }
 
+
+
+
+//SOLO PRUEBA ELIMINAR FUNCION DRAWTABLEROWRICH
+
+function drawTableRowRich(doc, { x, y, widths, values, zebra = false }) {
+  // values[0] puede ser { title, sub } o un string
+  const w = sum(widths);
+  const hasSub = values[0] && typeof values[0] === 'object' && values[0].title;
+  const rowH = hasSub ? 36 : ROW_H;
+
+  doc.save();
+
+  if (zebra) doc.rect(x, y, w, rowH).fill(COLORS.tableZebra);
+
+  let cx = x;
+
+  // 1) Primera columna: título + subtítulo pequeño
+  {
+    const colW = widths[0];
+    const vx = cx + PADX;
+    const vw = colW - PADX * 2;
+
+    if (hasSub) {
+      const { title, sub } = values[0];
+      // Título
+      doc.fillColor(COLORS.text).font('Helvetica').fontSize(FONTS.base);
+      doc.text(String(title ?? ''), vx, y + 6, { width: vw, ellipsis: true, lineBreak: false });
+
+      // Subtítulo chiquito y tenue
+      doc.fillColor(COLORS.textMuted).font('Helvetica').fontSize(FONTS.tiny);
+      doc.text(String(sub ?? ''), vx, y + 18, { width: vw, ellipsis: true, lineBreak: false });
+    } else {
+      // Comportamiento normal
+      doc.fillColor(COLORS.text).font('Helvetica').fontSize(FONTS.base);
+      doc.text(String(values[0] ?? ''), vx, y + 6, { width: vw, ellipsis: true, lineBreak: false });
+    }
+
+    cx += colW;
+  }
+
+  // 2) Resto de columnas (igual que antes)
+  doc.fillColor(COLORS.text).font('Helvetica').fontSize(FONTS.base);
+  for (let i = 1; i < values.length; i++) {
+    const colW = widths[i];
+    const align = i >= values.length - 2 ? 'right' : 'left';
+    doc.text(String(values[i] ?? ''), cx + PADX, y + 6, {
+      width: colW - PADX * 2,
+      align,
+      lineBreak: false,
+      ellipsis: true,
+    });
+    cx += colW;
+  }
+
+  // línea separadora
+  doc.moveTo(x, y + rowH).lineTo(x + w, y + rowH)
+    .strokeColor(COLORS.border).lineWidth(0.5).stroke();
+
+  doc.restore();
+  return y + rowH;
+}
+
+
+
+
+
+
+
+
+
+
 /** === Cálculos de importes === **/
 function precioFila(u, productosById) {
   if (Number.isFinite(u?.precio)) return Number(u.precio);
@@ -286,17 +381,57 @@ function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} 
     : '—';
   y2 += labelValue(doc, { x: c2.x, y: y2, label: 'Tipo:', value: reserva?.tipoEvento, wLabel: 65, wValue: c2.w - 65 - 8, boldValue: true }) + 6;
   y2 += labelValue(doc, { x: c2.x, y: y2, label: 'Fecha:', value: fechaTxt, wLabel: 65, wValue: c2.w - 65 - 8 }) + 6;
-  y2 += labelValue(doc, { x: c2.x, y: y2, label: 'Horario:', value: `${reserva?.horaInicio || '—'} – ${reserva?.horaFin || '—'}`, wLabel: 65, wValue: c2.w - 65 - 8 }) + 6;
+  y2 += labelValue(doc, {
+    x: c2.x,
+    y: y2,
+    label: 'Horario:',
+    value: `${time12(reserva?.horaInicio)} – ${time12(reserva?.horaFin)}`,
+    wLabel: 65,
+    wValue: c2.w - 65 - 8
+  }) + 6;
 
   doc.y = cardY + cardH + 12;
 
-  /** ID de reserva **/
-  const idCard = drawCard(doc, { x: X, y: doc.y, width: CONTENT_W, height: 40 });
+  /** ID de reserva + fecha de creación **/
+const idCard = drawCard(doc, { x: X, y: doc.y, width: CONTENT_W, height: 64 });
+
+// ID
+doc.fillColor(COLORS.primary).font('Helvetica-Bold').fontSize(FONTS.medium);
+doc.text('ID de Reserva:', idCard.x, idCard.y + 8, { lineBreak: false, ellipsis: true });
+doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(FONTS.h2);
+doc.text(
+  `#${String(reserva?._id || 'N/A').slice(-8).toUpperCase()}`,
+  idCard.x + 110,
+  idCard.y + 6,
+  { lineBreak: false, ellipsis: true }
+);
+
+// Fecha de creación (si existe)
+const fechaCreacionRaw = reserva?.createdAt || reserva?.fechaCreacion || reserva?.creadaEn;
+if (fechaCreacionRaw) {
+  const fechaCreacionTxt = new Date(fechaCreacionRaw).toLocaleString('es-MX', {
+  weekday: 'long',
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true
+});
+
   doc.fillColor(COLORS.primary).font('Helvetica-Bold').fontSize(FONTS.medium);
-  doc.text('ID de Reserva:', idCard.x, idCard.y + 8, { lineBreak: false, ellipsis: true });
-  doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(FONTS.h2);
-  doc.text(`#${String(reserva?._id || 'N/A').slice(-8).toUpperCase()}`, idCard.x + 110, idCard.y + 6, { lineBreak: false, ellipsis: true });
-  doc.y = idCard.y + 48;
+  doc.text('Fecha de la reserva:', idCard.x, idCard.y + 34, { lineBreak: false, ellipsis: true });
+
+  doc.fillColor(COLORS.text).font('Helvetica').fontSize(FONTS.base);
+  doc.text(fechaCreacionTxt, idCard.x + 140, idCard.y + 34, {
+    lineBreak: false,
+    ellipsis: true,
+    width: idCard.w - 140
+  });
+}
+
+doc.y = idCard.y + 72;
+
 
   /** Notas (si hay) **/
   if (reserva?.descripcion && String(reserva.descripcion).trim()) {
@@ -340,89 +475,95 @@ function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} 
 
   let subTotal = 0;
   lista.forEach((u, i) => {
-    const prod = u?.itemId ? productosById.get(String(u.itemId)) : null;
-    const nombre = u?.nombre || prod?.nombre || '—';
-    const categoria = u?.categoria || 'General';
-    const unidad = u?.unidad || 'pza';
-    const cant = Number(u?.cantidad || 0);
-    const pu = precioFila(u, productosById);
-    const importe = Number.isFinite(pu) ? pu * cant : null;
-    if (Number.isFinite(importe)) subTotal += importe;
+  const prod = u?.itemId ? productosById.get(String(u.itemId)) : null;
+  const nombre = u?.nombre || prod?.nombre || '—';
+  const categoria = u?.categoria || 'General';
+  const unidad = u?.unidad || 'pza';
+  const cant = Number(u?.cantidad || 0);
+  const pu = precioFila(u, productosById);
+  const importe = Number.isFinite(pu) ? pu * cant : null;
+  if (Number.isFinite(importe)) subTotal += importe;
 
-    const rowValues = showPrices
-      ? [nombre, categoria, unidad, String(cant), Number.isFinite(pu) ? money(pu) : '—', Number.isFinite(importe) ? money(importe) : '—']
-      : [nombre, categoria, unidad, String(cant)];
+  const rowValues = showPrices
+    ? [nombre, categoria, unidad, String(cant),
+       Number.isFinite(pu) ? money(pu) : '—',
+       Number.isFinite(importe) ? money(importe) : '—']
+    : [nombre, categoria, unidad, String(cant)];
 
-    ensureSpace(doc, ROW_H + 20, printHeaderOnNewPage);
-    y = drawTableRow(doc, { x: X, y, widths, values: rowValues, zebra: i % 2 === 1 });
-    doc.y = y;
-  });
+  ensureSpace(doc, ROW_H + 10, printHeaderOnNewPage);
+  y = drawTableRow(doc, { x: X, y, widths, values: rowValues, zebra: i % 2 === 1 });
+  doc.y = y;
+});
 
   let descuentoInfo = { tipo: 'monto', valor: 0, monto: 0 };
   let total = subTotal;
 
   if (showPrices) {
-    const d = reserva?.precios?.descuento || reserva?.descuento;
-    descuentoInfo = calcularDescuento(subTotal, d);
-    total = Math.max(0, subTotal - descuentoInfo.monto);
+  const d = reserva?.precios?.descuento || reserva?.descuento;
+  const descuentoInfo = calcularDescuento(subTotal, d);
+  const total = Math.max(0, subTotal - descuentoInfo.monto);
 
-    const totalsWidths = widths.slice();
-    const labelColSpan = totalsWidths.length - 2;
-    const labelWidth = sum(totalsWidths.slice(0, labelColSpan));
-    const lastTwo = totalsWidths.slice(labelColSpan);
-    const merged = [labelWidth, ...lastTwo];
+  // === Descripción de utensilios (debajo de la tabla, tenue) ===
+  const descBullets = [];
+  (lista || []).forEach(u => {
+    const p = u?.itemId ? productosById.get(String(u.itemId)) : null;
+    const d = (u?.descripcion && String(u.descripcion).trim()) || (p?.descripcion && String(p.descripcion).trim());
+    if (d) {
+      const name = u?.nombre || p?.nombre || 'Ítem';
+      // Sin viñeta “•” para mantenerlo sutil, si prefieres con viñetas, antepone "• "
+      descBullets.push(`• ${name}: ${d}`);
+    }
+  });
 
-    const subtotalRow = ['', 'SUBTOTAL', money(subTotal)];
-    ensureSpace(doc, ROW_H + 6, printHeaderOnNewPage);
-    y = drawTableRow(doc, { x: X, y: y + 6, widths: merged, values: subtotalRow });
+  if (descBullets.length > 0) {
+    const descText = descBullets.join('\n');
+    const descH = Math.max(70, doc.heightOfString(descText, { width: CONTENT_W - 28 }) + 28);
+    ensureSpace(doc, descH + 16, () => {});
+    const dCard = drawCard(doc, { x: X, y: doc.y + 8, width: CONTENT_W, height: descH });
 
-    const descLabel = descuentoInfo.tipo === 'porcentaje'
-      ? `DESCUENTO (${pct(descuentoInfo.valor)})`
-      : 'DESCUENTO';
-    const descRow = ['', descLabel, `-${money(descuentoInfo.monto)}`];
-    ensureSpace(doc, ROW_H + 4, printHeaderOnNewPage);
-    y = drawTableRow(doc, { x: X, y, widths: merged, values: descRow });
-
-    const totalRow = ['', 'TOTAL', money(total)];
-    ensureSpace(doc, ROW_H + 10, printHeaderOnNewPage);
-    y = drawTableRow(doc, { x: X, y, widths: merged, values: totalRow, isTotal: true });
-
-    doc.y = y + 10;
-
-    const summaryW = 260;
-    const summaryH = 90;
-    const sx = X + CONTENT_W - summaryW;
-    ensureSpace(doc, summaryH + 16, () => {});
-    const s = drawCard(doc, { x: sx, y: doc.y, width: summaryW, height: summaryH });
+    // Título normal y texto tenue
     doc.font('Helvetica-Bold').fontSize(FONTS.medium).fillColor(COLORS.primary);
-    doc.text('Resumen de totales', s.x, s.y, { lineBreak: false, ellipsis: true });
-    doc.font('Helvetica').fontSize(FONTS.base).fillColor(COLORS.text);
-
-    const lineY = s.y + 24;
-    doc.text('Subtotal', s.x, lineY, { width: s.w / 2, lineBreak: false, ellipsis: true });
-    doc.text(money(subTotal), s.x + s.w / 2, lineY, { width: s.w / 2, align: 'right', lineBreak: false, ellipsis: true });
-
-    const lineY2 = lineY + 16;
-    const dText = descuentoInfo.tipo === 'porcentaje'
-      ? `Descuento (${pct(descuentoInfo.valor)})`
-      : 'Descuento';
-    doc.text(dText, s.x, lineY2, { width: s.w / 2, lineBreak: false, ellipsis: true });
-    doc.text(`-${money(descuentoInfo.monto)}`, s.x + s.w / 2, lineY2, { width: s.w / 2, align: 'right', lineBreak: false, ellipsis: true });
-
-    const lineY3 = lineY2 + 16;
-    doc.font('Helvetica-Bold');
-    doc.text('Total', s.x, lineY3, { width: s.w / 2, lineBreak: false, ellipsis: true });
-    doc.text(money(total), s.x + s.w / 2, lineY3, { width: s.w / 2, align: 'right', lineBreak: false, ellipsis: true });
-
-    doc.y = s.y + summaryH + 8;
+    doc.text('Descripción de utensilios', dCard.x, dCard.y - 14, { lineBreak: false, ellipsis: true });
 
     doc.font('Helvetica').fontSize(FONTS.small).fillColor(COLORS.textMuted);
-    const note = esCotizacion
-      ? '* Esta es una cotización. Precios sujetos a cambio hasta su confirmación.'
-      : '* Precios estimados sujetos a confirmación. Pueden aplicar cargos adicionales por servicios extras.';
-    doc.text(note, X, doc.y, { width: CONTENT_W, align: 'right' });
-    doc.y += 10;
+    doc.text(descText, dCard.x, dCard.y + 6, { width: dCard.w, lineGap: 2 });
+
+    doc.y = dCard.y + descH + 8;
   }
+
+  // === Totales (justo después de la descripción) ===
+  const totalsWidths = widths.slice();
+  const labelColSpan = totalsWidths.length - 2;
+  const labelWidth = sum(totalsWidths.slice(0, labelColSpan));
+  const lastTwo = totalsWidths.slice(labelColSpan);
+  const merged = [labelWidth, ...lastTwo];
+
+  const subtotalRow = ['', 'SUBTOTAL', money(subTotal)];
+  ensureSpace(doc, ROW_H + 6, printHeaderOnNewPage);
+  y = drawTableRow(doc, { x: X, y: doc.y + 6, widths: merged, values: subtotalRow });
+
+  const descLabel = descuentoInfo.tipo === 'porcentaje'
+    ? `DESCUENTO (${pct(descuentoInfo.valor)})`
+    : 'DESCUENTO';
+  const descRow = ['', descLabel, `-${money(descuentoInfo.monto)}`];
+  ensureSpace(doc, ROW_H + 4, printHeaderOnNewPage);
+  y = drawTableRow(doc, { x: X, y, widths: merged, values: descRow });
+
+  const totalRow = ['', 'TOTAL', money(total)];
+  ensureSpace(doc, ROW_H + 10, printHeaderOnNewPage);
+  y = drawTableRow(doc, { x: X, y, widths: merged, values: totalRow, isTotal: true });
+
+  doc.y = y + 10;
+
+  // Nota (se mantiene)
+  doc.font('Helvetica').fontSize(FONTS.small).fillColor(COLORS.textMuted);
+  const note = esCotizacion
+    ? '* Esta es una cotización. Precios sujetos a cambio hasta su confirmación.'
+    : '* Precios estimados sujetos a confirmación. Pueden aplicar cargos adicionales por servicios extras.';
+  doc.text(note, X, doc.y, { width: CONTENT_W, align: 'right' });
+  doc.y += 10;
+}
+
 
   /** Información y condiciones **/
   doc.moveDown();
@@ -432,17 +573,9 @@ function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} 
     '• Cambios o cancelaciones: 24 horas de anticipación.',
   ];
 
-  const descBullets = [];
-  (lista || []).forEach(u => {
-    const p = u?.itemId ? productosById.get(String(u.itemId)) : null;
-    const d = (u?.descripcion && String(u.descripcion).trim()) || (p?.descripcion && String(p.descripcion).trim());
-    if (d) {
-      const name = u?.nombre || p?.nombre || 'Ítem';
-      descBullets.push(`• ${name}: ${d}`);
-    }
-  });
+  
 
-  const infoText = [...bulletsBase, ...descBullets].join('\n');
+  const infoText = [...bulletsBase].join('\n');
   const infoH = Math.max(70, doc.heightOfString(infoText, { width: CONTENT_W - 24 }) + 26);
   ensureSpace(doc, infoH + 20, () => {});
   const infoCard = drawCard(doc, { x: X, y: doc.y, width: CONTENT_W, height: infoH });
@@ -547,8 +680,8 @@ function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} 
   doc.font('Helvetica-Bold').fontSize(FONTS.small).fillColor(COLORS.primary);
   doc.text(brand.footer || 'Nardeli - Salón de Eventos', X, footerY + 2, { lineBreak: false, ellipsis: true });
   doc.font('Helvetica').fontSize(FONTS.tiny).fillColor(COLORS.textMuted);
-  doc.text('contacto@nardeli.mx • +52 000 000 0000', X, footerY + 14, { lineBreak: false, ellipsis: true });
-
+  doc.text('contacto@nardeli.mx • +52 656 196 3397', X, footerY + 14, { lineBreak: false, ellipsis: true });
+  doc.text(brand.address || 'Av. Waterfill 427, Waterfill Río Bravo, 32380 Juárez, Chih.', X + 180, footerY + 10, { lineBreak: false, ellipsis: true });
   doc.end();
 }
 

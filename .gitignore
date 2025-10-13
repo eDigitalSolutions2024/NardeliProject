@@ -23,6 +23,6 @@ Thumbs.db
 .vscode/
 
 # Ignorar imágenes subidas pero mantener la carpeta
-backend/uploads/*
+# backend/uploads/*
 !backend/uploads/.gitkeep
 
