@@ -568,9 +568,8 @@ doc.y = idCard.y + 72;
   /** Información y condiciones **/
   doc.moveDown();
   const bulletsBase = [
-    '• Confirme su evento con al menos 48 horas de anticipación.',
     '• Utensilios y equipo deben devolverse en las mismas condiciones.',
-    '• Cambios o cancelaciones: 24 horas de anticipación.',
+    '• Sera necesario un anticipo del 20% para apartar la fecha de su evento.',
   ];
 
   
