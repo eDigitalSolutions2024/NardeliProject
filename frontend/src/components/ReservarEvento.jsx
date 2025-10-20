@@ -17,7 +17,7 @@ const ReservarEvento = () => {
     cantidadPersonas: '',
     descripcion: '',
     // Nuevo: distinguir cotización / evento
-    tipoReserva: 'evento',   // 'evento' | 'cotizacion'
+    tipoReserva: 'cotizacion',   // 'evento' | 'cotizacion'
     notaCotizacion: ''
   });
 
@@ -108,7 +108,7 @@ const ReservarEvento = () => {
         telefono: '',
         cantidadPersonas: '',
         descripcion: '',
-        tipoReserva: 'evento',
+        tipoReserva: 'cotizacion',
         notaCotizacion: ''
       });
 

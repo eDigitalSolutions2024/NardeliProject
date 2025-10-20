@@ -79,6 +79,9 @@ const Dashboard = ({ onLogout }) => {
     const iniMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
     const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59, 999);
 
+    const hoy0 = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 0, 0, 0, 0);
+
+    
     const getFecha = (r) => {
       const ymd = r.fechaLocal || String(r.fecha).slice(0, 10); // "YYYY-MM-DD"
       return new Date(`${ymd}T12:00:00`);
@@ -106,9 +109,9 @@ const Dashboard = ({ onLogout }) => {
 
       // KPIs (solo eventos)
       const enMes = eventos.filter(r => {
-        const f = getFecha(r);
-        return f >= iniMes && f <= finMes;
-      });
+          const f = getFecha(r);
+          return f >= hoy0 && f <= finMes;
+        });
       const futurosEventos = eventos
         .filter(r => getFecha(r) >= new Date())
         .sort((a,b) => getFecha(a) - getFecha(b));

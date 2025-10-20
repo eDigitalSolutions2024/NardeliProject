@@ -186,17 +186,54 @@ router.post('/', async (req, res) => {
   }
 });
 
+// GET /reservas
 router.get('/', async (req, res) => {
   try {
     const { correo } = req.query;
     const tipo = req.query.tipo || req.query.tipoReserva;
+
     const pipeline = [];
     if (correo) pipeline.push({ $match: { correo: correo.toLowerCase().trim() } });
-    if (tipo === 'evento' || tipo === 'cotizacion') pipeline.push({ $match: { tipoReserva: tipo } });
+    if (tipo === 'evento' || tipo === 'cotizacion') {
+      pipeline.push({ $match: { tipoReserva: tipo } });
+    }
+
     pipeline.push(
-      { $addFields: { fechaLocal: { $dateToString: { date: "$fecha", format: "%Y-%m-%d", timezone: TZ } } } },
-      { $sort: { fecha: 1, horaInicio: 1 } }
+      // Fechas “locales” (string) útiles para UI
+      {
+        $addFields: {
+          fechaLocal: {
+            $dateToString: { date: "$fecha", format: "%Y-%m-%d", timezone: TZ }
+          },
+          creadaLocal: {
+            $dateToString: { date: "$createdAt", format: "%Y-%m-%d %H:%M", timezone: TZ }
+          }
+        }
+      },
+      // Proyecta explícitamente lo que necesitas (incluye createdAt)
+      {
+        $project: {
+          cliente: 1,
+          correo: 1,
+          telefono: 1,
+          tipoEvento: 1,
+          fecha: 1,
+          fechaLocal: 1,
+          horaInicio: 1,
+          horaFin: 1,
+          cantidadPersonas: 1,
+          estado: 1,
+          tipoReserva: 1,
+          descripcion: 1,
+          pdfUrl: 1,
+          createdAt: 1,   // ← campo crudo para que el front lo use
+          creadaLocal: 1  // ← string ya formateado (opcional)
+        }
+      },
+      // Ordena (opcional: primero las más recientes por creación)
+      { $sort: { createdAt: -1, fecha: 1, horaInicio: 1 } }
     );
+
     const reservas = await Reserva.aggregate(pipeline);
     return res.json(reservas);
   } catch (e) {
@@ -204,6 +241,7 @@ router.get('/', async (req, res) => {
     return res.status(500).json({ msg: 'Error del servidor' });
   }
 });
+
 
 router.post('/disponibilidad', async (req, res) => {
   try {

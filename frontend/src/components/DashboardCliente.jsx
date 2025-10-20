@@ -832,7 +832,7 @@ useEffect(() => {
           </button>
 
           <button
-            className="cd-btn"
+            className="pdf"
             type="button"
             onClick={() => {
               if (!reservaId) return alert('No hay reservaId');

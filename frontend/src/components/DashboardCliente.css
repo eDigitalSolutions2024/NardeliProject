@@ -52,6 +52,17 @@
   padding:10px 14px;
   cursor:pointer;
   font-weight:600;
+
+}
+ .pdf{
+  margin: 10px;
+  border:0;
+  border-radius:12px;
+  padding:10px 14px;
+  cursor:pointer;
+  font-weight:800;
+  background-color: rgb(179, 56, 56);
+  color: white;
 }
 .cd-btn-clear{ background:#fff; border:1px solid var(--border); }
 .cd-btn-primary{ background:var(--brand-1); color:#fff; }
