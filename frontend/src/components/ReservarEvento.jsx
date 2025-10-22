@@ -39,6 +39,28 @@ const ReservarEvento = () => {
     if (mensaje) setMensaje('');
   };
 
+  // Lee el token del localStorage y extrae el role del payload (sin verificar firma)
+function getSessionRole() {
+  try {
+    const t = localStorage.getItem('token');
+    if (!t) return null;
+    const [, payloadB64] = t.split('.');
+    if (!payloadB64) return null;
+    const json = JSON.parse(atob(payloadB64));
+    // según cómo firmes el JWT, intenta en estas rutas:
+    return json.role || json.rol || json?.user?.role || null;
+  } catch {
+    return null;
+  }
+}
+
+// Deriva el "mode" para el dashboard en función del rol
+function getDashboardModeFromRole(role) {
+  const r = String(role || '').toLowerCase();
+  return (r === 'admin' || r === 'asistente') ? 'admin' : 'user';
+}
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMensaje('');
@@ -49,7 +71,7 @@ const ReservarEvento = () => {
 
     // Abre pre-ventana SOLO para EVENTO (para el dashboard)
     let prewin = null;
-    if (action === 'dashboard' && esEvento) {
+    if (action === 'dashboard') {
       prewin = window.open('about:blank', '_blank');
     }
 
@@ -112,9 +134,16 @@ const ReservarEvento = () => {
         notaCotizacion: ''
       });
 
-      // ── EVENTO → abrir dashboard del cliente en la pre-ventana ─────────────────
-      if (action === 'dashboard' && esEvento) {
-        const url = `/cliente/dashboard?reservaId=${encodeURIComponent(reservaId)}`;
+// ── Ir al dashboard (evento o cotización) con modo por rol ───────────────
+      if (action === 'dashboard') {
+        const role = getSessionRole();
+        const mode = getDashboardModeFromRole(role);
+        const params = new URLSearchParams({
+          reservaId: String(reservaId),
+          mode,
+          tipo: esEvento ? 'evento' : 'cotizacion'
+        }).toString();
+        const url = `/cliente/dashboard?${params}`;
         if (prewin && !prewin.closed) {
           prewin.location.replace(url);
           prewin.focus();
@@ -124,10 +153,11 @@ const ReservarEvento = () => {
         return;
       }
 
-      // ── COTIZACIÓN → solo confirmar (flujo de OTP deshabilitado) ───────────────
-      setMensaje('✅ Cotización guardada correctamente.');
-      // ✅ Si más adelante quieres enviar código y redirigir al paso de verificación,
-      //    descomenta el bloque siguiente y el import de arriba:
+      // Si no se pidió dashboard, deja el mensaje informativo
+      setMensaje(esEvento
+        ? '✅ Evento creado correctamente.'
+        : '✅ Cotización guardada correctamente.'
+      );
       /*
       try {
         const r = await iniciarAccesoPorCorreo({

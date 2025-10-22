@@ -47,6 +47,33 @@ const Dashboard = ({ onLogout }) => {
     }
   };
 
+
+  const eliminarCotizacion = async (id) => {
+  if (!id) return;
+  const ok = window.confirm('¿Eliminar esta cotización? Esta acción no se puede deshacer.');
+  if (!ok) return;
+
+  try {
+    const resp = await fetch(`${API_BASE_URL}/reservas/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+
+    if (!resp.ok) {
+      const txt = await resp.text().catch(() => '');
+      let err;
+      try { err = JSON.parse(txt); } catch { err = { msg: txt || `HTTP ${resp.status}` }; }
+      alert(err?.msg || err?.error || 'No se pudo eliminar la cotización');
+      return;
+    }
+
+    await cargarDashboardData(); // refresca el panel
+    alert('✅ Cotización eliminada');
+  } catch (e) {
+    console.error('eliminarCotizacion error:', e);
+    alert('Error de conexión');
+  }
+};
+
   const toHHmm = (h) => {
     if (!h) return '';
     const s = String(h).trim().toLowerCase();
@@ -332,7 +359,16 @@ const Dashboard = ({ onLogout }) => {
                             Ver PDF
                           </a>
                         )}
+                        {/* ⬇️ Nuevo: eliminar cotización */}
+                        <button
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => eliminarCotizacion(a.id)}
+                          title="Eliminar cotización"
+                        >
+                          🗑️ Eliminar
+                        </button>
                       </div>
+
                     </div>
                   </div>
                 ))}

@@ -23,8 +23,9 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ success: false, message: ' contraseña inválidos' });
     }
 
+    // 👇 Incluye `sub` para que /reservas/activa funcione con req.user.sub
     const token = jwt.sign(
-      { id: usuario._id, email: usuario.email, role: usuario.role },
+      { sub: String(usuario._id), id: String(usuario._id), email: usuario.email, role: usuario.role },
       JWT_SECRET,
       { expiresIn: '7d' }
     );

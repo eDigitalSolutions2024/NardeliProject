@@ -18,6 +18,8 @@ const Calendario = () => {
   const [eventos, setEventos] = useState([]);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [reservaEditando, setReservaEditando] = useState(null);
+  const [activeStartDate, setActiveStartDate] = useState(null);
+
 
   const obtenerIcono = (tipo) => {
     switch ((tipo || '').toLowerCase()) {
@@ -107,6 +109,26 @@ const Calendario = () => {
       }
     }
   };
+const convertirACotizacion = async (id) => {
+  const ok = window.confirm('¿Convertir este evento a cotización?');
+  if (!ok) return;
+  try {
+    const resp = await fetch(`${API_BASE_URL}/reservas/${id}/convertir-a-cotizacion`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      // body: JSON.stringify({ nota: 'Opcional: texto para la cotización' })
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      alert(err?.msg || 'No se pudo convertir a cotización.');
+      return;
+    }
+    await obtenerEventos(); // ya no aparecerá en “eventos”
+  } catch (e) {
+    console.error(e);
+    alert('Error al convertir a cotización');
+  }
+};
 
   const manejarEditar = (evento) => {
     setReservaEditando({
@@ -170,6 +192,18 @@ const Calendario = () => {
     }
   };
 
+
+  const seleccionarFechaEvento = (ev) => {
+  // ev.ymd viene como "YYYY-MM-DD"
+  const d = new Date(`${ev.ymd}T12:00:00`); // noon para evitar TZ
+  setDate(d); // ← selecciona la fecha (tile --active)
+
+  // Mueve el calendario al mes correspondiente
+  const startOfMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+  setActiveStartDate(startOfMonth);
+};
+
+
   const formatearFecha = (valor) => {
     if (!valor) return '';
     let d;
@@ -211,7 +245,13 @@ const Calendario = () => {
 
         <div className="eventos-lista">
           {eventos.map((evento) => (
-            <div key={evento.id} className={`evento-card evento-${evento.tipo}`}>
+            <div key={evento.id}
+  className={`evento-card evento-${evento.tipo}`}
+  onClick={() => seleccionarFechaEvento(evento)}
+  role="button"
+  tabIndex={0}
+  onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && seleccionarFechaEvento(evento)}
+>
               <div className="evento-icon">{evento.icon}</div>
               <div className="evento-info">
                 <h3 className="evento-titulo">{evento.titulo}</h3>
@@ -221,8 +261,9 @@ const Calendario = () => {
                   <span className="evento-invitados">👥 {evento.invitados}</span>
                 </div>
                 <div className="evento-acciones">
-                  <button onClick={() => manejarEditar(evento)}>✏️ Editar</button>
-                  <button onClick={() => manejarEliminar(evento.id)}>🗑️ Eliminar</button>
+                  <button onClick={(e) => { e.stopPropagation(); manejarEditar(evento); }}>✏️ Editar</button>
+                  <button onClick={(e) => { e.stopPropagation(); manejarEliminar(evento.id); }}>🗑️ Eliminar</button>
+                  <button onClick={(e) => { e.stopPropagation(); convertirACotizacion(evento.id); }}>💱 A cotización</button>
                 </div>
               </div>
             </div>
@@ -329,7 +370,10 @@ const Calendario = () => {
             next2Label={null}
             prevLabel="‹"
             nextLabel="›"
+            activeStartDate={activeStartDate || undefined}
+            onActiveStartDateChange={({ activeStartDate }) => setActiveStartDate(activeStartDate)}
           />
+
         </div>
 
         <div className="fecha-seleccionada">

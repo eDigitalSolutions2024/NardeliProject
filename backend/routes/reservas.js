@@ -627,6 +627,49 @@ router.put('/:id/aceptar-cotizacion', async (req, res) => {
   }
 });
 
+
+
+// ===== Convertir EVENTO -> COTIZACIÓN =====
+router.put('/:id/convertir-a-cotizacion', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const nota = (req.body?.nota ?? '').toString();
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ msg: 'ID inválido', debug: { id } });
+    }
+
+    const r = await Reserva.findById(id);
+    if (!r) return res.status(404).json({ msg: 'Reserva no encontrada' });
+
+    // Si ya es cotización, no hacemos nada costoso
+    if (String(r.tipoReserva).toLowerCase() === 'cotizacion') {
+      // (opcional) actualizar nota de cotización si la mandan
+      if (nota) {
+        r.cotizacion = { ...(r.cotizacion || {}), nota };
+        await r.save();
+      }
+      return res.json({ ok: true, reserva: r, alreadyQuote: true });
+    }
+
+    // Cambiar a cotización y limpiar flags de aceptación
+    r.tipoReserva = 'cotizacion';
+    r.cotizacion = {
+      ...(r.cotizacion || {}),
+      aceptada: false,
+      aceptadaEn: null,
+      ...(nota ? { nota } : {})
+    };
+
+    await r.save();
+    return res.json({ ok: true, reserva: r });
+  } catch (e) {
+    console.error('convertir-a-cotizacion error:', e);
+    return res.status(500).json({ msg: 'Error al convertir a cotización' });
+  }
+});
+
+
 // ===== Alias: PATCH /reservas/:id/precios =====
 router.patch('/:id/precios', async (req, res) => {
   try {
