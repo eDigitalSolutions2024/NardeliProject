@@ -39,6 +39,10 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
   const [seleccion, setSeleccion] = useState({}); // { [id]: { item, qty } }
   const [error, setError] = useState('');
 
+  // ====== AUTH: rol y perfil (para restringir y etiquetar issuer)
+  const [me, setMe] = useState(null);           // { id, name, email, role }
+  const [userRole, setUserRole] = useState(null); // 'admin' | 'assistant' | etc.
+
   // Snapshot de utensilios guardados en la BD
   const [utensiliosBD, setUtensiliosBD] = useState([]); // [{ itemId, nombre, precio, descripcion, ... }]
 
@@ -63,6 +67,29 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
     const sp = new URLSearchParams(search);
     return sp.get('mode') === 'admin';
   }, [search]);
+
+  // Rol assistant por API
+  const isAssistant = useMemo(() => userRole === 'assistant', [userRole]);
+  // ✅ staff = admin (por query) o admin/assistant real por API
+  const isStaff = useMemo(() => isAdmin || isAssistant || userRole === 'admin', [isAdmin, isAssistant, userRole]);
+
+  // Cargar /auth/me para saber el rol real
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    (async () => {
+      try {
+        const r = await fetch(`${API_BASE_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!r.ok) return;
+        const d = await r.json();
+        setMe(d);
+        const role = d?.role || d?.rol || d?.user?.role || d?.user?.rol || null;
+        setUserRole(role);
+      } catch {}
+    })();
+  }, [API_BASE_URL]);
 
   // Id de reserva inicial: prop > param > query
   const initialReservaId = useMemo(() => {
@@ -157,44 +184,40 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
     return () => { alive = false; };
   }, [API_BASE_URL]);
 
-  // 2) Cargar snapshot de utensilios desde la BD
-  // 2b) Cargar descuento existente y (NUEVO) accesorios guardados en la reserva
-useEffect(() => {
-  if (!reservaId) return;
-  (async () => {
-    try {
-      const r = await fetch(`${API_BASE_URL}/reservas/${reservaId}`);
-      if (!r.ok) return;
-      const d = await r.json();
+  // 2) Cargar descuento existente + accesorios guardados en la reserva
+  useEffect(() => {
+    if (!reservaId) return;
+    (async () => {
+      try {
+        const r = await fetch(`${API_BASE_URL}/reservas/${reservaId}`);
+        if (!r.ok) return;
+        const d = await r.json();
 
-      // Descuento (igual que ya tenías)
-      const des = d?.precios?.descuento || d?.descuento;
-      if (des) {
-        setDescTipo(des.tipo || 'monto');
-        setDescValor(Number(des.valor || 0));
-      }
-
-      // ⬇️ NUEVO: hidratar accesorios desde resumenSeleccion.accesorios
-      // (solo si aún no hay selección en memoria para no pisar cambios locales)
-      if (Object.keys(selAccesorios || {}).length === 0) {
-        const accResumen = d?.resumenSeleccion?.accesorios || [];
-        if (Array.isArray(accResumen) && accResumen.length) {
-          const pre = {};
-          accResumen.forEach(a => {
-            if (a?.accesorioId) pre[String(a.accesorioId)] = Number(a?.cantidad || 0);
-          });
-          if (Object.keys(pre).length) setSelAccesorios(pre);
+        // Descuento
+        const des = d?.precios?.descuento || d?.descuento;
+        if (des) {
+          setDescTipo(des.tipo || 'monto');
+          setDescValor(Number(des.valor || 0));
         }
+
+        // Hidratar accesorios desde resumenSeleccion.accesorios (si no hay en memoria)
+        if (Object.keys(selAccesorios || {}).length === 0) {
+          const accResumen = d?.resumenSeleccion?.accesorios || [];
+          if (Array.isArray(accResumen) && accResumen.length) {
+            const pre = {};
+            accResumen.forEach(a => {
+              if (a?.accesorioId) pre[String(a.accesorioId)] = Number(a?.cantidad || 0);
+            });
+            if (Object.keys(pre).length) setSelAccesorios(pre);
+          }
+        }
+      } catch (err) {
+        console.error('GET reserva (descuento + accesorios):', err);
       }
-    } catch (err) {
-      console.error('GET reserva (descuento + accesorios):', err);
-    }
-  })();
-  // importante: incluir selAccesorios para que el "guard" funcione
-}, [reservaId, API_BASE_URL, selAccesorios]);
+    })();
+  }, [reservaId, API_BASE_URL, selAccesorios]);
 
-
-  // 2b) Cargar descuento existente desde la reserva
+  // 2b) (duplicado light) Cargar descuento existente desde la reserva
   useEffect(() => {
     if (!reservaId) return;
     (async () => {
@@ -210,6 +233,49 @@ useEffect(() => {
       } catch {}
     })();
   }, [reservaId]);
+
+  // Snapshot completo de la reserva para prefill del recibo (cliente, fechas, etc.)
+  const [reservaData, setReservaData] = useState(null);
+  // === Pagos parciales / historial de recibos ===
+const [receipts, setReceipts] = useState([]);     // historial de recibos de la reserva
+const [loadingReceipts, setLoadingReceipts] = useState(false);
+
+// Monto a cobrar en este recibo (por defecto: saldo)
+const [paymentAmount, setPaymentAmount] = useState(0);
+
+
+  useEffect(() => {
+    if (!reservaId) return;
+    (async () => {
+      try {
+        const r = await fetch(`${API_BASE_URL}/reservas/${reservaId}`);
+        if (!r.ok) return;
+        const d = await r.json();
+        setReservaData(d);
+      } catch {}
+    })();
+  }, [reservaId, API_BASE_URL]);
+
+
+useEffect(() => {
+  if (!reservaId) { setReceipts([]); return; }
+  let abort = false;
+  (async () => {
+    try {
+      setLoadingReceipts(true);
+      const r = await fetch(`${API_BASE_URL}/reservas/${reservaId}/receipts`);
+      const data = r.ok ? await r.json() : [];
+      if (!abort) setReceipts(Array.isArray(data) ? data : (data.items || []));
+    } catch {
+      if (!abort) setReceipts([]);
+    } finally {
+      if (!abort) setLoadingReceipts(false);
+    }
+  })();
+  return () => { abort = true; };
+}, [reservaId, API_BASE_URL]);
+
+
 
   // 2c) Prefill de accesorios desde BD (si ya hay guardados como préstamo)
   useEffect(() => {
@@ -417,6 +483,19 @@ useEffect(() => {
     () => Math.max(0, subTotalUI - descuentoMonto),
     [subTotalUI, descuentoMonto]
   );
+  // Suma de pagos ya registrados
+const totalPagado = useMemo(() => {
+  try {
+    return (receipts || []).reduce((sum, r) => sum + Number(r?.amount || 0), 0);
+  } catch { return 0; }
+}, [receipts]);
+
+// Saldo restante (no negativo)
+const saldoRestante = useMemo(() => {
+  const rest = Number(totalConDescuento || 0) - Number(totalPagado || 0);
+  return Math.max(0, Number.isFinite(rest) ? rest : 0);
+}, [totalConDescuento, totalPagado]);
+
 
   // ====== Guardar selección (persiste productos/utensilios)
   const guardarSeleccion = async () => {
@@ -586,6 +665,162 @@ useEffect(() => {
       })
       .filter(Boolean);
   }, [selAccesorios, accesorios]);
+
+  // ====== RECIBO: estado, prefill y submit
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const da = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${da}`;
+  }, []);
+
+  const [receiptForm, setReceiptForm] = useState({
+    customerName: '',
+    concept: '',
+    paymentMethod: 'TRANSFERENCIA',
+    currency: 'MXN',
+    issuedAt: '', // YYYY-MM-DD
+    notes: '',
+    taxRate: 0.16,
+  });
+
+ 
+
+ function openReceiptModalPrefill() {
+  if (!reservaData) {
+    alert('Aún no se carga la reserva. Intenta de nuevo en unos segundos.');
+    return;
+  }
+ const fmtFechaMX = (d) => {
+  try {
+    const dt = d ? new Date(d) : null;
+    return dt ? dt.toLocaleDateString('es-MX') : '';
+  } catch { return ''; }
+};
+  const cliente = (reservaData?.cliente || '').trim() || 'Cliente';
+
+  const conceptoBase = [
+    (reservaData?.tipoEvento || 'Evento'),
+    fmtFechaMX(reservaData?.fecha)
+  ].filter(Boolean).join(' – ');
+
+  const concept = `${conceptoBase}${conceptoBase ? ' • ' : ''}Reserva ${reservaId || ''}`.trim();
+
+  const notasParts = [
+    reservaData?.descripcion && `Descripción: ${reservaData.descripcion}`,
+    (reservaData?.horaInicio && reservaData?.horaFin) && `Horario: ${reservaData.horaInicio}–${reservaData.horaFin}`,
+    Number.isFinite(+reservaData?.cantidadPersonas) && `Personas: ${reservaData.cantidadPersonas}`,
+    reservaData?.correo && `Correo: ${reservaData.correo}`,
+    reservaData?.telefono && `Tel: ${reservaData.telefono}`
+  ].filter(Boolean);
+
+  setReceiptForm(f => ({
+    ...f,
+    customerName: cliente,
+    concept,
+    issuedAt: todayStr,
+    currency: reservaData?.precios?.moneda || f.currency || 'MXN',
+    notes: notasParts.join(' • ')
+  }));
+
+  // ⬇️ Prefill del monto a cobrar = saldo actual
+  setPaymentAmount(Number(saldoRestante || 0));
+
+  setShowReceiptModal(true);
+}
+
+
+
+  async function submitReceipt() {
+    try {
+      if (!reservaId) return alert('No hay reservaId');
+
+      const itemsPayload = Object.values(seleccion).map(({ item, qty }) => ({
+        description: item.nombre,
+        quantity: qty,
+        unitPrice: Number(priceFor(item.id) || 0),
+      }));
+      // === Validación: no sobrepagar ===
+const amt = Number(paymentAmount || 0);
+if (!Number.isFinite(amt) || amt <= 0) {
+  return alert('El monto a cobrar debe ser mayor a cero.');
+}
+if (amt > saldoRestante + 0.0001) { // tolerancia flotantes
+  return alert(`No puedes cobrar más del saldo restante ($${saldoRestante.toFixed(2)}).`);
+}
+
+
+      if (itemsPayload.length === 0) {
+        return alert('No hay artículos en la selección para generar el recibo.');
+      }
+
+      const payload = {
+  customerName: receiptForm.customerName || 'Cliente',
+  concept: receiptForm.concept || `Reserva ${reservaId}`,
+  items: itemsPayload,
+  taxRate: Number(receiptForm.taxRate || 0),
+  currency: receiptForm.currency || 'MXN',
+  paymentMethod: receiptForm.paymentMethod || 'EFECTIVO',
+  issuedAt: receiptForm.issuedAt || todayStr, // 'YYYY-MM-DD'
+  issuedBy: me?.email || me?.name || 'sistema@nrd',
+  notes: receiptForm.notes || '',
+  tz: 'America/Ciudad_Juarez',
+  amount: amt,  // ⬅️ monto de este recibo/pago parcial
+
+
+  // 🔽 datos útiles de la reserva:
+  orderId: reservaId,
+  customerId: reservaData?.clienteId || undefined,   // si quieres enlazar al usuario autenticado
+  contact: {
+    email: reservaData?.correo || undefined,
+    phone: reservaData?.telefono || undefined,
+  },
+  event: {
+    type: reservaData?.tipoEvento || undefined,
+    date: reservaData?.fecha || undefined,
+    start: reservaData?.horaInicio || undefined,
+    end: reservaData?.horaFin || undefined,
+    people: reservaData?.cantidadPersonas || undefined,
+  },
+};
+
+
+      const r = await fetch(`${API_BASE_URL}/receipts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await r.json();
+      if (!r.ok) throw new Error(data?.error || 'No se pudo crear el recibo');
+
+      const id = data?.receipt?._id || data?.receipt?.id;
+      if (!id) {
+        alert('Recibo creado, pero no se obtuvo el ID para el PDF.');
+        setShowReceiptModal(false);
+        return;
+      }
+      window.open(`${API_BASE_URL}/receipts/${id}/pdf`, '_blank');
+      setShowReceiptModal(false);
+    } catch (e) {
+      console.error('submitReceipt', e);
+      alert(e?.message || 'Error al generar el recibo');
+    }
+  }
+
+
+
+  // 👇 PÉGALO DEBAJO DE submitReceipt (o junto a tus helpers) y ANTES del return
+function openReceiptPdfById(id) {
+  if (!id) return;
+  const url = `${API_BASE_URL}/receipts/${id}/pdf`;
+  window.open(url, '_blank', 'noopener'); // abre en nueva pestaña
+}
+
+
 
   return (
     <div className="cliente-dashboard">
@@ -832,16 +1067,41 @@ useEffect(() => {
           </button>
 
           <button
-            className="pdf"
-            type="button"
-            onClick={() => {
-              if (!reservaId) return alert('No hay reservaId');
-              const url = `${API_BASE_URL}/reservas/${reservaId}/pdf`;
-              window.open(url, '_blank');
-            }}
-          >
-            Descargar PDF
-          </button>
+              className="pdf"
+              type="button"
+              onClick={async () => {
+                if (!reservaId) return alert('No hay reservaId');
+                const url = `${API_BASE_URL}/reservas/${reservaId}/pdf`;
+                window.open(url, '_blank');
+
+                // Refrescar historial de recibos
+                try {
+                  const rr = await fetch(`${API_BASE_URL}/reservas/${reservaId}/receipts`);
+                  if (rr.ok) {
+                    const list = await rr.json();
+                    setReceipts(Array.isArray(list) ? list : (list.items || []));
+                  }
+                } catch (e) {
+                  console.error('refresh receipts', e);
+                }
+              }}
+            >
+              Descargar PDF
+            </button>
+
+
+
+          {isStaff && (
+            <button
+              className="cd-btn"
+              type="button"
+              style={{ marginTop: 8, background: '#6d28d9', color: '#fff' }}
+              onClick={openReceiptModalPrefill}
+              title="Generar recibo a partir de esta selección"
+            >
+              Generar recibos
+            </button>
+          )}
         </div>
 
         {/* ACCESORIOS */}
@@ -954,6 +1214,216 @@ useEffect(() => {
             <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:16 }}>
               <button className="cd-btn cd-btn-clear" onClick={()=>setShowAccModal(false)}>Cancelar</button>
               <button className="cd-btn" onClick={aplicarAccesorios}>Guardar en reserva</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Generar Recibo (solo staff) */}
+      {showReceiptModal && isStaff && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100
+          }}
+          onClick={() => setShowReceiptModal(false)}
+        >
+          <div
+            style={{ background:'#fff', width:'min(760px, 96%)', borderRadius:12, padding:16, maxHeight:'82vh', overflow:'auto' }}
+            onClick={(e)=>e.stopPropagation()}
+          >
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+              <h3 style={{ margin: 0 }}>Generar recibo</h3>
+              <button className="del" onClick={() => setShowReceiptModal(false)}>Cerrar</button>
+            </div>
+
+            <div className="small" style={{ marginBottom: 12, color:'#555' }}>
+              <div>Reserva: <strong>{reservaId || '—'}</strong></div>
+              <div>Emisor: <strong>{me?.email || me?.name || 'sistema'}</strong></div>
+              <div>Total actual (con descuento): <strong>${totalConDescuento.toFixed(2)}</strong></div>
+            </div>
+
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <div>
+                <label>Cliente</label>
+                <input
+                  className="cd-input"
+                  value={receiptForm.customerName}
+                  onChange={(e)=>setReceiptForm(s=>({...s, customerName:e.target.value}))}
+                  placeholder="Nombre del cliente"
+                />
+              </div>
+              <div>
+                <label>Fecha (YYYY-MM-DD)</label>
+                <input
+                  className="cd-input"
+                  value={receiptForm.issuedAt}
+                  onChange={(e)=>setReceiptForm(s=>({...s, issuedAt:e.target.value}))}
+                  placeholder={todayStr}
+                />
+              </div>
+              <div>
+                <label>Concepto</label>
+                <input
+                  className="cd-input"
+                  value={receiptForm.concept}
+                  onChange={(e)=>setReceiptForm(s=>({...s, concept:e.target.value}))}
+                  placeholder={`Renta/servicio – Reserva ${reservaId || ''}`}
+                />
+              </div>
+              <div>
+                <label>Método de pago</label>
+                <select
+                  className="cd-select"
+                  value={receiptForm.paymentMethod}
+                  onChange={(e)=>setReceiptForm(s=>({...s, paymentMethod:e.target.value}))}
+                >
+                  <option value="EFECTIVO">EFECTIVO</option>
+                  <option value="TARJETA">TARJETA</option>
+                  <option value="TRANSFERENCIA">TRANSFERENCIA</option>
+                  <option value="OTRO">OTRO</option>
+                </select>
+              </div>
+              <div>
+                <label>Moneda</label>
+                <select
+                  className="cd-select"
+                  value={receiptForm.currency}
+                  onChange={(e)=>setReceiptForm(s=>({...s, currency:e.target.value}))}
+                >
+                  <option value="MXN">MXN</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
+              <div>
+                <label>IVA / Tasa impuesto</label>
+                <input
+                  className="cd-input"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="1"
+                  value={receiptForm.taxRate}
+                  onChange={(e)=>setReceiptForm(s=>({...s, taxRate:Number(e.target.value || 0)}))}
+                  placeholder="0.16"
+                />
+                <small className="small">Ejemplo: 0.16 = 16%</small>
+              </div>
+
+              <div>
+  <label>Monto a cobrar ahora</label>
+  <input
+    className="cd-input"
+    type="number"
+    step="0.01"
+    min="0"
+    max={Math.max(0, saldoRestante)}
+    value={paymentAmount}
+    onChange={(e)=> {
+      const v = Number(e.target.value || 0);
+      // clamp para no pasar del saldo
+      setPaymentAmount(Math.max(0, Math.min(v, Math.max(0, saldoRestante))));
+    }}
+    placeholder={saldoRestante.toFixed(2)}
+  />
+  <small className="small">
+    Saldo restante actual: <strong>${saldoRestante.toFixed(2)}</strong> (Total: ${totalConDescuento.toFixed(2)} • Pagado: ${totalPagado.toFixed(2)})
+  </small>
+</div>
+
+              <div style={{ gridColumn:'1 / -1' }}>
+                <label>Notas</label>
+                <input
+                  className="cd-input"
+                  value={receiptForm.notes}
+                  onChange={(e)=>setReceiptForm(s=>({...s, notes:e.target.value}))}
+                  placeholder="Observaciones"
+                />
+              </div>
+            </div>
+
+            <div style={{ marginTop: 14 }}>
+              <h4 style={{ marginBottom: 6 }}>Artículos del recibo</h4>
+              {Object.values(seleccion).length === 0 ? (
+                <div className="empty">No hay artículos seleccionados.</div>
+              ) : (
+                <div style={{ border:'1px solid #eee', borderRadius:8, padding:10 }}>
+                  {Object.values(seleccion).map(({ item, qty }) => {
+                    const p = priceFor(item.id);
+                    return (
+                      <div key={item.id} className="sel-item">
+                        <div><strong>{item.nombre}</strong> <small>• {item.categoria}</small></div>
+                        <div className="small">
+                          {qty} {item.unidad || 'pza'} × ${p.toFixed(2)} = <strong>${(qty*p).toFixed(2)}</strong>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div style={{ display:'flex', justifyContent:'space-between', marginTop:8 }}>
+                    <span>Subtotal estimado</span>
+                    <strong>${subTotalUI.toFixed(2)}</strong>
+                  </div>
+                  <div style={{ display:'flex', justifyContent:'space-between', color:'#dc2626' }}>
+                    <span>Descuento aplicado</span>
+                    <strong>- ${descuentoMonto.toFixed(2)}</strong>
+                  </div>
+                  <div style={{ display:'flex', justifyContent:'space-between', fontSize:16 }}>
+                    <span>Total estimado</span>
+                    <strong>${totalConDescuento.toFixed(2)}</strong>
+                  </div>
+                </div>
+              )}
+            </div>
+
+
+            <div style={{ marginTop: 16 }}>
+  <h4 style={{ marginBottom: 8 }}>Historial de recibos</h4>
+  {loadingReceipts ? (
+    <div className="empty">Cargando historial…</div>
+  ) : (receipts || []).length === 0 ? (
+    <div className="empty">Aún no hay pagos registrados.</div>
+  ) : (
+    <div style={{ border:'1px solid #eee', borderRadius:8, overflow:'hidden' }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', fontWeight:600, padding:'8px 10px', background:'#fafafa' }}>
+        <div>Fecha</div><div>Método</div><div>Folio</div><div>Monto</div>
+      </div>
+      {(receipts || []).map((rc) => (
+  <div
+    key={rc._id}
+    onDoubleClick={() => openReceiptPdfById(rc._id)}     // ⬅️ doble click abre PDF
+    role="button"
+    tabIndex={0}
+    title="Doble click para abrir el PDF del recibo"
+    onKeyDown={(e) => { if (e.key === 'Enter') openReceiptPdfById(rc._id); }} // accesible con Enter
+    style={{
+      display:'grid',
+      gridTemplateColumns:'1fr 1fr 1fr 1fr',
+      padding:'8px 10px',
+      borderTop:'1px solid #eee',
+      cursor:'pointer',                                   // feedback visual
+      userSelect:'none'
+    }}
+  >
+    <div>{rc.issuedAt ? new Date(rc.issuedAt).toLocaleString('es-MX') : '—'}</div>
+    <div>{rc.paymentMethod || '—'}</div>
+    <div>{rc.folio || rc._id?.slice(-6)?.toUpperCase() || '—'}</div>
+    <div>${Number(rc.amount || 0).toFixed(2)}</div>
+  </div>
+))}
+
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', padding:'10px', background:'#fafafa', borderTop:'1px solid #eee' }}>
+        <div style={{ gridColumn:'1 / 3' }}><strong>Totales</strong></div>
+        <div><strong>Pagado:</strong></div>
+        <div><strong>${totalPagado.toFixed(2)}</strong></div>
+      </div>
+    </div>
+  )}
+</div>
+
+
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:16 }}>
+              <button className="cd-btn cd-btn-clear" onClick={()=>setShowReceiptModal(false)}>Cancelar</button>
+              <button className="cd-btn" onClick={submitReceipt}>Generar y abrir PDF</button>
             </div>
           </div>
         </div>

@@ -27,6 +27,14 @@ function fmtDateTime(d) {
   }
 }
 
+// badge de estado de pago
+function payBadgeClass(estado) {
+  const e = String(estado || "").toLowerCase();
+  if (e === "pagado") return "badge success";
+  if (e === "pendiente") return "badge warning";
+  return "badge";
+}
+
 export default function Clientes() {
   const [tab, setTab] = useState("todos"); // todos | registrados | cotizaciones
   const [q, setQ] = useState("");
@@ -36,98 +44,125 @@ export default function Clientes() {
   const [rows, setRows] = useState([]);
 
   const fetchData = async () => {
-  setLoading(true);
-  setError("");
-  try {
-    const [usuariosRes, reservasRes] = await Promise.all([
-      fetch(`${API_BASE_URL}/usuarios?rol=cliente`),
-      fetch(`${API_BASE_URL}/reservas`),
-    ]);
+    setLoading(true);
+    setError("");
+    try {
+      const [usuariosRes, reservasRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/usuarios?rol=cliente`),
+        fetch(`${API_BASE_URL}/reservas`),
+      ]);
 
-    const usuarios = usuariosRes.ok ? await usuariosRes.json() : [];
-    const reservas = reservasRes.ok ? await reservasRes.json() : [];
+      const usuarios = usuariosRes.ok ? await usuariosRes.json() : [];
+      const reservas = reservasRes.ok ? await reservasRes.json() : [];
 
-    // --- Clientes registrados ---
-    const registrados = (usuarios || []).map((u) => ({
-      _uid: `reg-${u._id}`,
-      fuente: "usuarios",
-      tipoReserva: "registrado",            // para distinguir en UI si lo necesitas
-      tipo: "Registrado",                   // etiqueta visible
-      cliente:
-        u.nombre ||
-        [u.nombre, u.apellido, u.apellidos].filter(Boolean).join(" ") ||
-        "—",
-      correo: u.correo || u.email || "—",
-      telefono: u.telefono || "—",
-      tipoEvento: "—",
-      fecha: "—",
-      fechaAt: null,
-      creadaEn: "—",
-      creadaAt: null,
-      hora: "—",
-      cantidadPersonas: "—",
-      estado: u.activo ? "Activo" : "Inactivo",
-      descripcion: "",
-      raw: u,
-    }));
+      // --- Clientes registrados ---
+      const registrados = (usuarios || []).map((u) => ({
+        _uid: `reg-${u._id}`,
+        fuente: "usuarios",
+        tipoReserva: "registrado",
+        tipo: "Registrado",
+        cliente:
+          u.nombre ||
+          [u.nombre, u.apellido, u.apellidos].filter(Boolean).join(" ") ||
+          "—",
+        correo: u.correo || u.email || "—",
+        telefono: u.telefono || "—",
+        tipoEvento: "—",
+        fecha: "—",
+        fechaAt: null,
+        creadaEn: "—",
+        creadaAt: null,
+        hora: "—",
+        cantidadPersonas: "—",
+        estado: u.activo ? "Activo" : "Inactivo",
+        descripcion: "",
+        raw: u,
+        // columnas de pago no aplican a usuarios
+        pagoEstado: "—",
+        pagoInfo: null,
+      }));
 
-    // --- Reservas (cotización | evento) ---
-const reservasRows = (reservas || []).map((r) => {
-  const createdFallback =
-    r.createdAt || r.fechaCreacion || r.fechaRegistro ||
-    r.created || r.fechaAlta || r._createdAt || null;
+      // --- Reservas (cotización | evento) ---
+      const reservasRows = (reservas || []).map((r) => {
+        const createdFallback =
+          r.createdAt ||
+          r.fechaCreacion ||
+          r.fechaRegistro ||
+          r.created ||
+          r.fechaAlta ||
+          r._createdAt ||
+          null;
 
-  const tipoRes = String(r.tipoReserva || "cotizacion").toLowerCase().trim();
-  const tipoUI  = tipoRes === "evento" ? "Evento" : "Cotización";
+        const tipoRes = String(r.tipoReserva || "cotizacion")
+          .toLowerCase()
+          .trim();
+        const tipoUI = tipoRes === "evento" ? "Evento" : "Cotización";
 
-  // Estado derivado por tipo:
-  const estadoUI = tipoRes === "cotizacion"
-    ? "Pendiente"
-    : (r.estado || "Confirmada");
+        // Estado derivado por tipo
+        const estadoUI =
+          tipoRes === "cotizacion" ? "Pendiente" : r.estado || "Confirmada";
 
-  return {
-    _uid: `res-${r._id}`,
-    _id: r._id,
-    fuente: "reservas",
-    tipoReserva: tipoRes,                 // 'cotizacion' | 'evento'
-    tipo: tipoUI,                         // "Cotización" | "Evento"
+        return {
+          _uid: `res-${r._id}`,
+          _id: r._id,
+          fuente: "reservas",
+          tipoReserva: tipoRes, // 'cotizacion' | 'evento'
+          tipo: tipoUI, // "Cotización" | "Evento"
 
-    cliente: r.cliente || "—",
-    correo: r.correo || "—",
-    telefono: r.telefono || "—",
-    tipoEvento: r.tipoEvento || "—",
+          cliente: r.cliente || "—",
+          correo: r.correo || "—",
+          telefono: r.telefono || "—",
+          tipoEvento: r.tipoEvento || "—",
 
-    fecha: r.fecha ? fmtDate(r.fecha) : "—",
-    fechaAt: r.fecha ? new Date(r.fecha).toISOString() : null,
-    creadaEn: createdFallback ? fmtDateTime(createdFallback) : "—",
-    creadaAt: createdFallback ? new Date(createdFallback).toISOString() : null,
+          fecha: r.fecha ? fmtDate(r.fecha) : "—",
+          fechaAt: r.fecha ? new Date(r.fecha).toISOString() : null,
+          creadaEn: createdFallback ? fmtDateTime(createdFallback) : "—",
+          creadaAt: createdFallback
+            ? new Date(createdFallback).toISOString()
+            : null,
 
-    hora:
-      r.horaInicio && r.horaFin
-        ? `${r.horaInicio}–${r.horaFin}`
-        : r.horaInicio || r.horaFin || "—",
+          hora:
+            r.horaInicio && r.horaFin
+              ? `${r.horaInicio}–${r.horaFin}`
+              : r.horaInicio || r.horaFin || "—",
 
-    cantidadPersonas:
-      typeof r.cantidadPersonas === "number"
-        ? r.cantidadPersonas
-        : r.cantidadPersonas || "—",
+          cantidadPersonas:
+            typeof r.cantidadPersonas === "number"
+              ? r.cantidadPersonas
+              : r.cantidadPersonas || "—",
 
-    estado: estadoUI,                     // ← aquí ya va “Pendiente” si es cotización
-    descripcion: r.descripcion || "",
-    raw: r,
+          estado: estadoUI,
+          descripcion: r.descripcion || "",
+          raw: r,
+        };
+      });
+
+      // Enriquecer reservas con estado de pago usando /reservas/:id/saldo
+      const reservasEnriquecidas = await Promise.all(
+        reservasRows.map(async (row) => {
+          if (row.fuente !== "reservas" || row.tipoReserva !== "evento" || !row._id) {
+            return { ...row, pagoEstado: "—", pagoInfo: null };
+          }
+          try {
+            const r = await fetch(`${API_BASE_URL}/reservas/${row._id}/saldo`);
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            const { total = 0, paid = 0, remaining = 0 } = await r.json();
+            const pagoEstado = remaining > 0.0001 ? "Pendiente" : "Pagado";
+            return { ...row, pagoEstado, pagoInfo: { total, paid, remaining } };
+          } catch {
+            return { ...row, pagoEstado: "—", pagoInfo: null };
+          }
+        })
+      );
+
+      setRows([...registrados, ...reservasEnriquecidas]);
+    } catch (e) {
+      console.error(e);
+      setError("No pude cargar los datos de clientes/reservas.");
+    } finally {
+      setLoading(false);
+    }
   };
-});
-
-
-    setRows([...registrados, ...reservasRows]);
-  } catch (e) {
-    console.error(e);
-    setError("No pude cargar los datos de clientes/reservas.");
-  } finally {
-    setLoading(false);
-  }
-};
-
 
   useEffect(() => {
     fetchData();
@@ -151,10 +186,11 @@ const reservasRows = (reservas || []).map((r) => {
         r.telefono,
         r.tipoEvento,
         r.fecha,
-        r.creadaEn, // ← incluye fecha de creación en el buscador
+        r.creadaEn,
         r.hora,
         r.estado,
         r.tipo,
+        r.pagoEstado,
       ]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(k))
@@ -231,9 +267,10 @@ const reservasRows = (reservas || []).map((r) => {
               <th>Teléfono</th>
               <th>Evento</th>
               <th>Fecha</th>
-              <th>Creada</th>{/* ← NUEVA COLUMNA */}
+              <th>Creada</th>
               <th>Hora</th>
               <th>Personas</th>
+              <th>Pago</th> {/* NUEVA */}
               <th>Estado</th>
               <th style={{ width: 160 }}>Acciones</th>
             </tr>
@@ -241,7 +278,7 @@ const reservasRows = (reservas || []).map((r) => {
           <tbody>
             {paginated.length === 0 && !loading && (
               <tr>
-                <td colSpan="12" className="empty">Sin resultados</td>
+                <td colSpan="13" className="empty">Sin resultados</td>
               </tr>
             )}
 
@@ -249,30 +286,56 @@ const reservasRows = (reservas || []).map((r) => {
               <tr key={r._uid}>
                 <td>{(page - 1) * PAGE_SIZE + idx + 1}</td>
                 <td>
-              <span
-                className={`chip ${
-                  r.fuente === "usuarios"
-                    ? "chip-reg"
-                    : r.tipoReserva === "evento"
-                      ? "chip-event"
-                      : "chip-cot"
-                }`}
-              >
-                {r.tipo}
-              </span>
-            </td>
+                  <span
+                    className={`chip ${
+                      r.fuente === "usuarios"
+                        ? "chip-reg"
+                        : r.tipoReserva === "evento"
+                        ? "chip-event"
+                        : "chip-cot"
+                    }`}
+                  >
+                    {r.tipo}
+                  </span>
+                </td>
 
                 <td className="nombre">{r.cliente}</td>
                 <td className="correo">{r.correo}</td>
                 <td>{r.telefono}</td>
                 <td>{r.tipoEvento}</td>
                 <td>{r.fecha}</td>
-                <td>{r.creadaEn}</td>{/* ← valor mostrado */}
+                <td>{r.creadaEn}</td>
                 <td>{r.hora}</td>
                 <td style={{ textAlign: "center" }}>{r.cantidadPersonas}</td>
+
+                {/* COLUMNA PAGO */}
+                <td>
+                  {r.fuente === "reservas" && r.tipoReserva === "evento" ? (
+                    <span
+                      className={payBadgeClass(r.pagoEstado)}
+                      title={
+                        r.pagoInfo
+                          ? `Total: $${Number(r.pagoInfo.total || 0).toFixed(
+                              2
+                            )} • Pagado: $${Number(
+                              r.pagoInfo.paid || 0
+                            ).toFixed(2)} • Saldo: $${Number(
+                              r.pagoInfo.remaining || 0
+                            ).toFixed(2)}`
+                          : ""
+                      }
+                    >
+                      {r.pagoEstado}
+                    </span>
+                  ) : (
+                    <span className="badge">—</span>
+                  )}
+                </td>
+
                 <td>
                   <span className={badgeClass(r.estado)}>{r.estado}</span>
                 </td>
+
                 <td className="acciones">
                   <button
                     className="btn btn-light"
@@ -284,7 +347,10 @@ const reservasRows = (reservas || []).map((r) => {
                     <button
                       className="btn"
                       onClick={() =>
-                        window.open(`${API_BASE_URL}/reservas/${r._id}/pdf`, "_blank")
+                        window.open(
+                          `${API_BASE_URL}/reservas/${r._id}/pdf`,
+                          "_blank"
+                        )
                       }
                     >
                       PDF

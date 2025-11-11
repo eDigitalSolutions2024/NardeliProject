@@ -42,6 +42,10 @@ app.use('/api/productos', require('./routes/productos'));
 // server.js
 app.use('/api/accesorios', require('./routes/accesorios'));
 
+// << montar nueva carpeta de endpoints de recibos (con prefijo /api)
+app.use('/api', require('./routes/receipts'));
+
+
 // Si tienes inventario por separado:
 // app.use('/api/inventario', require('./routes/inventario'));
 
