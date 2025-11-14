@@ -156,7 +156,7 @@ const Dashboard = ({ onLogout }) => {
       const buildPdfUrl = (id) => `${API_BASE_URL}/reservas/${id}/pdf`;
 
       setActividad(
-        pendientes.slice(0, 5).map(r => ({
+        pendientes.slice(0).map(r => ({
           id: r._id,
           titulo: `Cotización - ${getCliente(r)}`,
           subtitulo: `Para el ${getFecha(r).toLocaleDateString()}`,
