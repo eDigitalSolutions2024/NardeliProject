@@ -29,6 +29,11 @@ const Dashboard = ({ onLogout }) => {
   });
   const [actividad, setActividad] = useState([]); // cotizaciones pendientes
 
+
+  const [searchActividad, setSearchActividad] = useState('');
+
+
+
   // === Nuevo: modal de edición de cotización ===
   const [showEditCot, setShowEditCot] = useState(false);
   const [cotEdit, setCotEdit] = useState(null);
@@ -172,6 +177,12 @@ const Dashboard = ({ onLogout }) => {
           descripcion: r.descripcion || '',
         }))
       );
+
+
+       
+
+
+
     } catch (e) {
       console.error('Error cargando reservas para dashboard:', e);
     } finally {
@@ -294,6 +305,12 @@ const Dashboard = ({ onLogout }) => {
     window.open(`/cliente/dashboard?${qs}`, '_blank', 'noopener,noreferrer');
   };
 
+ const actividadFiltrada = actividad.filter(a => {
+    if (!searchActividad.trim()) return true;
+    const texto = `${a.titulo || ''} ${a.subtitulo || ''} ${a.cliente || ''}`.toLowerCase();
+    return texto.includes(searchActividad.toLowerCase());
+    });
+
   const renderContent = () => {
     switch (activeSection) {
       case 'dashboard':
@@ -324,56 +341,91 @@ const Dashboard = ({ onLogout }) => {
             </div>
 
             {/* Cotizaciones pendientes */}
-            <div className="recent-activity">
-              <div className="d-flex align-items-center justify-content-between">
-                <h2>Cotizacion pendiente</h2>
-                {loadingDash && <span className="text-muted small">Actualizando…</span>}
-              </div>
+<div className="recent-activity">
+  <div className="d-flex align-items-center justify-content-between" style={{ gap: 12, flexWrap: 'wrap' }}>
+    <h2 style={{ marginBottom: 0 }}>Cotizacion pendiente</h2>
 
-              <div className="activity-list">
-                {actividad.length === 0 && (
-                  <div className="activity-item">
-                    <span className="activity-icon">ℹ️</span>
-                    <div className="activity-details">
-                      <p><strong>Sin cotizaciones pendientes</strong></p>
-                      <small>Cuando registres cotizaciones aparecerán aquí.</small>
-                    </div>
-                  </div>
-                )}
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      {loadingDash && <span className="text-muted small">Actualizando…</span>}
 
-                {actividad.map(a => (
-                  <div key={a.id} className="activity-item">
-                    <span className="activity-icon">{a.icon}</span>
-                    <div className="activity-details">
-                      <p><strong>{a.titulo}</strong></p>
-                      <small>{a.subtitulo}</small>
-                      <div className="activity-actions" style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <button className="btn btn-sm btn-outline-secondary" onClick={() => abrirModalEditarCot(a)}>
-                          ✏️ Editar
-                        </button>
-                        <button className="btn btn-sm btn-outline-success" onClick={() => convertirACEvento(a.id)}>
-                          ✅ Convertir a Evento
-                        </button>
-                        {a.pdfUrl && (
-                          <a className="btn btn-sm btn-outline-primary" href={a.pdfUrl} target="_blank" rel="noreferrer">
-                            Ver PDF
-                          </a>
-                        )}
-                        {/* ⬇️ Nuevo: eliminar cotización */}
-                        <button
-                          className="btn btn-sm btn-outline-danger"
-                          onClick={() => eliminarCotizacion(a.id)}
-                          title="Eliminar cotización"
-                        >
-                          🗑️ Eliminar
-                        </button>
-                      </div>
+      {/* 🔍 Buscador */}
+      <input
+        type="text"
+        placeholder="Buscar por cliente, fecha o texto..."
+        value={searchActividad}
+        onChange={(e) => setSearchActividad(e.target.value)}
+        style={{
+          padding: '6px 10px',
+          borderRadius: 8,
+          border: '1px solid #ddd',
+          minWidth: 220,
+          fontSize: 14,
+        }}
+      />
+    </div>
+  </div>
 
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+  <div className="activity-list">
+    {actividadFiltrada.length === 0 && (
+      <div className="activity-item">
+        <span className="activity-icon">ℹ️</span>
+        <div className="activity-details">
+          <p><strong>Sin cotizaciones pendientes</strong></p>
+          <small>
+            {actividad.length === 0
+              ? 'Cuando registres cotizaciones aparecerán aquí.'
+              : 'No hay resultados para ese criterio de búsqueda.'}
+          </small>
+        </div>
+      </div>
+    )}
+
+    {actividadFiltrada.map(a => (
+      <div key={a.id} className="activity-item">
+        <span className="activity-icon">{a.icon}</span>
+        <div className="activity-details">
+          <p><strong>{a.titulo}</strong></p>
+          <small>{a.subtitulo}</small>
+          <div
+            className="activity-actions"
+            style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}
+          >
+            <button
+              className="btn btn-sm btn-outline-secondary"
+              onClick={() => abrirModalEditarCot(a)}
+            >
+              ✏️ Editar
+            </button>
+            <button
+              className="btn btn-sm btn-outline-success"
+              onClick={() => convertirACEvento(a.id)}
+            >
+              ✅ Convertir a Evento
+            </button>
+            {a.pdfUrl && (
+              <a
+                className="btn btn-sm btn-outline-primary"
+                href={a.pdfUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Ver PDF
+              </a>
+            )}
+            <button
+              className="btn btn-sm btn-outline-danger"
+              onClick={() => eliminarCotizacion(a.id)}
+              title="Eliminar cotización"
+            >
+              🗑️ Eliminar
+            </button>
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
+
 
             {/* Modal de edición de cotización */}
             {showEditCot && cotEdit && (

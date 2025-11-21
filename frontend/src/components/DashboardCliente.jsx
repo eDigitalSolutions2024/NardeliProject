@@ -55,6 +55,9 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
   const [loadingAcc, setLoadingAcc] = useState(false);
   const [selAccesorios, setSelAccesorios] = useState({}); // { [accesorioId]: qty }
 
+  // Productos a los que se aplicará el descuento global (por item, opcional)
+const [discountItems, setDiscountItems] = useState({}); // { [itemId]: true }
+
   // MODAL "Ver accesorios"
   const [showAccModal, setShowAccModal] = useState(false);
 
@@ -471,13 +474,31 @@ useEffect(() => {
 
   const subTotalUI = totalMonto;
 
+  // Subtotal solo de los productos con descuento activo
+const subtotalDescuento = useMemo(
+  () => Object.values(seleccion).reduce((acc, x) => {
+    const idStr = String(x.item.id);
+    if (!discountItems[idStr]) return acc; // este producto NO tiene descuento
+    const linea = priceFor(x.item.id) * x.qty;
+    return acc + linea;
+  }, 0),
+  [seleccion, discountItems, reservedPriceById, invPriceById]
+);
+
+
   const descuentoMonto = useMemo(() => {
-    const v = Number(descValor) || 0;
-    if (descTipo === 'porcentaje') {
-      return Math.min(subTotalUI, subTotalUI * (Math.max(0, Math.min(100, v)) / 100));
-    }
-    return Math.min(subTotalUI, Math.max(0, v));
-  }, [descTipo, descValor, subTotalUI]);
+  const base = subtotalDescuento;        // solo sobre productos marcados
+  const v = Number(descValor) || 0;
+  if (!base || v <= 0) return 0;
+
+  if (descTipo === 'porcentaje') {
+    const pct = Math.max(0, Math.min(100, v)) / 100;
+    return Math.min(base, base * pct);
+  }
+
+  // tipo = "monto": descuentas hasta lo que abarcan los productos marcados
+  return Math.min(base, Math.max(0, v));
+}, [descTipo, descValor, subtotalDescuento]);
 
   const totalConDescuento = useMemo(
     () => Math.max(0, subTotalUI - descuentoMonto),
@@ -765,7 +786,7 @@ if (amt > saldoRestante + 0.0001) { // tolerancia flotantes
   currency: receiptForm.currency || 'MXN',
   paymentMethod: receiptForm.paymentMethod || 'EFECTIVO',
   issuedAt: receiptForm.issuedAt || todayStr, // 'YYYY-MM-DD'
-  issuedBy: me?.email || me?.name || 'sistema@nrd',
+  issuedBy: me?.email || me?.name || 'centro de eventos Nardeli',
   notes: receiptForm.notes || '',
   tz: 'America/Ciudad_Juarez',
   amount: amt,  // ⬅️ monto de este recibo/pago parcial
@@ -957,26 +978,49 @@ function openReceiptPdfById(id) {
               <div className="empty">Aún no has agregado artículos.</div>
             ) : (
               Object.values(seleccion).map(({ item, qty }) => {
-                const p = priceFor(item.id);
-                const sub = p * qty;
-                return (
-                  <div key={item.id} className="sel-item">
-                    <div>
-                      <strong>{item.nombre}</strong>
-                      <div className="small">
-                        <small>
-                          {qty} {item.unidad || 'pza'} • {item.categoria}
-                          {isAdmin && ` • $${p.toFixed(2)} c/u`}
-                        </small>
-                      </div>
-                    </div>
-                    <div className="d-flex" style={{ display:'flex', alignItems:'center', gap:8 }}>
-                      {isAdmin && <strong>${sub.toFixed(2)}</strong>}
-                      <button className="del" onClick={() => setQty(item, 0)}>Quitar</button>
-                    </div>
-                  </div>
-                );
-              })
+  const p = priceFor(item.id);
+  const sub = p * qty;
+  const idStr = String(item.id);
+
+  return (
+    <div key={idStr} className="sel-item">
+      <div>
+        <strong>{item.nombre}</strong>
+        <div className="small">
+          <small>
+            {qty} {item.unidad || 'pza'} • {item.categoria}
+            {isAdmin && ` • $${p.toFixed(2)} c/u`}
+          </small>
+        </div>
+
+        {isAdmin && (
+          <label
+            className="small"
+            style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}
+          >
+            <input
+              type="checkbox"
+              checked={!!discountItems[idStr]}
+              onChange={(e) =>
+                setDiscountItems(prev => ({
+                  ...prev,
+                  [idStr]: e.target.checked
+                }))
+              }
+            />
+            Aplicar descuento a este producto
+          </label>
+        )}
+      </div>
+
+      <div className="d-flex" style={{ display:'flex', alignItems:'center', gap:8 }}>
+        {isAdmin && <strong>${sub.toFixed(2)}</strong>}
+        <button className="del" onClick={() => setQty(item, 0)}>Quitar</button>
+      </div>
+    </div>
+  );
+})
+
             )}
           </div>
 
@@ -1045,8 +1089,9 @@ function openReceiptPdfById(id) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#dc2626' }}>
                   <span>
                     {descTipo === 'porcentaje'
-                      ? `Descuento (${Number(descValor) || 0}%)`
-                      : 'Descuento'}
+    ? `Descuento (${Number(descValor) || 0}%) en productos seleccionados`
+    : 'Descuento en productos seleccionados'}
+
                   </span>
                   <strong>- ${descuentoMonto.toFixed(2)}</strong>
                 </div>
