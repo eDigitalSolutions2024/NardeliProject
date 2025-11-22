@@ -325,43 +325,53 @@ useEffect(() => {
     return m;
   }, [items]);
 
-  // Precio para UI: 1) utensilios (snapshot) 2) inventario (fallback) 3) 0
-  const priceFor = (productId) => {
-    const id = String(productId);
-    const r = reservedPriceById.get(id);
-    if (Number.isFinite(r) && r > 0) return r; // snapshot válido
-    const i = invPriceById.get(id);
-    if (Number.isFinite(i) && i > 0) return i; // fallback inventario
-    return Number.isFinite(r) ? r : 0; // si el 0 es intencional, muéstralo
-  };
+  // Precio para UI: 1) inventario (MASTER)  2) utensilios (fallback)  3) 0
+const priceFor = (productId) => {
+  const id = String(productId);
+
+  // 🟢 primero: inventario
+  const i = invPriceById.get(id);
+  if (Number.isFinite(i) && i > 0) return i;
+
+  // 🟡 solo si no hay precio en inventario, toma el de la reserva
+  const r = reservedPriceById.get(id);
+  if (Number.isFinite(r) && r > 0) return r;
+
+  return 0;
+};
+
 
   // 3) Cargar selección (BD o localStorage)
   useEffect(() => {
-    if (!reservaId || items.length === 0) return;
+  if (!reservaId || items.length === 0) return;
 
-    const mergeSeleccionFromSaved = (savedArr) => {
-      if (!Array.isArray(savedArr) || savedArr.length === 0) return;
-      const byId = new Map(items.map(it => [String(it.id), it]));
-      const next = {};
-      savedArr.forEach(s => {
-        const sid = String(s.itemId || s.id || s._id);
-        const base = byId.get(sid) || {
-          id: sid,
-          nombre: s.nombre || 'Ítem',
-          categoria: s.categoria || 'general',
-          unidad: s.unidad || 'pza',
-          imagen: s.imagen || '',
-          stock: Number(s.stock ?? 0),
-          precio: toPrice(s.precio),
-          descripcion: s.descripcion || ''
-        };
-        if (!base.descripcion && byId.get(sid)?.descripcion) {
-          base.descripcion = byId.get(sid).descripcion;
-        }
-        next[sid] = { item: base, qty: Number(s.cantidad ?? s.qty ?? 0) };
-      });
-      setSeleccion(next);
-    };
+  const mergeSeleccionFromSaved = (savedArr) => {
+    if (!Array.isArray(savedArr) || savedArr.length === 0) return;
+
+    // ⬅️ NUEVO: guardar snapshot completo para precios
+    setUtensiliosBD(savedArr);
+
+    const byId = new Map(items.map(it => [String(it.id), it]));
+    const next = {};
+    savedArr.forEach(s => {
+      const sid = String(s.itemId || s.id || s._id);
+      const base = byId.get(sid) || {
+        id: sid,
+        nombre: s.nombre || 'Ítem',
+        categoria: s.categoria || 'general',
+        unidad: s.unidad || 'pza',
+        imagen: s.imagen || '',
+        stock: Number(s.stock ?? 0),
+        precio: toPrice(s.precio),
+        descripcion: s.descripcion || ''
+      };
+      if (!base.descripcion && byId.get(sid)?.descripcion) {
+        base.descripcion = byId.get(sid).descripcion;
+      }
+      next[sid] = { item: base, qty: Number(s.cantidad ?? s.qty ?? 0) };
+    });
+    setSeleccion(next);
+  };
 
     (async () => {
       try {
@@ -526,20 +536,26 @@ const saldoRestante = useMemo(() => {
     }
     const token = localStorage.getItem('token') || '';
     const itemsPayload = Object.values(seleccion).map(({ item, qty }) => {
-      const id = String(item.id);
-      const base = {
-        itemId: item.id,
-        nombre: item.nombre,
-        cantidad: qty,
-        unidad: item.unidad,
-        categoria: item.categoria,
-        descripcion: item.descripcion || ''
-      };
-      if (reservedPriceById.has(id)) {
-        base.precio = priceFor(id);
-      }
-      return base;
-    });
+  const id = String(item.id);
+  const base = {
+    itemId: item.id,
+    nombre: item.nombre,
+    cantidad: qty,
+    unidad: item.unidad,
+    categoria: item.categoria,
+    descripcion: item.descripcion || ''
+  };
+
+  // siempre guardamos un precio, priorizando inventario
+  const inv = invPriceById.get(id);
+  const res = reservedPriceById.get(id);
+  base.precio = Number.isFinite(inv) && inv > 0
+    ? inv
+    : (Number.isFinite(res) ? res : 0);
+
+  return base;
+});
+
     try {
       setSaving(true);
       const res = await fetch(`${API_BASE_URL}/reservas/${reservaId}/utensilios`, {
