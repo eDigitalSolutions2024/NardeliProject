@@ -536,26 +536,20 @@ const saldoRestante = useMemo(() => {
     }
     const token = localStorage.getItem('token') || '';
     const itemsPayload = Object.values(seleccion).map(({ item, qty }) => {
-  const id = String(item.id);
-  const base = {
-    itemId: item.id,
-    nombre: item.nombre,
-    cantidad: qty,
-    unidad: item.unidad,
-    categoria: item.categoria,
-    descripcion: item.descripcion || ''
-  };
-
-  // siempre guardamos un precio, priorizando inventario
-  const inv = invPriceById.get(id);
-  const res = reservedPriceById.get(id);
-  base.precio = Number.isFinite(inv) && inv > 0
-    ? inv
-    : (Number.isFinite(res) ? res : 0);
-
-  return base;
-});
-
+      const id = String(item.id);
+      const base = {
+        itemId: item.id,
+        nombre: item.nombre,
+        cantidad: qty,
+        unidad: item.unidad,
+        categoria: item.categoria,
+        descripcion: item.descripcion || ''
+      };
+      if (reservedPriceById.has(id)) {
+        base.precio = priceFor(id);
+      }
+      return base;
+    });
     try {
       setSaving(true);
       const res = await fetch(`${API_BASE_URL}/reservas/${reservaId}/utensilios`, {
