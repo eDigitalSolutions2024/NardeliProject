@@ -699,6 +699,8 @@ const saldoRestante = useMemo(() => {
 
   // ====== RECIBO: estado, prefill y submit
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+
 
   const todayStr = useMemo(() => {
     const d = new Date();
@@ -761,6 +763,48 @@ const saldoRestante = useMemo(() => {
   setPaymentAmount(Number(saldoRestante || 0));
 
   setShowReceiptModal(true);
+}
+
+
+async function deleteReceiptById(id) {
+  if (!id) return;
+  if (!window.confirm('¿Eliminar este recibo? Esta acción no se puede deshacer.')) return;
+
+  try {
+    const r = await fetch(`${API_BASE_URL}/receipts/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!r.ok) {
+      const text = await r.text().catch(() => '');
+      let msg;
+      try {
+        const j = JSON.parse(text);
+        msg = j?.msg || j?.error || text;
+      } catch {
+        msg = text || `HTTP ${r.status}`;
+      }
+      throw new Error(msg);
+    }
+
+    // refrescar lista de recibos después de borrar
+    if (!reservaId) return;
+    try {
+      const rr = await fetch(`${API_BASE_URL}/reservas/${reservaId}/receipts`);
+      const data = rr.ok ? await rr.json() : [];
+      setReceipts(Array.isArray(data) ? data : (data.items || []));
+    } catch (e) {
+      console.error('refresh receipts after delete', e);
+    }
+
+    alert('Recibo eliminado correctamente');
+  } catch (err) {
+    console.error('deleteReceiptById', err);
+    alert(err?.message || 'No se pudo eliminar el recibo');
+  }
 }
 
 
@@ -1147,16 +1191,29 @@ function openReceiptPdfById(id) {
 
 
           {isStaff && (
-            <button
-              className="cd-btn"
-              type="button"
-              style={{ marginTop: 8, background: '#6d28d9', color: '#fff' }}
-              onClick={openReceiptModalPrefill}
-              title="Generar recibo a partir de esta selección"
-            >
-              Generar recibos
-            </button>
-          )}
+  <div style={{ marginTop: 8, display: 'block', flexDirection: 'column', gap: 6, }}>
+    <button
+      className="pdf"
+      type="button"
+      style={{ background: '#6d28d9', color: '#fff' }}
+      onClick={openReceiptModalPrefill}
+      title="Generar recibo a partir de esta selección"
+    >
+      Generar recibo
+    </button>
+
+    <button
+      className="pdf"
+      type="button"
+      style={{ background: '#0f766e', color: '#fff' }}
+      onClick={() => setShowHistoryModal(true)}
+      title="Ver historial de pagos / recibos de esta reserva"
+    >
+      Ver historial de recibos
+    </button>
+  </div>
+)}
+
         </div>
 
         {/* ACCESORIOS */}
@@ -1431,7 +1488,7 @@ function openReceiptPdfById(id) {
             </div>
 
 
-            <div style={{ marginTop: 16 }}>
+            {/*<div style={{ marginTop: 16 }}>
   <h4 style={{ marginBottom: 8 }}>Historial de recibos</h4>
   {loadingReceipts ? (
     <div className="empty">Cargando historial…</div>
@@ -1473,7 +1530,7 @@ function openReceiptPdfById(id) {
       </div>
     </div>
   )}
-</div>
+</div>*/}
 
 
             <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:16 }}>
@@ -1483,6 +1540,150 @@ function openReceiptPdfById(id) {
           </div>
         </div>
       )}
+
+
+      {/* MODAL: Historial de Recibos (solo staff) */}
+{showHistoryModal && isStaff && (
+  <div
+    style={{
+      position: 'fixed',
+      inset: 0,
+      background: 'rgba(0,0,0,.35)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1150
+    }}
+    onClick={() => setShowHistoryModal(false)}
+  >
+    <div
+      style={{
+        background: '#fff',
+        width: 'min(720px, 96%)',
+        borderRadius: 12,
+        padding: 16,
+        maxHeight: '80vh',
+        overflow: 'auto'
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 8
+        }}
+      >
+        <h3 style={{ margin: 0 }}>Historial de recibos</h3>
+        <button className="del" onClick={() => setShowHistoryModal(false)}>
+          Cerrar
+        </button>
+      </div>
+
+      <div className="small" style={{ marginBottom: 10, color: '#555' }}>
+        <div>
+          Reserva: <strong>{reservaId || '—'}</strong>
+        </div>
+        <div>
+          Total con descuento: <strong>${totalConDescuento.toFixed(2)}</strong>
+        </div>
+        <div>
+          Total pagado: <strong>${totalPagado.toFixed(2)}</strong>
+        </div>
+        <div>
+          Saldo restante: <strong>${saldoRestante.toFixed(2)}</strong>
+        </div>
+      </div>
+
+      {loadingReceipts ? (
+        <div className="empty">Cargando historial…</div>
+      ) : (receipts || []).length === 0 ? (
+        <div className="empty">Aún no hay pagos registrados.</div>
+      ) : (
+        <div style={{ border: '1px solid #eee', borderRadius: 8, overflow: 'hidden' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr 1fr 1fr',
+              fontWeight: 600,
+              padding: '8px 10px',
+              background: '#fafafa'
+            }}
+          >
+            <div>Fecha</div>
+            <div>Método</div>
+            <div>Folio</div>
+            <div>Monto</div>
+          </div>
+
+          {(receipts || []).map((rc) => (
+  <div
+    key={rc._id}
+    onDoubleClick={() => openReceiptPdfById(rc._id)}
+    role="button"
+    tabIndex={0}
+    title="Doble click para abrir el PDF del recibo"
+    onKeyDown={(e) => {
+      if (e.key === 'Enter') openReceiptPdfById(rc._id);
+    }}
+    style={{
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr 1fr 1fr',
+      padding: '8px 10px',
+      borderTop: '1px solid #eee',
+      cursor: 'pointer',
+      userSelect: 'none'
+    }}
+  >
+    <div>{rc.issuedAt ? new Date(rc.issuedAt).toLocaleString('es-MX') : '—'}</div>
+    <div>{rc.paymentMethod || '—'}</div>
+    <div>{rc.folio || rc._id?.slice(-6)?.toUpperCase() || '—'}</div>
+
+    {/* Columna monto + botón eliminar */}
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+      <span>${Number(rc.amount || 0).toFixed(2)}</span>
+      <button
+        type="button"
+        className="del"
+        style={{ fontSize: 11, padding: '2px 8px' }}
+        onClick={(e) => {
+          e.stopPropagation();           // para que no dispare el doble click de abrir PDF
+          deleteReceiptById(rc._id);
+        }}
+      >
+        Eliminar
+      </button>
+    </div>
+  </div>
+))}
+
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr 1fr 1fr',
+              padding: '10px',
+              background: '#fafafa',
+              borderTop: '1px solid #eee'
+            }}
+          >
+            <div style={{ gridColumn: '1 / 3' }}>
+              <strong>Totales</strong>
+            </div>
+            <div>
+              <strong>Pagado:</strong>
+            </div>
+            <div>
+              <strong>${totalPagado.toFixed(2)}</strong>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+)}
+
     </div>
   );
 };

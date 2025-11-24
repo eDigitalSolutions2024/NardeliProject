@@ -75,6 +75,31 @@ router.get('/reservas/:id/saldo', async (req, res) => {
   res.json({ subtotal, descuento, total, paid, remaining });
 });
 
+/** DELETE /receipts/:id -> eliminar un recibo */
+router.delete('/receipts/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const rc = await Receipt.findByIdAndDelete(id);
+
+    if (!rc) {
+      return res.status(404).json({ ok: false, msg: 'Recibo no encontrado' });
+    }
+
+    return res.json({
+      ok: true,
+      msg: 'Recibo eliminado correctamente',
+      receipt: rc,
+    });
+  } catch (err) {
+    console.error('DELETE /receipts/:id', err);
+    return res.status(500).json({
+      ok: false,
+      msg: 'Error interno al eliminar el recibo',
+    });
+  }
+});
+
 /** GET /receipts/:id/pdf -> PDF del recibo */
 router.get('/receipts/:id/pdf', async (req, res) => {
   try {
