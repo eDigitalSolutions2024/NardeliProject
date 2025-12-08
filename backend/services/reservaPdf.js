@@ -679,7 +679,7 @@ doc.y = idCard.y + 72;
   doc.font('Helvetica-Bold').fontSize(FONTS.small).fillColor(COLORS.primary);
   doc.text(brand.footer || 'Nardeli - Salón de Eventos', X, footerY + 2, { lineBreak: false, ellipsis: true });
   doc.font('Helvetica').fontSize(FONTS.tiny).fillColor(COLORS.textMuted);
-  doc.text('contacto@nardeli.mx • +52 656 682 4252', X, footerY + 14, { lineBreak: false, ellipsis: true });
+  doc.text('contacto@nardeli.mx • +52 656 105 6717', X, footerY + 14, { lineBreak: false, ellipsis: true });
   doc.text(brand.address || 'Av. Waterfill 431, Waterfill Río Bravo, 32550 Juárez, Chih.', X + 180, footerY + 10, { lineBreak: false, ellipsis: true });
   doc.end();
 }

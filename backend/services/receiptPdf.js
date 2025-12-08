@@ -420,7 +420,7 @@ const totalsBoxH = rowsCount * 16 + 16;
   // Footer contacto
   doc.font('Helvetica').fontSize(9).fillColor('#6b7280');
   doc.text(
-    'Tel: 656 682 4252   •   nardelicentrodeeventos@gmail.com',
+    'Tel: 656 105 6717   •   nardelicentrodeeventos@gmail.com',
     contentX,
     pageH - 50,
     { width: pageW - contentX - 36, align: 'right' }
