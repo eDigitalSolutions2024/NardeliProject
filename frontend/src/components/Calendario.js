@@ -19,7 +19,7 @@ const Calendario = () => {
   const [mostrarModal, setMostrarModal] = useState(false);
   const [reservaEditando, setReservaEditando] = useState(null);
   const [activeStartDate, setActiveStartDate] = useState(null);
-
+  const [searchEventos, setSearchEventos] = useState('');
 
   const obtenerIcono = (tipo) => {
     switch ((tipo || '').toLowerCase()) {
@@ -223,6 +223,12 @@ const convertirACotizacion = async (id) => {
 
   const eventosDelDia = getEventosDelDia(date);
 
+  const eventosFiltrados = eventos.filter((e) => {
+  if (!searchEventos.trim()) return true;
+  const texto = `${e.titulo || ''} ${e.cliente || ''} ${formatearFecha(e.ymd)}`.toLowerCase();
+  return texto.includes(searchEventos.toLowerCase());
+});
+
   // Botón para ir al Panel (DashboardCliente) con reservaId y modo admin
   const irAlPanelAdmin = () => {
     if (!reservaEditando?.id) return;
@@ -238,37 +244,105 @@ const convertirACotizacion = async (id) => {
     <div className="calendario-container">
       {/* Panel de Próximos Eventos */}
       <div className="eventos-panel">
-        <div className="eventos-header">
-          <h2>Próximos Eventos</h2>
-          <span className="eventos-count">{eventos.length} eventos</span>
-        </div>
+        <div
+  className="eventos-header"
+  style={{
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+  }}
+>
+  <div>
+    <h2>Próximos Eventos</h2>
+    <span className="eventos-count">
+      {eventosFiltrados.length} de {eventos.length} eventos
+    </span>
+  </div>
+
+  <input
+    type="text"
+    placeholder="Buscar por cliente, fecha o tipo..."
+    value={searchEventos}
+    onChange={(e) => setSearchEventos(e.target.value)}
+    style={{
+      padding: '6px 10px',
+      borderRadius: 8,
+      border: '1px solid #ddd',
+      fontSize: 14,
+      minWidth: 220,
+    }}
+  />
+</div>
+
 
         <div className="eventos-lista">
-          {eventos.map((evento) => (
-            <div key={evento.id}
-  className={`evento-card evento-${evento.tipo}`}
-  onClick={() => seleccionarFechaEvento(evento)}
-  role="button"
-  tabIndex={0}
-  onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && seleccionarFechaEvento(evento)}
->
-              <div className="evento-icon">{evento.icon}</div>
-              <div className="evento-info">
-                <h3 className="evento-titulo">{evento.titulo}</h3>
-                <p className="evento-fecha">{formatearFecha(evento.ymd)}</p>
-                <div className="evento-detalles">
-                  <span className="evento-hora">⏰ {toHHmm(evento.horaInicio)} – {toHHmm(evento.horaFin)}</span>
-                  <span className="evento-invitados">👥 {evento.invitados}</span>
-                </div>
-                <div className="evento-acciones">
-                  <button onClick={(e) => { e.stopPropagation(); manejarEditar(evento); }}>✏️ Editar</button>
-                  <button onClick={(e) => { e.stopPropagation(); manejarEliminar(evento.id); }}>🗑️ Eliminar</button>
-                  <button onClick={(e) => { e.stopPropagation(); convertirACotizacion(evento.id); }}>💱 A cotización</button>
-                </div>
-              </div>
-            </div>
-          ))}
+  {eventosFiltrados.length === 0 ? (
+    <div className="evento-card">
+      <div className="evento-info">
+        <h3 className="evento-titulo">Sin resultados</h3>
+        <p className="evento-fecha">
+          {eventos.length === 0
+            ? 'Cuando registres eventos aparecerán aquí.'
+            : 'No hay eventos que coincidan con ese criterio de búsqueda.'}
+        </p>
+      </div>
+    </div>
+  ) : (
+    eventosFiltrados.map((evento) => (
+      <div
+        key={evento.id}
+        className={`evento-card evento-${evento.tipo}`}
+        onClick={() => seleccionarFechaEvento(evento)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) =>
+          (e.key === 'Enter' || e.key === ' ') && seleccionarFechaEvento(evento)
+        }
+      >
+        <div className="evento-icon">{evento.icon}</div>
+        <div className="evento-info">
+          <h3 className="evento-titulo">{evento.titulo}</h3>
+          <p className="evento-fecha">{formatearFecha(evento.ymd)}</p>
+          <div className="evento-detalles">
+            <span className="evento-hora">
+              ⏰ {toHHmm(evento.horaInicio)} – {toHHmm(evento.horaFin)}
+            </span>
+            <span className="evento-invitados">👥 {evento.invitados}</span>
+          </div>
+          <div className="evento-acciones">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                manejarEditar(evento);
+              }}
+            >
+              ✏️ Editar
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                manejarEliminar(evento.id);
+              }}
+            >
+              🗑️ Eliminar
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                convertirACotizacion(evento.id);
+              }}
+            >
+              💱 A cotización
+            </button>
+          </div>
         </div>
+      </div>
+    ))
+  )}
+</div>
+
 
         {mostrarModal && reservaEditando && (
           <div className="modal-overlay">
