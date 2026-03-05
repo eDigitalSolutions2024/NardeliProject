@@ -105,6 +105,7 @@ export default function Clientes() {
         return {
           _uid: `res-${r._id}`,
           _id: r._id,
+          folio: r.folio || "", // ✅ este es el ID corto del PDF (C2DFFC0C)
           fuente: "reservas",
           tipoReserva: tipoRes, // 'cotizacion' | 'evento'
           tipo: tipoUI, // "Cotización" | "Evento"
@@ -176,26 +177,36 @@ export default function Clientes() {
   }, [rows, tab]);
 
   // Búsqueda
-  const filtered = useMemo(() => {
-    const k = q.trim().toLowerCase();
-    if (!k) return filteredByTab;
-    return filteredByTab.filter((r) =>
-      [
-        r.cliente,
-        r.correo,
-        r.telefono,
-        r.tipoEvento,
-        r.fecha,
-        r.creadaEn,
-        r.hora,
-        r.estado,
-        r.tipo,
-        r.pagoEstado,
-      ]
-        .filter(Boolean)
-        .some((v) => String(v).toLowerCase().includes(k))
-    );
-  }, [filteredByTab, q]);
+  // Búsqueda
+const filtered = useMemo(() => {
+  const raw = q.trim().toLowerCase();
+  if (!raw) return filteredByTab;
+
+  // permite buscar con o sin "#"
+  const k = raw.replace(/^#/, "");
+
+  const norm = (v) => String(v ?? "").toLowerCase().replace(/^#/, "");
+
+  return filteredByTab.filter((r) =>
+    [
+      r._id,     // mongo id largo
+      r.folio,   // ✅ id corto del PDF (C2DFFC0C)
+      r._uid,
+      r.cliente,
+      r.correo,
+      r.telefono,
+      r.tipoEvento,
+      r.fecha,
+      r.creadaEn,
+      r.hora,
+      r.estado,
+      r.tipo,
+      r.pagoEstado,
+    ]
+      .filter(Boolean)
+      .some((v) => norm(v).includes(k))
+  );
+}, [filteredByTab, q]);
 
   // Paginación
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -215,6 +226,24 @@ export default function Clientes() {
     if (e.includes("cancel")) return "badge danger";
     return "badge";
   };
+
+  const abrirPanelCliente = (row) => {
+  // solo reservas pueden abrir el panel
+  if (row.fuente !== "reservas" || !row._id) {
+    alert("Este registro no es una reserva.");
+    return;
+  }
+
+  const tipo = row.tipoReserva || "cotizacion"; // 'cotizacion' | 'evento'
+  const qs = new URLSearchParams({
+    reservaId: String(row._id),
+    mode: "admin",
+    tipo: String(tipo),
+  }).toString();
+
+  // abre en nueva pestaña (como tu dashboard admin)
+  window.open(`/cliente/dashboard?${qs}`, "_blank", "noopener,noreferrer");
+};
 
   return (
     <div className="clientes-container">
@@ -244,7 +273,7 @@ export default function Clientes() {
 
           <input
             className="search"
-            placeholder="Buscar por nombre, correo, teléfono, evento…"
+            placeholder="Buscar por nombre, correo, teléfono, evento o ID…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
@@ -338,11 +367,18 @@ export default function Clientes() {
 
                 <td className="acciones">
                   <button
-                    className="btn btn-light"
-                    onClick={() => console.log("Detalle:", r)}
-                  >
-                    Ver
-                  </button>
+  className="btn btn-light"
+  onClick={() => {
+    if (r.fuente === "reservas" && r._id) {
+      const url = `/cliente/dashboard?reservaId=${r._id}&mode=admin`;
+      window.open(url, "_blank");
+    } else {
+      alert("Este cliente no tiene una reserva asociada.");
+    }
+  }}
+>
+  Ver
+</button>
                   {r.fuente === "reservas" && r._id && (
                     <button
                       className="btn"

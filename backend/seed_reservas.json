@@ -1,0 +1,4382 @@
+[
+  {
+    "clienteId": null,
+    "cliente": "Sofía Aguirre",
+    "correo": "sofia.aguirre60@gmail.com",
+    "telefono": "6562677409",
+    "tipoEvento": "Baby shower",
+    "fecha": "2026-05-25T06:00:00.000Z",
+    "horaInicio": "15:30",
+    "horaFin": "06:30",
+    "cantidadPersonas": 61,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 2,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 12,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 9,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 2,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-24T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 200,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Paola Castillo",
+    "correo": "paola.castillo78@yahoo.com",
+    "telefono": "6562554294",
+    "tipoEvento": "Posada",
+    "fecha": "2026-06-28T06:00:00.000Z",
+    "horaInicio": "19:45",
+    "horaFin": "04:45",
+    "cantidadPersonas": 35,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 8,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-06T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 200,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Jorge Hernández",
+    "correo": "jorge.hernandez50@hotmail.com",
+    "telefono": "6562043262",
+    "tipoEvento": "Graduación",
+    "fecha": "2026-08-24T06:00:00.000Z",
+    "horaInicio": "20:00",
+    "horaFin": "20:00",
+    "cantidadPersonas": 26,
+    "descripcion": "",
+    "utensilios": [],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-06T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 5,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Carlos Rivas",
+    "correo": "carlos.rivas29@yahoo.com",
+    "telefono": "6564755089",
+    "tipoEvento": "Bautizo",
+    "fecha": "2026-07-26T06:00:00.000Z",
+    "horaInicio": "18:45",
+    "horaFin": "03:00",
+    "cantidadPersonas": 141,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 3,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 4,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 96,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 8,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-03T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 15,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Luis Mendoza",
+    "correo": "luis.mendoza88@hotmail.com",
+    "telefono": "6564035414",
+    "tipoEvento": "Graduación",
+    "fecha": "2026-05-31T06:00:00.000Z",
+    "horaInicio": "13:00",
+    "horaFin": "14:45",
+    "cantidadPersonas": 148,
+    "descripcion": "",
+    "utensilios": [],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Luis Mendoza",
+    "correo": "luis.mendoza14@gmail.com",
+    "telefono": "6568353251",
+    "tipoEvento": "Posada",
+    "fecha": "2026-07-03T06:00:00.000Z",
+    "horaInicio": "18:45",
+    "horaFin": "11:30",
+    "cantidadPersonas": 103,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 119,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 6,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 6,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 4,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-01T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Paola Castillo",
+    "correo": "paola.castillo43@yahoo.com",
+    "telefono": "6567160267",
+    "tipoEvento": "Posada",
+    "fecha": "2026-07-07T06:00:00.000Z",
+    "horaInicio": "15:30",
+    "horaFin": "10:00",
+    "cantidadPersonas": 72,
+    "descripcion": "",
+    "utensilios": [],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-20T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Ana Torres",
+    "correo": "ana.torres35@gmail.com",
+    "telefono": "6562066147",
+    "tipoEvento": "Baby shower",
+    "fecha": "2026-03-19T06:00:00.000Z",
+    "horaInicio": "18:15",
+    "horaFin": "15:00",
+    "cantidadPersonas": 107,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 10,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Paquete decoración básica",
+        "cantidad": 9,
+        "unidad": "paq",
+        "categoria": "paquetes",
+        "precio": 900,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-26T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Jorge Hernández",
+    "correo": "jorge.hernandez88@gmail.com",
+    "telefono": "6561437376",
+    "tipoEvento": "XV años",
+    "fecha": "2026-07-20T06:00:00.000Z",
+    "horaInicio": "20:30",
+    "horaFin": "15:30",
+    "cantidadPersonas": 141,
+    "descripcion": "",
+    "utensilios": [],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 100,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Carlos Rivas",
+    "correo": "carlos.rivas89@yahoo.com",
+    "telefono": "6563081894",
+    "tipoEvento": "Baby shower",
+    "fecha": "2026-08-01T06:00:00.000Z",
+    "horaInicio": "13:15",
+    "horaFin": "16:00",
+    "cantidadPersonas": 21,
+    "descripcion": "",
+    "utensilios": [],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-01T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 15,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Jorge Hernández",
+    "correo": "jorge.hernandez2@hotmail.com",
+    "telefono": "6561462457",
+    "tipoEvento": "Bautizo",
+    "fecha": "2026-06-29T06:00:00.000Z",
+    "horaInicio": "12:00",
+    "horaFin": "07:00",
+    "cantidadPersonas": 155,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 10,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 62,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-18T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 15,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Paola Castillo",
+    "correo": "paola.castillo24@yahoo.com",
+    "telefono": "6568593320",
+    "tipoEvento": "Graduación",
+    "fecha": "2026-08-01T06:00:00.000Z",
+    "horaInicio": "13:00",
+    "horaFin": "10:30",
+    "cantidadPersonas": 125,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 3,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "borrador",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Carlos Rivas",
+    "correo": "carlos.rivas45@gmail.com",
+    "telefono": "6561144055",
+    "tipoEvento": "Aniversario",
+    "fecha": "2026-04-29T06:00:00.000Z",
+    "horaInicio": "19:00",
+    "horaFin": "07:45",
+    "cantidadPersonas": 104,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Paquete decoración básica",
+        "cantidad": 11,
+        "unidad": "paq",
+        "categoria": "paquetes",
+        "precio": 900,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 6,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 4,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "borrador",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 50,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Ana Torres",
+    "correo": "ana.torres29@hotmail.com",
+    "telefono": "6565998878",
+    "tipoEvento": "Baby shower",
+    "fecha": "2026-05-15T06:00:00.000Z",
+    "horaInicio": "12:30",
+    "horaFin": "16:45",
+    "cantidadPersonas": 159,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Paquete decoración básica",
+        "cantidad": 10,
+        "unidad": "paq",
+        "categoria": "paquetes",
+        "precio": 900,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "cancelada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 50,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "María López",
+    "correo": "maria.lopez83@gmail.com",
+    "telefono": "6567359678",
+    "tipoEvento": "Posada",
+    "fecha": "2026-02-15T07:00:00.000Z",
+    "horaInicio": "18:15",
+    "horaFin": "06:00",
+    "cantidadPersonas": 91,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 6,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-16T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 10,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Ana Torres",
+    "correo": "ana.torres75@yahoo.com",
+    "telefono": "6568163401",
+    "tipoEvento": "Bautizo",
+    "fecha": "2026-03-16T06:00:00.000Z",
+    "horaInicio": "19:30",
+    "horaFin": "05:00",
+    "cantidadPersonas": 142,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 47,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 2,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 8,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Paola Castillo",
+    "correo": "paola.castillo88@gmail.com",
+    "telefono": "6562388456",
+    "tipoEvento": "Bautizo",
+    "fecha": "2026-06-25T06:00:00.000Z",
+    "horaInicio": "18:15",
+    "horaFin": "07:45",
+    "cantidadPersonas": 25,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 5,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 3,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 200,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Lorena Martínez",
+    "correo": "lorena.martinez33@gmail.com",
+    "telefono": "6568614758",
+    "tipoEvento": "Bautizo",
+    "fecha": "2026-07-06T06:00:00.000Z",
+    "horaInicio": "16:45",
+    "horaFin": "08:45",
+    "cantidadPersonas": 85,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 12,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 21,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 3,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 2,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-15T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Sofía Aguirre",
+    "correo": "sofia.aguirre78@gmail.com",
+    "telefono": "6562623521",
+    "tipoEvento": "Posada",
+    "fecha": "2026-03-03T07:00:00.000Z",
+    "horaInicio": "19:30",
+    "horaFin": "03:00",
+    "cantidadPersonas": 48,
+    "descripcion": "",
+    "utensilios": [],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-03-03T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 200,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "María López",
+    "correo": "maria.lopez14@hotmail.com",
+    "telefono": "6565200082",
+    "tipoEvento": "Bautizo",
+    "fecha": "2026-06-20T06:00:00.000Z",
+    "horaInicio": "13:00",
+    "horaFin": "05:45",
+    "cantidadPersonas": 73,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 6,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Paquete decoración básica",
+        "cantidad": 7,
+        "unidad": "paq",
+        "categoria": "paquetes",
+        "precio": 900,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 9,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 8,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "borrador",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Sofía Aguirre",
+    "correo": "sofia.aguirre97@yahoo.com",
+    "telefono": "6563401661",
+    "tipoEvento": "Boda civil",
+    "fecha": "2026-02-22T07:00:00.000Z",
+    "horaInicio": "18:15",
+    "horaFin": "05:15",
+    "cantidadPersonas": 134,
+    "descripcion": "",
+    "utensilios": [],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-01T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 10,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Fernanda Silva",
+    "correo": "fernanda.silva56@hotmail.com",
+    "telefono": "6561764241",
+    "tipoEvento": "XV años",
+    "fecha": "2026-07-02T06:00:00.000Z",
+    "horaInicio": "13:00",
+    "horaFin": "10:30",
+    "cantidadPersonas": 129,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 9,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 5,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "borrador",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Ricardo Nava",
+    "correo": "ricardo.nava49@gmail.com",
+    "telefono": "6568211363",
+    "tipoEvento": "Baby shower",
+    "fecha": "2026-07-01T06:00:00.000Z",
+    "horaInicio": "18:30",
+    "horaFin": "19:45",
+    "cantidadPersonas": 27,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 17,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 27,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Fernanda Silva",
+    "correo": "fernanda.silva19@gmail.com",
+    "telefono": "6566310613",
+    "tipoEvento": "Cumpleaños",
+    "fecha": "2026-07-18T06:00:00.000Z",
+    "horaInicio": "20:00",
+    "horaFin": "11:45",
+    "cantidadPersonas": 57,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 12,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 6,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 5,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "cancelada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-03-03T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 50,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Lorena Martínez",
+    "correo": "lorena.martinez47@hotmail.com",
+    "telefono": "6566982355",
+    "tipoEvento": "Baby shower",
+    "fecha": "2026-06-15T06:00:00.000Z",
+    "horaInicio": "20:15",
+    "horaFin": "18:00",
+    "cantidadPersonas": 135,
+    "descripcion": "",
+    "utensilios": [],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 200,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Lorena Martínez",
+    "correo": "lorena.martinez70@gmail.com",
+    "telefono": "6568796173",
+    "tipoEvento": "Aniversario",
+    "fecha": "2026-07-15T06:00:00.000Z",
+    "horaInicio": "12:15",
+    "horaFin": "05:00",
+    "cantidadPersonas": 28,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 72,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Paquete decoración básica",
+        "cantidad": 2,
+        "unidad": "paq",
+        "categoria": "paquetes",
+        "precio": 900,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 12,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "cancelada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Ana Torres",
+    "correo": "ana.torres79@yahoo.com",
+    "telefono": "6564543205",
+    "tipoEvento": "Aniversario",
+    "fecha": "2026-03-31T06:00:00.000Z",
+    "horaInicio": "18:15",
+    "horaFin": "07:30",
+    "cantidadPersonas": 129,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 6,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 100,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "María López",
+    "correo": "maria.lopez54@yahoo.com",
+    "telefono": "6564762221",
+    "tipoEvento": "Aniversario",
+    "fecha": "2026-04-18T06:00:00.000Z",
+    "horaInicio": "19:15",
+    "horaFin": "05:15",
+    "cantidadPersonas": 96,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 9,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 2,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "cancelada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-15T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 50,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Fernanda Silva",
+    "correo": "fernanda.silva51@gmail.com",
+    "telefono": "6563475281",
+    "tipoEvento": "Boda civil",
+    "fecha": "2026-02-25T07:00:00.000Z",
+    "horaInicio": "17:00",
+    "horaFin": "15:15",
+    "cantidadPersonas": 123,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Paquete decoración básica",
+        "cantidad": 11,
+        "unidad": "paq",
+        "categoria": "paquetes",
+        "precio": 900,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "borrador",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Ricardo Nava",
+    "correo": "ricardo.nava4@hotmail.com",
+    "telefono": "6564697136",
+    "tipoEvento": "Boda civil",
+    "fecha": "2026-03-13T06:00:00.000Z",
+    "horaInicio": "17:45",
+    "horaFin": "06:30",
+    "cantidadPersonas": 84,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 9,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 6,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 3,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 12,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-06T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Lorena Martínez",
+    "correo": "lorena.martinez78@hotmail.com",
+    "telefono": "6565443757",
+    "tipoEvento": "Aniversario",
+    "fecha": "2026-05-19T06:00:00.000Z",
+    "horaInicio": "13:15",
+    "horaFin": "04:00",
+    "cantidadPersonas": 24,
+    "descripcion": "",
+    "utensilios": [],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "cancelada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-03-01T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 5,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Carlos Rivas",
+    "correo": "carlos.rivas26@yahoo.com",
+    "telefono": "6563126017",
+    "tipoEvento": "Bautizo",
+    "fecha": "2026-03-24T06:00:00.000Z",
+    "horaInicio": "12:00",
+    "horaFin": "03:15",
+    "cantidadPersonas": 66,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 3,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 1,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 49,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-03-02T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 15,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Carlos Rivas",
+    "correo": "carlos.rivas10@hotmail.com",
+    "telefono": "6568963950",
+    "tipoEvento": "Bautizo",
+    "fecha": "2026-07-20T06:00:00.000Z",
+    "horaInicio": "14:30",
+    "horaFin": "16:15",
+    "cantidadPersonas": 141,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 1,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 7,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-12T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 100,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Carlos Rivas",
+    "correo": "carlos.rivas82@gmail.com",
+    "telefono": "6564006686",
+    "tipoEvento": "Bautizo",
+    "fecha": "2026-04-16T06:00:00.000Z",
+    "horaInicio": "18:45",
+    "horaFin": "19:45",
+    "cantidadPersonas": 149,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Paquete decoración básica",
+        "cantidad": 12,
+        "unidad": "paq",
+        "categoria": "paquetes",
+        "precio": 900,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 6,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-10T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Fernanda Silva",
+    "correo": "fernanda.silva62@gmail.com",
+    "telefono": "6561588120",
+    "tipoEvento": "Baby shower",
+    "fecha": "2026-05-31T06:00:00.000Z",
+    "horaInicio": "12:15",
+    "horaFin": "09:00",
+    "cantidadPersonas": 29,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Paquete decoración básica",
+        "cantidad": 3,
+        "unidad": "paq",
+        "categoria": "paquetes",
+        "precio": 900,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 5,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 6,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 200,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Ricardo Nava",
+    "correo": "ricardo.nava71@yahoo.com",
+    "telefono": "6568677272",
+    "tipoEvento": "XV años",
+    "fecha": "2026-08-04T06:00:00.000Z",
+    "horaInicio": "15:45",
+    "horaFin": "17:00",
+    "cantidadPersonas": 119,
+    "descripcion": "",
+    "utensilios": [],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-14T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 50,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Sofía Aguirre",
+    "correo": "sofia.aguirre46@hotmail.com",
+    "telefono": "6569983066",
+    "tipoEvento": "Graduación",
+    "fecha": "2026-06-04T06:00:00.000Z",
+    "horaInicio": "19:30",
+    "horaFin": "04:30",
+    "cantidadPersonas": 23,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Paquete decoración básica",
+        "cantidad": 6,
+        "unidad": "paq",
+        "categoria": "paquetes",
+        "precio": 900,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "borrador",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Lorena Martínez",
+    "correo": "lorena.martinez64@yahoo.com",
+    "telefono": "6564898061",
+    "tipoEvento": "Cumpleaños",
+    "fecha": "2026-07-14T06:00:00.000Z",
+    "horaInicio": "13:30",
+    "horaFin": "09:30",
+    "cantidadPersonas": 32,
+    "descripcion": "",
+    "utensilios": [],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "cancelada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-24T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 10,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Ricardo Nava",
+    "correo": "ricardo.nava6@gmail.com",
+    "telefono": "6562183797",
+    "tipoEvento": "Bautizo",
+    "fecha": "2026-04-01T06:00:00.000Z",
+    "horaInicio": "14:15",
+    "horaFin": "11:30",
+    "cantidadPersonas": 63,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 7,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 3,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 10,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 43,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "borrador",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 10,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Paola Castillo",
+    "correo": "paola.castillo32@hotmail.com",
+    "telefono": "6566337185",
+    "tipoEvento": "Baby shower",
+    "fecha": "2026-07-27T06:00:00.000Z",
+    "horaInicio": "17:30",
+    "horaFin": "08:15",
+    "cantidadPersonas": 148,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 11,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 12,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-08T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Lorena Martínez",
+    "correo": "lorena.martinez81@hotmail.com",
+    "telefono": "6561576141",
+    "tipoEvento": "Baby shower",
+    "fecha": "2026-08-25T06:00:00.000Z",
+    "horaInicio": "17:30",
+    "horaFin": "17:30",
+    "cantidadPersonas": 139,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 10,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 7,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "borrador",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 200,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Ana Torres",
+    "correo": "ana.torres99@hotmail.com",
+    "telefono": "6569219234",
+    "tipoEvento": "Boda civil",
+    "fecha": "2026-06-14T06:00:00.000Z",
+    "horaInicio": "14:15",
+    "horaFin": "07:45",
+    "cantidadPersonas": 59,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 8,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "borrador",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Jorge Hernández",
+    "correo": "jorge.hernandez83@gmail.com",
+    "telefono": "6564424956",
+    "tipoEvento": "Cumpleaños",
+    "fecha": "2026-05-26T06:00:00.000Z",
+    "horaInicio": "20:45",
+    "horaFin": "13:15",
+    "cantidadPersonas": 75,
+    "descripcion": "",
+    "utensilios": [],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "cancelada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-26T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 100,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Paola Castillo",
+    "correo": "paola.castillo10@yahoo.com",
+    "telefono": "6569114578",
+    "tipoEvento": "Aniversario",
+    "fecha": "2026-07-13T06:00:00.000Z",
+    "horaInicio": "15:45",
+    "horaFin": "17:15",
+    "cantidadPersonas": 130,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 69,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 15,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Fernanda Silva",
+    "correo": "fernanda.silva93@yahoo.com",
+    "telefono": "6567939409",
+    "tipoEvento": "Boda civil",
+    "fecha": "2026-08-18T06:00:00.000Z",
+    "horaInicio": "18:15",
+    "horaFin": "14:15",
+    "cantidadPersonas": 67,
+    "descripcion": "",
+    "utensilios": [],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-05T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Jorge Hernández",
+    "correo": "jorge.hernandez98@yahoo.com",
+    "telefono": "6561503917",
+    "tipoEvento": "Cumpleaños",
+    "fecha": "2026-05-29T06:00:00.000Z",
+    "horaInicio": "19:00",
+    "horaFin": "11:15",
+    "cantidadPersonas": 81,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 7,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 5,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 12,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-23T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 200,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Lorena Martínez",
+    "correo": "lorena.martinez8@gmail.com",
+    "telefono": "6565481585",
+    "tipoEvento": "Bautizo",
+    "fecha": "2026-07-01T06:00:00.000Z",
+    "horaInicio": "12:45",
+    "horaFin": "14:45",
+    "cantidadPersonas": 46,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 39,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 11,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 9,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-08T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Ana Torres",
+    "correo": "ana.torres92@gmail.com",
+    "telefono": "6565106319",
+    "tipoEvento": "Cumpleaños",
+    "fecha": "2026-08-05T06:00:00.000Z",
+    "horaInicio": "13:45",
+    "horaFin": "18:45",
+    "cantidadPersonas": 90,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 4,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 83,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 9,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Paquete decoración básica",
+        "cantidad": 6,
+        "unidad": "paq",
+        "categoria": "paquetes",
+        "precio": 900,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-03-01T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 50,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Jorge Hernández",
+    "correo": "jorge.hernandez25@gmail.com",
+    "telefono": "6561486240",
+    "tipoEvento": "Bautizo",
+    "fecha": "2026-06-09T06:00:00.000Z",
+    "horaInicio": "16:15",
+    "horaFin": "05:45",
+    "cantidadPersonas": 21,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 6,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 3,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "borrador",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Luis Mendoza",
+    "correo": "luis.mendoza10@yahoo.com",
+    "telefono": "6563804668",
+    "tipoEvento": "Aniversario",
+    "fecha": "2026-03-28T06:00:00.000Z",
+    "horaInicio": "19:30",
+    "horaFin": "09:45",
+    "cantidadPersonas": 117,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 103,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 1,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 100,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Sofía Aguirre",
+    "correo": "sofia.aguirre28@hotmail.com",
+    "telefono": "6569311941",
+    "tipoEvento": "Aniversario",
+    "fecha": "2026-02-22T07:00:00.000Z",
+    "horaInicio": "12:45",
+    "horaFin": "09:45",
+    "cantidadPersonas": 62,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Paquete decoración básica",
+        "cantidad": 9,
+        "unidad": "paq",
+        "categoria": "paquetes",
+        "precio": 900,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 3,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "borrador",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 10,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Carlos Rivas",
+    "correo": "carlos.rivas93@gmail.com",
+    "telefono": "6566838684",
+    "tipoEvento": "Cumpleaños",
+    "fecha": "2026-07-05T06:00:00.000Z",
+    "horaInicio": "12:30",
+    "horaFin": "12:15",
+    "cantidadPersonas": 92,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Paquete decoración básica",
+        "cantidad": 8,
+        "unidad": "paq",
+        "categoria": "paquetes",
+        "precio": 900,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 11,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 2,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Ana Torres",
+    "correo": "ana.torres40@gmail.com",
+    "telefono": "6561573944",
+    "tipoEvento": "Posada",
+    "fecha": "2026-08-29T06:00:00.000Z",
+    "horaInicio": "19:15",
+    "horaFin": "08:45",
+    "cantidadPersonas": 54,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 5,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "cancelada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Luis Mendoza",
+    "correo": "luis.mendoza6@hotmail.com",
+    "telefono": "6565943666",
+    "tipoEvento": "Cumpleaños",
+    "fecha": "2026-07-03T06:00:00.000Z",
+    "horaInicio": "12:30",
+    "horaFin": "20:30",
+    "cantidadPersonas": 64,
+    "descripcion": "",
+    "utensilios": [],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-13T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Ana Torres",
+    "correo": "ana.torres19@gmail.com",
+    "telefono": "6566912535",
+    "tipoEvento": "XV años",
+    "fecha": "2026-04-25T06:00:00.000Z",
+    "horaInicio": "16:45",
+    "horaFin": "15:45",
+    "cantidadPersonas": 138,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 11,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 5,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 3,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 100,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Ana Torres",
+    "correo": "ana.torres82@yahoo.com",
+    "telefono": "6563822363",
+    "tipoEvento": "Posada",
+    "fecha": "2026-03-17T06:00:00.000Z",
+    "horaInicio": "20:30",
+    "horaFin": "19:45",
+    "cantidadPersonas": 139,
+    "descripcion": "",
+    "utensilios": [],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "borrador",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 200,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Fernanda Silva",
+    "correo": "fernanda.silva1@hotmail.com",
+    "telefono": "6563915537",
+    "tipoEvento": "Cumpleaños",
+    "fecha": "2026-07-13T06:00:00.000Z",
+    "horaInicio": "19:15",
+    "horaFin": "15:00",
+    "cantidadPersonas": 110,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 3,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Paquete decoración básica",
+        "cantidad": 1,
+        "unidad": "paq",
+        "categoria": "paquetes",
+        "precio": 900,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 10,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 3,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "borrador",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 50,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "María López",
+    "correo": "maria.lopez6@yahoo.com",
+    "telefono": "6564615940",
+    "tipoEvento": "Posada",
+    "fecha": "2026-07-07T06:00:00.000Z",
+    "horaInicio": "19:45",
+    "horaFin": "05:00",
+    "cantidadPersonas": 43,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Paquete decoración básica",
+        "cantidad": 11,
+        "unidad": "paq",
+        "categoria": "paquetes",
+        "precio": 900,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 10,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 4,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 200,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Ricardo Nava",
+    "correo": "ricardo.nava14@gmail.com",
+    "telefono": "6564830512",
+    "tipoEvento": "XV años",
+    "fecha": "2026-05-25T06:00:00.000Z",
+    "horaInicio": "18:45",
+    "horaFin": "09:15",
+    "cantidadPersonas": 63,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 1,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-06T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 50,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Lorena Martínez",
+    "correo": "lorena.martinez9@hotmail.com",
+    "telefono": "6561164589",
+    "tipoEvento": "Bautizo",
+    "fecha": "2026-03-22T06:00:00.000Z",
+    "horaInicio": "13:15",
+    "horaFin": "07:30",
+    "cantidadPersonas": 158,
+    "descripcion": "",
+    "utensilios": [],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "borrador",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 200,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Ricardo Nava",
+    "correo": "ricardo.nava60@gmail.com",
+    "telefono": "6569458858",
+    "tipoEvento": "Bautizo",
+    "fecha": "2026-04-29T06:00:00.000Z",
+    "horaInicio": "13:30",
+    "horaFin": "08:30",
+    "cantidadPersonas": 81,
+    "descripcion": "",
+    "utensilios": [],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-13T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 100,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Paola Castillo",
+    "correo": "paola.castillo36@yahoo.com",
+    "telefono": "6567525562",
+    "tipoEvento": "Aniversario",
+    "fecha": "2026-07-07T06:00:00.000Z",
+    "horaInicio": "20:45",
+    "horaFin": "19:00",
+    "cantidadPersonas": 53,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 10,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 11,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Paquete decoración básica",
+        "cantidad": 6,
+        "unidad": "paq",
+        "categoria": "paquetes",
+        "precio": 900,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "cancelada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 10,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Fernanda Silva",
+    "correo": "fernanda.silva23@gmail.com",
+    "telefono": "6563499841",
+    "tipoEvento": "Aniversario",
+    "fecha": "2026-05-26T06:00:00.000Z",
+    "horaInicio": "15:30",
+    "horaFin": "13:15",
+    "cantidadPersonas": 49,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 12,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 3,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Carlos Rivas",
+    "correo": "carlos.rivas92@gmail.com",
+    "telefono": "6562195454",
+    "tipoEvento": "Posada",
+    "fecha": "2026-04-12T06:00:00.000Z",
+    "horaInicio": "17:15",
+    "horaFin": "10:00",
+    "cantidadPersonas": 116,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 4,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 7,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "borrador",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Luis Mendoza",
+    "correo": "luis.mendoza8@gmail.com",
+    "telefono": "6561159555",
+    "tipoEvento": "Graduación",
+    "fecha": "2026-03-28T06:00:00.000Z",
+    "horaInicio": "16:15",
+    "horaFin": "03:45",
+    "cantidadPersonas": 61,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Paquete decoración básica",
+        "cantidad": 9,
+        "unidad": "paq",
+        "categoria": "paquetes",
+        "precio": 900,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 6,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 104,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 15,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Paola Castillo",
+    "correo": "paola.castillo25@hotmail.com",
+    "telefono": "6562612106",
+    "tipoEvento": "Cumpleaños",
+    "fecha": "2026-02-15T07:00:00.000Z",
+    "horaInicio": "16:00",
+    "horaFin": "06:45",
+    "cantidadPersonas": 99,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 8,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 3,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 93,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 7,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-12T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Luis Mendoza",
+    "correo": "luis.mendoza94@yahoo.com",
+    "telefono": "6563971862",
+    "tipoEvento": "XV años",
+    "fecha": "2026-07-19T06:00:00.000Z",
+    "horaInicio": "17:45",
+    "horaFin": "05:00",
+    "cantidadPersonas": 153,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Paquete decoración básica",
+        "cantidad": 7,
+        "unidad": "paq",
+        "categoria": "paquetes",
+        "precio": 900,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 2,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "cancelada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 100,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Ana Torres",
+    "correo": "ana.torres68@yahoo.com",
+    "telefono": "6565862550",
+    "tipoEvento": "Aniversario",
+    "fecha": "2026-06-03T06:00:00.000Z",
+    "horaInicio": "15:45",
+    "horaFin": "18:45",
+    "cantidadPersonas": 160,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Paquete decoración básica",
+        "cantidad": 11,
+        "unidad": "paq",
+        "categoria": "paquetes",
+        "precio": 900,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 2,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 9,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 4,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "cancelada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 200,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Fernanda Silva",
+    "correo": "fernanda.silva79@hotmail.com",
+    "telefono": "6561645594",
+    "tipoEvento": "Baby shower",
+    "fecha": "2026-02-23T07:00:00.000Z",
+    "horaInicio": "16:15",
+    "horaFin": "07:00",
+    "cantidadPersonas": 113,
+    "descripcion": "",
+    "utensilios": [],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 200,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Jorge Hernández",
+    "correo": "jorge.hernandez12@yahoo.com",
+    "telefono": "6564894326",
+    "tipoEvento": "Boda civil",
+    "fecha": "2026-04-16T06:00:00.000Z",
+    "horaInicio": "14:00",
+    "horaFin": "17:15",
+    "cantidadPersonas": 95,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 53,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Paquete decoración básica",
+        "cantidad": 6,
+        "unidad": "paq",
+        "categoria": "paquetes",
+        "precio": 900,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Luis Mendoza",
+    "correo": "luis.mendoza32@yahoo.com",
+    "telefono": "6562276891",
+    "tipoEvento": "XV años",
+    "fecha": "2026-03-28T06:00:00.000Z",
+    "horaInicio": "16:30",
+    "horaFin": "13:45",
+    "cantidadPersonas": 111,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 2,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 15,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 7,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Paquete decoración básica",
+        "cantidad": 4,
+        "unidad": "paq",
+        "categoria": "paquetes",
+        "precio": 900,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-21T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 100,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Paola Castillo",
+    "correo": "paola.castillo57@yahoo.com",
+    "telefono": "6569448760",
+    "tipoEvento": "Posada",
+    "fecha": "2026-05-24T06:00:00.000Z",
+    "horaInicio": "13:45",
+    "horaFin": "04:45",
+    "cantidadPersonas": 146,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 82,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 94,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 200,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Jorge Hernández",
+    "correo": "jorge.hernandez34@yahoo.com",
+    "telefono": "6568945706",
+    "tipoEvento": "Bautizo",
+    "fecha": "2026-07-27T06:00:00.000Z",
+    "horaInicio": "13:45",
+    "horaFin": "17:00",
+    "cantidadPersonas": 86,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 2,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 4,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 3,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 8,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-19T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 100,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Ana Torres",
+    "correo": "ana.torres56@yahoo.com",
+    "telefono": "6563323693",
+    "tipoEvento": "Baby shower",
+    "fecha": "2026-03-29T06:00:00.000Z",
+    "horaInicio": "20:00",
+    "horaFin": "14:00",
+    "cantidadPersonas": 41,
+    "descripcion": "",
+    "utensilios": [],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "borrador",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Jorge Hernández",
+    "correo": "jorge.hernandez62@hotmail.com",
+    "telefono": "6566292698",
+    "tipoEvento": "Cumpleaños",
+    "fecha": "2026-07-15T06:00:00.000Z",
+    "horaInicio": "18:45",
+    "horaFin": "18:00",
+    "cantidadPersonas": 158,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 2,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 11,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 2,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 9,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 5,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "María López",
+    "correo": "maria.lopez29@yahoo.com",
+    "telefono": "6564835068",
+    "tipoEvento": "Aniversario",
+    "fecha": "2026-04-01T06:00:00.000Z",
+    "horaInicio": "12:45",
+    "horaFin": "14:30",
+    "cantidadPersonas": 139,
+    "descripcion": "",
+    "utensilios": [],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "borrador",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 15,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Fernanda Silva",
+    "correo": "fernanda.silva71@yahoo.com",
+    "telefono": "6561089959",
+    "tipoEvento": "Baby shower",
+    "fecha": "2026-07-19T06:00:00.000Z",
+    "horaInicio": "12:00",
+    "horaFin": "14:45",
+    "cantidadPersonas": 125,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Bocina",
+        "cantidad": 11,
+        "unidad": "pza",
+        "categoria": "audio",
+        "precio": 450,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-27T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 100,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "María López",
+    "correo": "maria.lopez65@yahoo.com",
+    "telefono": "6568040580",
+    "tipoEvento": "XV años",
+    "fecha": "2026-08-18T06:00:00.000Z",
+    "horaInicio": "17:15",
+    "horaFin": "20:00",
+    "cantidadPersonas": 46,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Mesa redonda",
+        "cantidad": 8,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 180,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 11,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "borrador",
+    "tipoReserva": "cotizacion",
+    "cotizacion": {
+      "aceptada": false,
+      "aceptadaEn": null,
+      "nota": "Pendiente de confirmación."
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "monto",
+        "valor": 0,
+        "motivo": ""
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Paola Castillo",
+    "correo": "paola.castillo60@hotmail.com",
+    "telefono": "6561221470",
+    "tipoEvento": "Cumpleaños",
+    "fecha": "2026-05-20T06:00:00.000Z",
+    "horaInicio": "16:45",
+    "horaFin": "14:45",
+    "cantidadPersonas": 46,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Paquete decoración básica",
+        "cantidad": 1,
+        "unidad": "paq",
+        "categoria": "paquetes",
+        "precio": 900,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 25,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Brincolín",
+        "cantidad": 6,
+        "unidad": "pza",
+        "categoria": "entretenimiento",
+        "precio": 1200,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 9,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "cancelada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-04T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 10,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  },
+  {
+    "clienteId": null,
+    "cliente": "Lorena Martínez",
+    "correo": "lorena.martinez3@yahoo.com",
+    "telefono": "6565979539",
+    "tipoEvento": "Cumpleaños",
+    "fecha": "2026-03-22T06:00:00.000Z",
+    "horaInicio": "13:15",
+    "horaFin": "11:15",
+    "cantidadPersonas": 91,
+    "descripcion": "",
+    "utensilios": [
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 108,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Mantel blanco",
+        "cantidad": 7,
+        "unidad": "pza",
+        "categoria": "textil",
+        "precio": 60,
+        "descripcion": "",
+        "imagen": ""
+      },
+      {
+        "itemId": null,
+        "nombre": "Silla Tiffany",
+        "cantidad": 60,
+        "unidad": "pza",
+        "categoria": "mobiliario",
+        "precio": 35,
+        "descripcion": "",
+        "imagen": ""
+      }
+    ],
+    "resumenSeleccion": {
+      "accesorios": []
+    },
+    "estado": "confirmada",
+    "tipoReserva": "evento",
+    "cotizacion": {
+      "aceptada": true,
+      "aceptadaEn": "2026-02-12T07:00:00.000Z",
+      "nota": ""
+    },
+    "precios": {
+      "moneda": "MXN",
+      "descuento": {
+        "tipo": "porcentaje",
+        "valor": 5,
+        "motivo": "Promo seed"
+      },
+      "subtotal": 0,
+      "total": 0
+    },
+    "pdfUrl": null,
+    "pdfPath": null
+  }
+]

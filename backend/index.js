@@ -39,11 +39,16 @@ app.use('/api/usuarios', require('./routes/usuarios'));
 app.use('/api/reservas', require('./routes/reservas'));
 app.use('/api/productos', require('./routes/productos'));
 
+
 // server.js
 app.use('/api/accesorios', require('./routes/accesorios'));
 
 // << montar nueva carpeta de endpoints de recibos (con prefijo /api)
 app.use('/api', require('./routes/receipts'));
+
+// ✅ Reportes
+app.use('/api/reportes', require('./routes/reportes'));
+
 
 
 // Si tienes inventario por separado:

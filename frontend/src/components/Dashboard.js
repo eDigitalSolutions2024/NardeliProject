@@ -8,6 +8,7 @@ import TablaProductos from './TablaProductos';
 import API_BASE_URL from '../api';
 import Clientes from './Clientes';
 import Reserva from './ReservarEvento';
+import Reportes from './Reportes';
 // imports nuevos arriba
 import FormAccesorio from './FormAccesorio';
 import TablaAccesorios from './TablaAccesorios';
@@ -161,21 +162,26 @@ const Dashboard = ({ onLogout }) => {
       const buildPdfUrl = (id) => `${API_BASE_URL}/reservas/${id}/pdf`;
 
       setActividad(
-        pendientes.slice(0 ).map(r => ({
-          id: r._id,
-          titulo: `Cotización - ${getCliente(r)}`,
-          subtitulo: `Para el ${getFecha(r).toLocaleDateString()}`,
-          icon: '📝',
-          pdfUrl: buildPdfUrl(r._id),
-          // === datos para editar ===
-          cliente: getCliente(r),
-          tipoEvento: r.tipoEvento || '',
-          ymd: r.fechaLocal || String(r.fecha).slice(0, 10),
-          horaInicio: r.horaInicio || '',
-          horaFin: r.horaFin || r.horaInicio || '',
-          cantidadPersonas: r.cantidadPersonas || 0,
-          descripcion: r.descripcion || '',
-        }))
+        pendientes.slice(0).map(r => {
+          console.log('cot:', r._id, 'shortId:', r.shortId, 'folio:', r.folio);
+
+          return {
+            id: r._id,
+            folio: (r.shortId || r.folio || '').toUpperCase(),
+            folioLabel: `#${(r.shortId || r.folio || '').toUpperCase()}`,
+            titulo: `Cotización - ${getCliente(r)}`,
+            subtitulo: `Para el ${getFecha(r).toLocaleDateString()}`,
+            icon: '📝',
+            pdfUrl: buildPdfUrl(r._id),
+            cliente: getCliente(r),
+            tipoEvento: r.tipoEvento || '',
+            ymd: r.fechaLocal || String(r.fecha).slice(0, 10),
+            horaInicio: r.horaInicio || '',
+            horaFin: r.horaFin || r.horaInicio || '',
+            cantidadPersonas: r.cantidadPersonas || 0,
+            descripcion: r.descripcion || '',
+          };
+        })
       );
 
 
@@ -305,11 +311,24 @@ const Dashboard = ({ onLogout }) => {
     window.open(`/cliente/dashboard?${qs}`, '_blank', 'noopener,noreferrer');
   };
 
- const actividadFiltrada = actividad.filter(a => {
-    if (!searchActividad.trim()) return true;
-    const texto = `${a.titulo || ''} ${a.subtitulo || ''} ${a.cliente || ''}`.toLowerCase();
-    return texto.includes(searchActividad.toLowerCase());
-    });
+ const normalizeFolio = (s) =>
+  String(s || '').trim().replace(/^#/, '').toUpperCase();
+
+const actividadFiltrada = actividad.filter(a => {
+  const q = String(searchActividad || '').trim();
+  if (!q) return true;
+
+  const qNorm = normalizeFolio(q);
+
+  const texto = `${a.titulo || ''} ${a.subtitulo || ''} ${a.cliente || ''}`.toLowerCase();
+  const folio = normalizeFolio(a.folio);
+
+  // busca por texto normal o por folio
+  return (
+    texto.includes(q.toLowerCase()) ||
+    (folio && folio.includes(qNorm))
+  );
+});
 
   const renderContent = () => {
     switch (activeSection) {
@@ -384,7 +403,14 @@ const Dashboard = ({ onLogout }) => {
       <div key={a.id} className="activity-item">
         <span className="activity-icon">{a.icon}</span>
         <div className="activity-details">
-          <p><strong>{a.titulo}</strong></p>
+          <p>
+            <strong>{a.titulo}</strong>
+            {a.folio && (
+              <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.8 }}>
+                #{a.folio}
+              </span>
+            )}
+          </p>
           <small>{a.subtitulo}</small>
           <div
             className="activity-actions"
@@ -529,8 +555,7 @@ const Dashboard = ({ onLogout }) => {
       case 'reportes':
         return (
           <div className="dashboard-content">
-            <h1>Reportes y Estadísticas</h1>
-            <p>Visualiza reportes detallados del negocio.</p>
+            <Reportes />
           </div>
         );
       case 'reservar':

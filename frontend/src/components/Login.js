@@ -63,7 +63,7 @@ const Login = ({ onLoginSuccess }) => {
       } else {
         // Mensajes más claros según status
         if (res.status === 404) setError('No encontrado');
-        else if (res.status === 401) setError('Usuario o contraseña inválidos front');
+        else if (res.status === 401) setError('Usuario o contraseña inválidos');
         else setError(data?.message || data?.msg || 'Ocurrió un error');
       }
     } catch (err) {

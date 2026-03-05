@@ -186,6 +186,21 @@ router.post('/', async (req, res) => {
   }
 });
 
+// ===== Reserva activa (montado en /reservas => /reservas/activa) =====
+router.get('/activa', auth, async (req, res) => {
+  try {
+    const clienteId = req.user.sub;
+    let r = await Reserva.findOne({ clienteId, estado: 'borrador' });
+    if (!r) {
+      r = await Reserva.create({ clienteId, estado: 'borrador', createdAt: new Date() });
+    }
+    res.json({ ok: true, reservaId: String(r._id) });
+  } catch (e) {
+    console.error('reservas/activa error:', e);
+    res.status(500).json({ ok: false, msg: 'No se pudo obtener la reserva activa' });
+  }
+});
+  
 // GET /reservas
 router.get('/', async (req, res) => {
   try {
@@ -207,6 +222,13 @@ router.get('/', async (req, res) => {
           },
           creadaLocal: {
             $dateToString: { date: "$createdAt", format: "%Y-%m-%d %H:%M", timezone: TZ }
+          },
+
+          // 👇 folio corto (últimos 8 del _id)
+          folio: {
+            $toUpper: {
+              $substrBytes: [{ $toString: "$_id" }, 16, 8]
+            }
           }
         }
       },
@@ -218,6 +240,7 @@ router.get('/', async (req, res) => {
           telefono: 1,
           tipoEvento: 1,
           fecha: 1,
+          folio: 1,
           fechaLocal: 1,
           horaInicio: 1,
           horaFin: 1,
@@ -288,6 +311,61 @@ router.delete('/:id', async (req, res) => {
   } catch (e) {
     console.error('Error al eliminar:', e);
     return res.status(500).json({ msg: 'Error del servidor' });
+  }
+});
+
+// ✅ GET /reservas/lookup/:key
+// key puede ser: "65f..." (ObjectId) o "#C2DFFC0C" o "C2DFFC0C"
+// ✅ GET /reservas/lookup/:key
+router.get('/lookup/:key', async (req, res) => {
+  try {
+    let { key } = req.params;
+    key = String(key || '').trim();
+
+    // Limpia: quita #, espacios, "folio:", etc. y deja solo HEX
+    key = key.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+
+    let r = null;
+
+    // 1) si viene ObjectId completo
+    if (mongoose.isValidObjectId(key)) {
+      r = await Reserva.findById(key).lean();
+      if (r) return res.json({ ok: true, reserva: r });
+    }
+
+    // 2) si viene folio de 8 hex (como C2DFFC0C)
+    if (/^[0-9A-F]{8}$/.test(key)) {
+      const out = await Reserva.aggregate([
+        {
+          $addFields: {
+            _idStr: { $toString: '$_id' }
+          }
+        },
+        {
+          $addFields: {
+            folio8: {
+              $toUpper: {
+                $substrBytes: [
+                  '$_idStr',
+                  { $subtract: [{ $strLenBytes: '$_idStr' }, 8] },
+                  8
+                ]
+              }
+            }
+          }
+        },
+        { $match: { folio8: key } },
+        { $limit: 1 }
+      ]);
+
+      r = out?.[0] || null;
+    }
+
+    if (!r) return res.status(404).json({ ok: false, msg: 'Reserva no encontrada' });
+    return res.json({ ok: true, reserva: r });
+  } catch (e) {
+    console.error('GET /reservas/lookup/:key', e);
+    return res.status(500).json({ ok: false, msg: 'Error interno' });
   }
 });
 
@@ -472,21 +550,6 @@ router.get('/:id/pdf', async (req, res) => {
   } catch (e) {
     console.error(e);
     return res.status(500).json({ msg: 'Error interno al generar PDF' });
-  }
-});
-
-// ===== Reserva activa (montado en /reservas => /reservas/activa) =====
-router.get('/activa', auth, async (req, res) => {
-  try {
-    const clienteId = req.user.sub;
-    let r = await Reserva.findOne({ clienteId, estado: 'borrador' });
-    if (!r) {
-      r = await Reserva.create({ clienteId, estado: 'borrador', createdAt: new Date() });
-    }
-    res.json({ ok: true, reservaId: String(r._id) });
-  } catch (e) {
-    console.error('reservas/activa error:', e);
-    res.status(500).json({ ok: false, msg: 'No se pudo obtener la reserva activa' });
   }
 });
 

@@ -26,3 +26,14 @@ Thumbs.db
 # backend/uploads/*
 !backend/uploads/.gitkeep
 
+# Scripts locales (no subir a git)
+backend/scripts/create_admin.js
+backend/scripts/fix_admin.js
+backend/scripts/generate_reservas_seed*
+backend/scripts/seed_productos*
+backend/scripts/seed_receipts*
+backend/scripts/seed_reservas_links*
+
+# Ignorar imágenes subidas pero mantener la carpeta
+backend/uploads/*
+!backend/uploads/.gitkeep

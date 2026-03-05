@@ -39,6 +39,9 @@ const reservaSchema = new mongoose.Schema(
     // Datos de la persona / autenticación opcional
     clienteId: { type: mongoose.Schema.Types.ObjectId, ref: 'Usuario', default: null },
 
+    // Folio corto para buscar y mostrar en PDF (últimos 8 del _id)
+    shortId: { type: String, uppercase: true, trim: true, index: true },
+
     // Datos básicos
     cliente: { type: String, required: true, trim: true },
     correo: { type: String, required: true, lowercase: true, trim: true, index: true },
@@ -136,5 +139,12 @@ reservaSchema.virtual('totalVirtual').get(function () {
 // -------- Índices de ayuda --------
 reservaSchema.index({ fecha: 1, horaInicio: 1 });
 reservaSchema.index({ tipoReserva: 1, fecha: 1 });
+reservaSchema.index({ shortId: 1 }, { unique: true, sparse: true });
+
+reservaSchema.pre('save', function(next) {
+  if (this.shortId) return next();
+  this.shortId = String(this._id).slice(-8).toUpperCase();
+  next();
+});
 
 module.exports = mongoose.model('Reserva', reservaSchema);

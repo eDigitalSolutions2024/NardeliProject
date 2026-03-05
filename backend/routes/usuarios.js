@@ -1,25 +1,30 @@
 const express = require('express');
 const router = express.Router();
 const Usuario = require('../models/Usuario');
+const bcrypt = require('bcryptjs');
 
-// Ruta POST para registrar un nuevo usuario
 router.post('/registro', async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // Validaciones básicas
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, message: 'Todos los campos son obligatorios' });
     }
 
-    // Verificar si el usuario ya existe
-    const usuarioExistente = await Usuario.findOne({ email });
+    const usuarioExistente = await Usuario.findOne({ email: String(email).trim().toLowerCase() });
     if (usuarioExistente) {
       return res.status(409).json({ success: false, message: 'El usuario ya existe' });
     }
 
-    // Crear y guardar el nuevo usuario
-    const nuevoUsuario = new Usuario({ fullname: name, email, password }); // Más adelante agregaremos hash
+    const hash = await bcrypt.hash(password, 10);
+
+    const nuevoUsuario = new Usuario({
+      fullname: name,
+      email: String(email).trim().toLowerCase(),
+      password: hash,
+      role: 'admin' // 👈 si este será el admin
+    });
+
     await nuevoUsuario.save();
 
     res.status(201).json({ success: true, message: 'Usuario registrado correctamente' });

@@ -1,0 +1,90 @@
+[
+  {
+    "nombre": "Silla Tiffany",
+    "categoria": "mobiliario",
+    "cantidad": 200,
+    "precio": 35,
+    "descripcion": "",
+    "imagen": ""
+  },
+  {
+    "nombre": "Silla plegable",
+    "categoria": "mobiliario",
+    "cantidad": 150,
+    "precio": 20,
+    "descripcion": "",
+    "imagen": ""
+  },
+  {
+    "nombre": "Mesa redonda 1.50m",
+    "categoria": "mobiliario",
+    "cantidad": 30,
+    "precio": 180,
+    "descripcion": "",
+    "imagen": ""
+  },
+  {
+    "nombre": "Mesa rectangular 1.80m",
+    "categoria": "mobiliario",
+    "cantidad": 20,
+    "precio": 200,
+    "descripcion": "",
+    "imagen": ""
+  },
+  {
+    "nombre": "Plato base",
+    "categoria": "vajilla",
+    "cantidad": 150,
+    "precio": 12,
+    "descripcion": "",
+    "imagen": ""
+  },
+  {
+    "nombre": "Copa cristal",
+    "categoria": "vajilla",
+    "cantidad": 120,
+    "precio": 15,
+    "descripcion": "",
+    "imagen": ""
+  },
+  {
+    "nombre": "Bocina",
+    "categoria": "audio",
+    "cantidad": 6,
+    "precio": 450,
+    "descripcion": "",
+    "imagen": ""
+  },
+  {
+    "nombre": "Micrófono",
+    "categoria": "audio",
+    "cantidad": 4,
+    "precio": 180,
+    "descripcion": "",
+    "imagen": ""
+  },
+  {
+    "nombre": "Brincolín",
+    "categoria": "entretenimiento",
+    "cantidad": 2,
+    "precio": 1200,
+    "descripcion": "",
+    "imagen": ""
+  },
+  {
+    "nombre": "Paquete decoración básica",
+    "categoria": "paquetes",
+    "cantidad": 50,
+    "precio": 900,
+    "descripcion": "Incluye mantel + lazos + camino.",
+    "imagen": ""
+  },
+  {
+    "nombre": "Paquete mantelería premium",
+    "categoria": "paquetes",
+    "cantidad": 30,
+    "precio": 1400,
+    "descripcion": "Textiles premium + montaje.",
+    "imagen": ""
+  }
+]

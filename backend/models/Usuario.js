@@ -1,5 +1,6 @@
 // models/Usuario.js
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 const UsuarioSchema = new mongoose.Schema({
   fullname: { type: String, trim: true },
@@ -37,5 +38,21 @@ UsuarioSchema.methods.clearMagicFlow = async function () {
   this.magicTokenAttempts = 0;
   await this.save();
 };
+
+
+
+UsuarioSchema.pre('save', async function (next) {
+  try {
+    if (!this.isModified('password')) return next();
+    if (!this.password) return next();
+
+    if (this.password.startsWith('$2a$') || this.password.startsWith('$2b$')) return next();
+
+    this.password = await bcrypt.hash(this.password, 10);
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 module.exports = mongoose.model('Usuario', UsuarioSchema);
