@@ -29,6 +29,14 @@ const toPrice = (v) => {
   return 0;
 };
 
+const money = (n) =>
+  Number(n || 0).toLocaleString('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
 const DashboardCliente = ({ reservaId: reservaIdProp }) => {
   // Inventario (con precio para fallback visual)
   const [items, setItems] = useState([]); // [{id, nombre, categoria, stock, unidad, imagen, precio, descripcion}]
@@ -1043,7 +1051,7 @@ function openReceiptPdfById(id) {
         <div className="small">
           <small>
             {qty} {item.unidad || 'pza'} • {item.categoria}
-            {isAdmin && ` • $${p.toFixed(2)} c/u`}
+            {isAdmin && <strong>{money(sub)}</strong>}
           </small>
         </div>
 
@@ -1087,7 +1095,7 @@ function openReceiptPdfById(id) {
             <>
               <div style={{display:'flex', justifyContent:'space-between', marginBottom:12}}>
                 <strong>Subtotal $</strong>
-                <strong>${subTotalUI.toFixed(2)}</strong>
+                <strong>{money(subTotalUI)}</strong>
               </div>
 
               <hr style={{ margin: '12px 0', borderColor: '#eee' }} />
@@ -1138,7 +1146,7 @@ function openReceiptPdfById(id) {
               <div style={{ display: 'grid', rowGap: 6, marginBottom: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>Subtotal</span>
-                  <strong>${subTotalUI.toFixed(2)}</strong>
+                  <strong>{money(subTotalUI)}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#dc2626' }}>
                   <span>
@@ -1147,11 +1155,11 @@ function openReceiptPdfById(id) {
     : 'Descuento en productos seleccionados'}
 
                   </span>
-                  <strong>- ${descuentoMonto.toFixed(2)}</strong>
+                  <strong>- {money(descuentoMonto)}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16 }}>
                   <span>Total</span>
-                  <strong>${totalConDescuento.toFixed(2)}</strong>
+                 <strong>{money(totalConDescuento)}</strong>
                 </div>
               </div>
             </>
@@ -1439,7 +1447,7 @@ function openReceiptPdfById(id) {
     placeholder={saldoRestante.toFixed(2)}
   />
   <small className="small">
-    Saldo restante actual: <strong>${saldoRestante.toFixed(2)}</strong> (Total: ${totalConDescuento.toFixed(2)} • Pagado: ${totalPagado.toFixed(2)})
+    Saldo restante actual: <strong>{money(saldoRestante)}</strong> (Total: ${totalConDescuento.toFixed(2)} • Pagado: ${totalPagado.toFixed(2)})
   </small>
 </div>
 
@@ -1473,7 +1481,7 @@ function openReceiptPdfById(id) {
                   })}
                   <div style={{ display:'flex', justifyContent:'space-between', marginTop:8 }}>
                     <span>Subtotal estimado</span>
-                    <strong>${subTotalUI.toFixed(2)}</strong>
+                    <strong>{money(subTotalUI)}</strong>
                   </div>
                   <div style={{ display:'flex', justifyContent:'space-between', color:'#dc2626' }}>
                     <span>Descuento aplicado</span>
@@ -1592,7 +1600,7 @@ function openReceiptPdfById(id) {
           Total pagado: <strong>${totalPagado.toFixed(2)}</strong>
         </div>
         <div>
-          Saldo restante: <strong>${saldoRestante.toFixed(2)}</strong>
+          Saldo restante: <strong>{money(saldoRestante)}</strong>
         </div>
       </div>
 
@@ -1642,7 +1650,7 @@ function openReceiptPdfById(id) {
 
     {/* Columna monto + botón eliminar */}
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-      <span>${Number(rc.amount || 0).toFixed(2)}</span>
+      <span>{money(rc.amount)}</span>
       <button
         type="button"
         className="del"
@@ -1675,7 +1683,7 @@ function openReceiptPdfById(id) {
               <strong>Pagado:</strong>
             </div>
             <div>
-              <strong>${totalPagado.toFixed(2)}</strong>
+              <strong>{money(totalPagado)}</strong>
             </div>
           </div>
         </div>

@@ -2,7 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import API_BASE_URL from '../api';
 import * as XLSX from 'xlsx';
 
-const money = (n) => `$${Number(n || 0).toFixed(2)}`;
+const money = (n) =>
+  Number(n || 0).toLocaleString('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
 const todayYmd = () => {
   const d = new Date();
