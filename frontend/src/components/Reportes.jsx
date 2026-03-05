@@ -292,13 +292,13 @@ export default function Reportes() {
             <p className="stat-number">{loadingSummary ? '…' : summary.counts.pagados}</p>
           </div>
         </div>
-        {/*<div className="stat-card">
+        <div className="stat-card">
           <div className="stat-icon">🟡</div>
           <div className="stat-info">
             <h3>Parciales</h3>
             <p className="stat-number">{loadingSummary ? '…' : summary.counts.parciales}</p>
           </div>
-        </div>*/}
+        </div>
         <div className="stat-card">
           <div className="stat-icon">⏳</div>
           <div className="stat-info">
