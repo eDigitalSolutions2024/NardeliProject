@@ -167,17 +167,46 @@ async function checarDisponibilidad({ fecha, horaInicio, horaFin, excluirId = nu
   return choca ? { disponible: false, motivo: 'Empalme con otra reserva' } : { disponible: true };
 }
 
+
+
+async function checarEventoEnFecha({ fecha, excluirId = null }) {
+  const fechaStr = ymd(fecha);
+  if (!fechaStr) return { disponible: false, motivo: 'Fecha inválida' };
+
+  const filtro = {
+    ...sameDayFilter(fechaStr, excluirId),
+    tipoReserva: 'evento'
+  };
+
+  const existeEvento = await Reserva.findOne(filtro).lean();
+
+  return existeEvento
+    ? { disponible: false, motivo: 'Ya existe un evento registrado en esa fecha' }
+    : { disponible: true };
+}
+
+
 // ===== CRUD =====
 router.post('/', async (req, res) => {
   try {
     const tipoReserva = req.body.tipoReserva || 'evento';
     req.body.fecha = normalizeFechaNoonUTC(req.body.fecha);
-    if (!req.body.fecha || isNaN(req.body.fecha)) return res.status(400).json({ msg: 'Fecha inválida' });
 
-    if (tipoReserva === 'evento') {
-      const disp = await checarDisponibilidad(req.body);
-      if (!disp.disponible) return res.status(409).json({ msg: disp.motivo });
+    if (!req.body.fecha || isNaN(req.body.fecha)) {
+      return res.status(400).json({ msg: 'Fecha inválida' });
     }
+
+    // Regla:
+    // - Puede haber muchas cotizaciones en la misma fecha
+    // - Pero si ya existe un evento en esa fecha, no se permite
+    //   ni otra cotización ni otro evento
+    if (tipoReserva === 'cotizacion' || tipoReserva === 'evento') {
+      const disp = await checarEventoEnFecha({ fecha: req.body.fecha });
+      if (!disp.disponible) {
+        return res.status(409).json({ msg: disp.motivo });
+      }
+    }
+
     const guardada = await new Reserva({ ...req.body, tipoReserva }).save();
     return res.status(201).json({ ok: true, id: guardada._id, reserva: guardada });
   } catch (e) {
@@ -185,7 +214,6 @@ router.post('/', async (req, res) => {
     return res.status(500).json({ msg: 'Error del servidor' });
   }
 });
-
 // ===== Reserva activa (montado en /reservas => /reservas/activa) =====
 router.get('/activa', auth, async (req, res) => {
   try {
@@ -279,21 +307,43 @@ router.post('/disponibilidad', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    if (!mongoose.isValidObjectId(id)) return res.status(400).json({ msg: 'ID inválido' });
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ msg: 'ID inválido' });
+    }
 
     const prev = await Reserva.findById(id);
-    if (!prev) return res.status(404).json({ msg: 'Reserva no encontrada' });
+    if (!prev) {
+      return res.status(404).json({ msg: 'Reserva no encontrada' });
+    }
 
     req.body.fecha = normalizeFechaNoonUTC(req.body.fecha);
-    if (!req.body.fecha || isNaN(req.body.fecha)) return res.status(400).json({ msg: 'Fecha inválida' });
+    if (!req.body.fecha || isNaN(req.body.fecha)) {
+      return res.status(400).json({ msg: 'Fecha inválida' });
+    }
 
     const nextTipo = req.body.tipoReserva || prev.tipoReserva || 'evento';
-    if (nextTipo === 'evento') {
-      const disp = await checarDisponibilidad({ ...req.body, excluirId: id });
-      if (!disp.disponible) return res.status(409).json({ msg: disp.motivo });
+
+    if (nextTipo === 'cotizacion' || nextTipo === 'evento') {
+      const disp = await checarEventoEnFecha({
+        fecha: req.body.fecha,
+        excluirId: id
+      });
+
+      if (!disp.disponible) {
+        return res.status(409).json({ msg: disp.motivo });
+      }
     }
-    const actualizada = await Reserva.findByIdAndUpdate(id, { ...req.body, tipoReserva: nextTipo }, { new: true, runValidators: true });
-    if (!actualizada) return res.status(404).json({ msg: 'Reserva no encontrada' });
+
+    const actualizada = await Reserva.findByIdAndUpdate(
+      id,
+      { ...req.body, tipoReserva: nextTipo },
+      { new: true, runValidators: true }
+    );
+
+    if (!actualizada) {
+      return res.status(404).json({ msg: 'Reserva no encontrada' });
+    }
+
     return res.json(actualizada);
   } catch (e) {
     console.error('Error al actualizar:', e);
