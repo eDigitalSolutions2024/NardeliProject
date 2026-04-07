@@ -57,11 +57,17 @@ function drawCheckbox(doc, { label, checked = false, x, y }) {
 
 function fmtDate(d) {
   try {
-    return new Date(d).toLocaleDateString('es-MX', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+    const date = new Date(d);
+    if (isNaN(date.getTime())) return '';
+
+    const diaSemana = date.toLocaleDateString('es-MX', { weekday: 'long' });
+    const dia = date.getDate();
+    const mes = date.toLocaleDateString('es-MX', { month: 'long' });
+    const anio = date.getFullYear();
+
+    const cap = (txt) => txt.charAt(0).toUpperCase() + txt.slice(1);
+
+    return `${cap(diaSemana)} ${dia} de ${cap(mes)} de ${anio}`;
   } catch {
     return '';
   }
