@@ -47,6 +47,8 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
   const [seleccion, setSeleccion] = useState({}); // { [id]: { item, qty } }
   const [error, setError] = useState('');
 
+
+
   // ====== AUTH: rol y perfil (para restringir y etiquetar issuer)
   const [me, setMe] = useState(null);           // { id, name, email, role }
   const [userRole, setUserRole] = useState(null); // 'admin' | 'assistant' | etc.
@@ -62,6 +64,9 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
   const [accesorios, setAccesorios] = useState([]); // lista desde /accesorios
   const [loadingAcc, setLoadingAcc] = useState(false);
   const [selAccesorios, setSelAccesorios] = useState({}); // { [accesorioId]: qty }
+
+  const [historial, setHistorial] = useState([]);
+  const [showHistorial, setShowHistorial] = useState(false);
 
   // Productos a los que se aplicará el descuento global (por item, opcional)
 const [discountItems, setDiscountItems] = useState({}); // { [itemId]: true }
@@ -585,6 +590,42 @@ const saldoRestante = useMemo(() => {
     }
   };
 
+  const cargarHistorial = async () => {
+  try {
+    if (!reservaId) {
+      alert('No se encontró la reserva.');
+      return;
+    }
+
+    const res = await fetch(`${API_BASE_URL}/reservas/${reservaId}/historial`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data?.msg || `HTTP ${res.status}`);
+    }
+
+    setHistorial(Array.isArray(data?.historial) ? data.historial : []);
+    setShowHistorial(true);
+  } catch (e) {
+    console.error('cargarHistorial:', e);
+    alert('No se pudo cargar el historial');
+  }
+};
+
+  const formatearCambio = (item) => {
+  if (item.tipo === 'producto') {
+    if (item.accion === 'add') return `Se agregó ${item.producto?.nombre}`;
+    if (item.accion === 'remove') return `Se eliminó ${item.producto?.nombre}`;
+    if (item.accion === 'update') return `Se actualizó ${item.producto?.nombre}`;
+  }
+
+  if (item.tipo === 'descuento') {
+    return 'Se actualizó el descuento';
+  }
+
+  return 'Cambio realizado';
+};
+
   // ====== Aplicar accesorios como préstamo (precio $0) a la reserva
   const aplicarAccesorios = async () => {
     if (!reservaId) return;
@@ -619,9 +660,15 @@ const saldoRestante = useMemo(() => {
 
   // ====== Finalizar: guarda productos + aplica accesorios
   const finalizarReserva = async () => {
+  try {
     await guardarSeleccion();
     await aplicarAccesorios();
-  };
+    alert('Reserva finalizada y cambios guardados');
+  } catch (e) {
+    console.error('finalizarReserva', e);
+    alert('No se pudo finalizar la reserva');
+  }
+};
 
   // ====== Editar precio (solo admin) — modifica SOLO el snapshot de utensilios
   const editarPrecio = async (item) => {
@@ -1219,6 +1266,14 @@ function openReceiptPdfById(id) {
     >
       Ver historial de recibos
     </button>
+
+    <button
+      className="pdf"
+      type="button"
+      onClick={cargarHistorial}
+    >
+      Ver historial de cambios
+    </button>
   </div>
 )}
 
@@ -1431,28 +1486,28 @@ function openReceiptPdfById(id) {
               </div>
 
               <div>
-  <label>Monto a cobrar ahora</label>
-  <input
-    className="cd-input"
-    type="number"
-    step="0.01"
-    min="0"
-    max={Math.max(0, saldoRestante)}
-    value={paymentAmount}
-    onChange={(e)=> {
-      const v = Number(e.target.value || 0);
-      // clamp para no pasar del saldo
-      setPaymentAmount(Math.max(0, Math.min(v, Math.max(0, saldoRestante))));
-    }}
-    placeholder={saldoRestante.toFixed(2)}
-  />
-  <small className="small">
-    Saldo restante actual: <strong>{money(saldoRestante)}</strong> (Total: ${totalConDescuento.toFixed(2)} • Pagado: ${totalPagado.toFixed(2)})
-  </small>
-</div>
+                <label>Monto a cobrar ahora</label>
+                <input
+                  className="cd-input"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max={Math.max(0, saldoRestante)}
+                  value={paymentAmount}
+                  onChange={(e)=> {
+                    const v = Number(e.target.value || 0);
+                    // clamp para no pasar del saldo
+                    setPaymentAmount(Math.max(0, Math.min(v, Math.max(0, saldoRestante))));
+                  }}
+                  placeholder={saldoRestante.toFixed(2)}
+                />
+                <small className="small">
+                  Saldo restante actual: <strong>{money(saldoRestante)}</strong> (Total: ${totalConDescuento.toFixed(2)} • Pagado: ${totalPagado.toFixed(2)})
+                </small>
+              </div>
 
               <div style={{ gridColumn:'1 / -1' }}>
-                <label>Notas</label>
+                <label style={{ fontSize: '17px', fontWeight: '700' }}>Notas</label>
                 <input
                   className="cd-input"
                   value={receiptForm.notes}
@@ -1548,6 +1603,42 @@ function openReceiptPdfById(id) {
           </div>
         </div>
       )}
+
+      {showHistorial && (
+  <div className="modal-overlay">
+    <div className="modal-content">
+      <h2>Historial de cambios</h2>
+
+      {historial.length === 0 && <p>No hay cambios registrados.</p>}
+
+      {historial.map((h) => (
+        <div key={h._id} className="historial-item">
+          <strong>{formatearCambio(h)}</strong>
+
+          <div>
+            Antes: {h.tipo === 'descuento'
+              ? `$${h.descuentoAntes}`
+              : h.cantidadAntes}
+          </div>
+
+          <div>
+            Después: {h.tipo === 'descuento'
+              ? `$${h.descuentoDespues}`
+              : h.cantidadDespues}
+          </div>
+
+          <div style={{ fontSize: '12px', color: '#666' }}>
+            {new Date(h.fecha).toLocaleString()}
+          </div>
+        </div>
+      ))}
+
+      <button onClick={() => setShowHistorial(false)}>
+        Cerrar
+      </button>
+    </div>
+  </div>
+)}
 
 
       {/* MODAL: Historial de Recibos (solo staff) */}

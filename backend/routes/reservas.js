@@ -10,9 +10,47 @@ const { streamReservaPDF } = require('../services/reservaPdf');
 const jwt = require('jsonwebtoken');
 const Accesorio = require('../models/Accesorio');
 
+const HistorialReserva = require('../models/HistorialReserva');
+
 const isId = (v) => mongoose.isValidObjectId(String(v));
 const TZ = process.env.APP_TIMEZONE || 'America/Ciudad_Juarez';
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto-temporal';
+
+const axios = require('axios');
+
+async function enviarWhatsAppTemplatePrueba({ to }) {
+  const url = `https://graph.facebook.com/v23.0/${process.env.WA_PHONE_NUMBER_ID}/messages`;
+
+  try {
+    const { data } = await axios.post(
+      url,
+      {
+        messaging_product: 'whatsapp',
+        to,
+        type: 'template',
+        template: {
+          name: 'hello_world',
+          language: {
+            code: 'en_US'
+          }
+        }
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    return data;
+  } catch (err) {
+    console.error('Error WhatsApp template:', err?.response?.data || err.message);
+    throw new Error(
+      err?.response?.data?.error?.message || err.message || 'Error enviando template'
+    );
+  }
+}
 
 // ===== Auth muy simple =====
 function auth(req, res, next) {
@@ -81,6 +119,52 @@ function sameDayFilter(fechaStr, excluirId = null) {
   return expr;
 }
 
+// ==== FUNCION PARA DETECTAR CAMBIOS =====
+function generarHistorialAccesorios(prev = [], next = []) {
+  const cambios = [];
+
+  const prevMap = new Map(prev.map(a => [a.accesorioId, a]));
+  const nextMap = new Map(next.map(a => [a.accesorioId, a]));
+
+  // ➕ Agregados y 🔄 updates
+  for (const [id, nuevo] of nextMap) {
+    const anterior = prevMap.get(id);
+
+    if (!anterior) {
+      cambios.push({
+        tipo: 'producto',
+        accion: 'add',
+        producto: { id, nombre: nuevo.nombre },
+        cantidadAntes: 0,
+        cantidadDespues: nuevo.cantidad
+      });
+    } else if (anterior.cantidad !== nuevo.cantidad) {
+      cambios.push({
+        tipo: 'producto',
+        accion: 'update',
+        producto: { id, nombre: nuevo.nombre },
+        cantidadAntes: anterior.cantidad,
+        cantidadDespues: nuevo.cantidad
+      });
+    }
+  }
+
+  // ❌ Eliminados
+  for (const [id, anterior] of prevMap) {
+    if (!nextMap.has(id)) {
+      cambios.push({
+        tipo: 'producto',
+        accion: 'remove',
+        producto: { id, nombre: anterior.nombre },
+        cantidadAntes: anterior.cantidad,
+        cantidadDespues: 0
+      });
+    }
+  }
+
+  return cambios;
+}
+
 // ===== Mailer =====
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -129,7 +213,6 @@ async function ensureUserAndMaybeSendPassword({ email, fullname }) {
   }
   return { created: false, sentPassword: false };
 }
-
 // ===== Rutas públicas =====
 router.post('/public', async (req, res) => {
   try {
@@ -167,8 +250,6 @@ async function checarDisponibilidad({ fecha, horaInicio, horaFin, excluirId = nu
   return choca ? { disponible: false, motivo: 'Empalme con otra reserva' } : { disponible: true };
 }
 
-
-
 async function checarEventoEnFecha({ fecha, excluirId = null }) {
   const fechaStr = ymd(fecha);
   if (!fechaStr) return { disponible: false, motivo: 'Fecha inválida' };
@@ -184,7 +265,6 @@ async function checarEventoEnFecha({ fecha, excluirId = null }) {
     ? { disponible: false, motivo: 'Ya existe un evento registrado en esa fecha' }
     : { disponible: true };
 }
-
 
 // ===== CRUD =====
 router.post('/', async (req, res) => {
@@ -304,9 +384,418 @@ router.post('/disponibilidad', async (req, res) => {
   }
 });
 
+function valorComparable(v) {
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  if (v === undefined) return null;
+  if (v === '') return '';
+  return v ?? null;
+}
+
+function etiquetaCampo(campo) {
+  const map = {
+    cliente: 'Cliente',
+    correo: 'Correo',
+    telefono: 'Teléfono',
+    tipoEvento: 'Tipo de evento',
+    fecha: 'Fecha',
+    horaInicio: 'Hora de inicio',
+    horaFin: 'Hora de fin',
+    cantidadPersonas: 'Cantidad de personas',
+    descripcion: 'Descripción',
+    estado: 'Estado',
+    tipoReserva: 'Tipo de reserva'
+  };
+  return map[campo] || campo;
+}
+
+function generarCambiosGenerales(prev, body) {
+  const campos = [
+    'cliente',
+    'correo',
+    'telefono',
+    'tipoEvento',
+    'fecha',
+    'horaInicio',
+    'horaFin',
+    'cantidadPersonas',
+    'descripcion',
+    'estado',
+    'tipoReserva'
+  ];
+
+  const cambios = [];
+
+  for (const campo of campos) {
+    if (!(campo in body)) continue;
+
+    const antes = valorComparable(prev[campo]);
+    const despues = valorComparable(body[campo]);
+
+    if (String(antes ?? '') !== String(despues ?? '')) {
+      cambios.push({
+        tipo: 'campo',
+        accion: 'field_update',
+        campo,
+        etiqueta: etiquetaCampo(campo),
+        valorAntes: antes,
+        valorDespues: despues
+      });
+    }
+  }
+
+  return cambios;
+}
+
+function formatoFechaWA(fecha) {
+  if (!fecha) return 'N/D';
+  const d = new Date(fecha);
+  if (isNaN(d)) return String(fecha);
+  return d.toLocaleDateString('es-MX', {
+    timeZone: TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+}
+
+function calcularTotalesReserva(reserva) {
+  const subtotal = (reserva?.utensilios || []).reduce((acc, it) => {
+    const p = Number(it?.precio || 0);
+    const q = Number(it?.cantidad || 0);
+    return acc + (p * q);
+  }, 0);
+
+  const desc = reserva?.precios?.descuento || { tipo: 'monto', valor: 0 };
+  let descuento = 0;
+
+  if (desc.tipo === 'porcentaje') {
+    const pct = Math.max(0, Math.min(100, Number(desc.valor || 0)));
+    descuento = subtotal * (pct / 100);
+  } else {
+    descuento = Math.max(0, Number(desc.valor || 0));
+  }
+
+  descuento = Math.min(descuento, subtotal);
+  const total = Math.max(0, subtotal - descuento);
+
+  return { subtotal, descuento, total };
+}
+
+function formatearMoneda(valor) {
+  return `$${Number(valor || 0).toLocaleString('es-MX', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })}`;
+}
+
+function resumenItemsReserva(items = []) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return 'Sin servicios registrados';
+  }
+
+  return items.map(it => {
+    const nombre = it?.nombre || 'Ítem';
+    const cantidad = Number(it?.cantidad || 0);
+    const precio = Number(it?.precio || 0);
+
+    return `${nombre} — Cant: ${cantidad} — P.Unit: ${formatearMoneda(precio)}`;
+  }).join(' | ');
+}
+
+function compararItemsReserva(prevItems = [], nextItems = []) {
+  const cambios = [];
+
+  const keyOf = (it) =>
+    String(it?.itemId || it?._id || it?.id || it?.nombre || '').trim();
+
+  const prevMap = new Map(prevItems.map(it => [keyOf(it), it]));
+  const nextMap = new Map(nextItems.map(it => [keyOf(it), it]));
+
+  for (const [key, nuevo] of nextMap.entries()) {
+    const anterior = prevMap.get(key);
+
+    if (!anterior) {
+      cambios.push(
+        `• ${nuevo.nombre}: agregado — Cant: ${Number(nuevo.cantidad || 0)} — P.Unit: ${formatearMoneda(nuevo.precio || 0)}`
+      );
+      continue;
+    }
+
+    const cantAntes = Number(anterior.cantidad || 0);
+    const cantDespues = Number(nuevo.cantidad || 0);
+    const precioAntes = Number(anterior.precio || 0);
+    const precioDespues = Number(nuevo.precio || 0);
+
+    if (cantAntes !== cantDespues && precioAntes !== precioDespues) {
+      cambios.push(
+        `• ${nuevo.nombre}: cantidad ${cantAntes} → ${cantDespues}, precio ${formatearMoneda(precioAntes)} → ${formatearMoneda(precioDespues)}`
+      );
+      continue;
+    }
+
+    if (cantAntes !== cantDespues) {
+      cambios.push(`• ${nuevo.nombre}: cantidad ${cantAntes} → ${cantDespues}`);
+    }
+
+    if (precioAntes !== precioDespues) {
+      cambios.push(`• ${nuevo.nombre}: precio ${formatearMoneda(precioAntes)} → ${formatearMoneda(precioDespues)}`);
+    }
+  }
+
+  for (const [key, anterior] of prevMap.entries()) {
+    if (!nextMap.has(key)) {
+      cambios.push(`• ${anterior.nombre}: eliminado`);
+    }
+  }
+
+  return cambios;
+}
+
+function construirPayloadTemplateCambioEvento(prev, actualizada, cambiosGenerales = []) {
+  const totPrev = calcularTotalesReserva(prev);
+  const totNuevo = calcularTotalesReserva(actualizada);
+
+  const folio = actualizada.shortId || String(actualizada._id).slice(-8).toUpperCase();
+  const cliente = actualizada.cliente || 'N/D';
+  const telefono = actualizada.telefono || 'N/D';
+  const tipoEvento = actualizada.tipoEvento || 'N/D';
+  const fecha = formatoFechaWA(actualizada.fecha);
+  const horario = `${actualizada.horaInicio || 'N/D'} - ${actualizada.horaFin || 'N/D'}`;
+  const personas = String(actualizada.cantidadPersonas ?? 'N/D');
+
+  const servicios = resumenItemsReserva(actualizada.utensilios || []);
+
+  const subtotal = formatearMoneda(totNuevo.subtotal);
+  const descuento = formatearMoneda(totNuevo.descuento);
+  const total = formatearMoneda(totNuevo.total);
+
+  const cambiosGeneralesTexto = cambiosGenerales.map(c =>
+    `• ${c.etiqueta}: ${c.valorAntes ?? 'vacío'} → ${c.valorDespues ?? 'vacío'}`
+  );
+
+  const cambiosItemsTexto = compararItemsReserva(
+    prev?.utensilios || [],
+    actualizada?.utensilios || []
+  );
+
+  const cambiosTotalesTexto = [];
+
+  if (Number(totPrev.subtotal) !== Number(totNuevo.subtotal)) {
+    cambiosTotalesTexto.push(
+      `• Subtotal: ${formatearMoneda(totPrev.subtotal)} → ${formatearMoneda(totNuevo.subtotal)}`
+    );
+  }
+
+  if (Number(totPrev.descuento) !== Number(totNuevo.descuento)) {
+    cambiosTotalesTexto.push(
+      `• Descuento: ${formatearMoneda(totPrev.descuento)} → ${formatearMoneda(totNuevo.descuento)}`
+    );
+  }
+
+  if (Number(totPrev.total) !== Number(totNuevo.total)) {
+    cambiosTotalesTexto.push(
+      `• Total: ${formatearMoneda(totPrev.total)} → ${formatearMoneda(totNuevo.total)}`
+    );
+  }
+
+  const cambios = [
+  ...cambiosGeneralesTexto,
+  ...cambiosItemsTexto,
+  ...cambiosTotalesTexto
+].join(' | ') || 'Sin cambios detectados';
+
+  return {
+    folio,
+    cliente,
+    telefono,
+    tipoEvento,
+    fecha,
+    horario,
+    personas,
+    servicios,
+    subtotal,
+    descuento,
+    total,
+    cambios
+  };
+}
+
+function limpiarTextoTemplate(valor) {
+  return String(valor ?? '')
+    .replace(/[\n\r\t]+/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+async function enviarWhatsAppTemplateCambioEvento({
+  to,
+  folio,
+  cliente,
+  telefono,
+  tipoEvento,
+  fecha,
+  horario,
+  personas,
+  servicios,
+  subtotal,
+  descuento,
+  total,
+  cambios
+}) {
+  const url = `https://graph.facebook.com/v23.0/${process.env.WA_PHONE_NUMBER_ID}/messages`;
+
+  const requestBody = {
+    messaging_product: 'whatsapp',
+    to,
+    type: 'template',
+    template: {
+      name: 'evento_cambio_alerta',
+      language: {
+        code: 'es_MX'
+      },
+      components: [
+        {
+          type: 'body',
+          parameters: [
+            { type: 'text', text: limpiarTextoTemplate(folio) },
+            { type: 'text', text: limpiarTextoTemplate(cliente) },
+            { type: 'text', text: limpiarTextoTemplate(telefono) },
+            { type: 'text', text: limpiarTextoTemplate(tipoEvento) },
+            { type: 'text', text: limpiarTextoTemplate(fecha) },
+            { type: 'text', text: limpiarTextoTemplate(horario) },
+            { type: 'text', text: limpiarTextoTemplate(personas) },
+            { type: 'text', text: limpiarTextoTemplate(servicios) },
+            { type: 'text', text: limpiarTextoTemplate(subtotal) },
+            { type: 'text', text: limpiarTextoTemplate(descuento) },
+            { type: 'text', text: limpiarTextoTemplate(total) },
+            { type: 'text', text: limpiarTextoTemplate(cambios) }
+          ]
+        }
+      ]
+    }
+  };
+
+  console.log('========== WHATSAPP TEMPLATE ==========');
+  console.log('URL:', url);
+  console.log('TO:', to);
+  console.log('PHONE_NUMBER_ID:', process.env.WA_PHONE_NUMBER_ID);
+  console.log('TEMPLATE BODY:', JSON.stringify(requestBody, null, 2));
+
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(requestBody)
+  });
+
+  const data = await resp.json();
+
+  console.log('META STATUS:', resp.status);
+  console.log('META RESPONSE:', JSON.stringify(data, null, 2));
+
+  if (!resp.ok) {
+    console.error('ERROR META TEMPLATE:', JSON.stringify(data, null, 2));
+    throw new Error(data?.error?.message || 'Error enviando template de WhatsApp');
+  }
+
+  return data;
+}
+
+/*function construirMensajeCambioEvento(prev, actualizada, cambiosGenerales = []) {
+  const totPrev = calcularTotalesReserva(prev);
+  const totNuevo = calcularTotalesReserva(actualizada);
+
+  const cambiosGeneralesTexto = cambiosGenerales.map(c =>
+    `• ${c.etiqueta}: ${c.valorAntes ?? 'vacío'} → ${c.valorDespues ?? 'vacío'}`
+  );
+
+  const cambiosItemsTexto = compararItemsReserva(
+    prev?.utensilios || [],
+    actualizada?.utensilios || []
+  );
+
+  const cambiosTotalesTexto = [];
+
+  if (Number(totPrev.subtotal) !== Number(totNuevo.subtotal)) {
+    cambiosTotalesTexto.push(
+      `• Subtotal: ${formatearMoneda(totPrev.subtotal)} → ${formatearMoneda(totNuevo.subtotal)}`
+    );
+  }
+
+  if (Number(totPrev.descuento) !== Number(totNuevo.descuento)) {
+    cambiosTotalesTexto.push(
+      `• Descuento: ${formatearMoneda(totPrev.descuento)} → ${formatearMoneda(totNuevo.descuento)}`
+    );
+  }
+
+  if (Number(totPrev.total) !== Number(totNuevo.total)) {
+    cambiosTotalesTexto.push(
+      `• Total: ${formatearMoneda(totPrev.total)} → ${formatearMoneda(totNuevo.total)}`
+    );
+  }
+
+  return [
+    '🚨 CAMBIO EN EVENTO',
+    '',
+    'Se editó una reserva.',
+    '',
+    `Folio: ${actualizada.shortId || String(actualizada._id).slice(-8).toUpperCase()}`,
+    `Cliente: ${actualizada.cliente || 'N/D'}`,
+    `Teléfono: ${actualizada.telefono || 'N/D'}`,
+    `Tipo de evento: ${actualizada.tipoEvento || 'N/D'}`,
+    `Fecha: ${formatoFechaWA(actualizada.fecha)}`,
+    `Horario: ${actualizada.horaInicio || 'N/D'} - ${actualizada.horaFin || 'N/D'}`,
+    `Personas: ${actualizada.cantidadPersonas ?? 'N/D'}`,
+    '',
+    'Servicios actuales:',
+    resumenItemsReserva(actualizada.utensilios || []),
+    '',
+    `Subtotal actual: ${formatearMoneda(totNuevo.subtotal)}`,
+    `Descuento actual: ${formatearMoneda(totNuevo.descuento)}`,
+    `Total actual: ${formatearMoneda(totNuevo.total)}`,
+    '',
+    'Cambios detectados:',
+    ...(cambiosGeneralesTexto.length ? cambiosGeneralesTexto : []),
+    ...(cambiosItemsTexto.length ? cambiosItemsTexto : []),
+    ...(cambiosTotalesTexto.length ? cambiosTotalesTexto : []),
+    ...(!cambiosGeneralesTexto.length && !cambiosItemsTexto.length && !cambiosTotalesTexto.length
+      ? ['• Sin cambios detectados']
+      : [])
+  ].join('\n');
+}*/
+
+/*async function enviarWhatsAppAlerta({ to, body }) {
+  const url = `https://graph.facebook.com/v23.0/${process.env.WA_PHONE_NUMBER_ID}/messages`;
+
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      to,
+      type: 'text',
+      text: { body }
+    })
+  });
+
+  const data = await resp.json();
+
+  if (!resp.ok) {
+    throw new Error(data?.error?.message || 'Error enviando WhatsApp');
+  }
+
+  return data;
+}*/
+
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({ msg: 'ID inválido' });
     }
@@ -316,10 +805,11 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ msg: 'Reserva no encontrada' });
     }
 
-    req.body.fecha = normalizeFechaNoonUTC(req.body.fecha);
-    if (!req.body.fecha || isNaN(req.body.fecha)) {
+   const fechaFinal = req.body.fecha ? normalizeFechaNoonUTC(req.body.fecha) : prev.fecha;
+    if (!fechaFinal || isNaN(fechaFinal)) {
       return res.status(400).json({ msg: 'Fecha inválida' });
     }
+    req.body.fecha = fechaFinal;
 
     const nextTipo = req.body.tipoReserva || prev.tipoReserva || 'evento';
 
@@ -334,6 +824,12 @@ router.put('/:id', async (req, res) => {
       }
     }
 
+    // ===== Detectar cambios antes de actualizar =====
+    const cambios = generarCambiosGenerales(prev, {
+      ...req.body,
+      tipoReserva: nextTipo
+    });
+
     const actualizada = await Reserva.findByIdAndUpdate(
       id,
       { ...req.body, tipoReserva: nextTipo },
@@ -342,6 +838,57 @@ router.put('/:id', async (req, res) => {
 
     if (!actualizada) {
       return res.status(404).json({ msg: 'Reserva no encontrada' });
+    }
+
+    // ===== Historial + WhatsApp solo si YA era evento antes del cambio =====
+       if (prev.tipoReserva === 'evento' && cambios.length > 0) {
+      // Guardar historial de campos
+      await HistorialReserva.insertMany(
+        cambios.map(c => ({
+          reservaId: actualizada._id,
+          tipo: c.tipo,
+          accion: c.accion,
+          campo: c.campo,
+          etiqueta: c.etiqueta,
+          valorAntes: c.valorAntes,
+          valorDespues: c.valorDespues,
+          usuario: req.user?.sub || null
+        }))
+      );
+
+      const payload = construirPayloadTemplateCambioEvento(
+        prev.toObject(),
+        actualizada.toObject(),
+        cambios
+      );
+
+      try {
+        await enviarWhatsAppTemplateCambioEvento({
+          to: process.env.WA_ALERT_NUMBER,
+          ...payload
+        });
+
+        await HistorialReserva.create({
+          reservaId: actualizada._id,
+          tipo: 'whatsapp',
+          accion: 'alert_sent',
+          destino: process.env.WA_ALERT_NUMBER,
+          mensaje: JSON.stringify(payload, null, 2),
+          usuario: req.user?.sub || null
+        });
+      } catch (err) {
+        console.error('ERROR ENVIANDO TEMPLATE EN PUT /:id:', err.message);
+
+        await HistorialReserva.create({
+          reservaId: actualizada._id,
+          tipo: 'whatsapp',
+          accion: 'alert_error',
+          destino: process.env.WA_ALERT_NUMBER,
+          mensaje: JSON.stringify(payload, null, 2),
+          error: err.message,
+          usuario: req.user?.sub || null
+        });
+      }
     }
 
     return res.json(actualizada);
@@ -419,6 +966,26 @@ router.get('/lookup/:key', async (req, res) => {
   }
 });
 
+// ====== RUTA PODER VISUALIZAR EL HISTORIAL DE CAMBIOS =====
+router.get('/:id/historial', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ msg: 'ID inválido' });
+    }
+
+    const historial = await HistorialReserva.find({ reservaId: id })
+      .sort({ fecha: -1 })
+      .lean();
+
+    return res.json({ ok: true, historial });
+  } catch (e) {
+    console.error('GET /reservas/:id/historial error:', e);
+    return res.status(500).json({ msg: 'Error interno' });
+  }
+});
+
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -437,28 +1004,118 @@ router.put('/:id/utensilios', async (req, res) => {
   try {
     const { id } = req.params;
     const { items = [] } = req.body;
-    if (!mongoose.isValidObjectId(id)) return res.status(400).json({ msg: 'ID inválido' });
-    if (!Array.isArray(items)) return res.status(400).json({ msg: 'items debe ser un arreglo' });
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ msg: 'ID inválido' });
+    }
+
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ msg: 'items debe ser un arreglo' });
+    }
 
     const reservaActual = await Reserva.findById(id).lean();
-    if (!reservaActual) return res.status(404).json({ msg: 'Reserva no encontrada' });
+    if (!reservaActual) {
+      return res.status(404).json({ msg: 'Reserva no encontrada' });
+    }
 
-    const prevById = new Map((reservaActual.utensilios || []).map(u => [String(u.itemId || u._id || u.id), u]));
+    // ===== HISTORIAL: solo si ya es evento =====
+    if (reservaActual.tipoReserva === 'evento') {
+      const prev = reservaActual.utensilios || [];
+      const next = items || [];
+
+      const prevMap = new Map(
+        prev.map(u => [String(u.itemId || u._id || u.id), u])
+      );
+
+      const cambios = [];
+
+      // Agregados y actualizaciones
+      for (const it of next) {
+        const itemKey = String(it.itemId || it._id || it.id);
+        const anterior = prevMap.get(itemKey);
+        const cantidadNueva = Number(it.cantidad ?? it.qty ?? 0);
+
+        if (!anterior) {
+          cambios.push({
+            tipo: 'producto',
+            accion: 'add',
+            producto: {
+              id: itemKey,
+              nombre: it.nombre
+            },
+            cantidadAntes: 0,
+            cantidadDespues: cantidadNueva
+          });
+        } else if (Number(anterior.cantidad) !== cantidadNueva) {
+          cambios.push({
+            tipo: 'producto',
+            accion: 'update',
+            producto: {
+              id: itemKey,
+              nombre: it.nombre
+            },
+            cantidadAntes: Number(anterior.cantidad || 0),
+            cantidadDespues: cantidadNueva
+          });
+        }
+      }
+
+      // Eliminados
+      for (const u of prev) {
+        const itemKey = String(u.itemId || u._id || u.id);
+        const sigue = next.find(
+          n => String(n.itemId || n._id || n.id) === itemKey
+        );
+
+        if (!sigue) {
+          cambios.push({
+            tipo: 'producto',
+            accion: 'remove',
+            producto: {
+              id: itemKey,
+              nombre: u.nombre
+            },
+            cantidadAntes: Number(u.cantidad || 0),
+            cantidadDespues: 0
+          });
+        }
+      }
+
+      if (cambios.length > 0) {
+        await HistorialReserva.insertMany(
+          cambios.map(c => ({
+            reservaId: reservaActual._id,
+            ...c
+          }))
+        );
+      }
+    }
+
+    // ===== Lógica original para guardar utensilios =====
+    const prevById = new Map(
+      (reservaActual.utensilios || []).map(u => [String(u.itemId || u._id || u.id), u])
+    );
 
     const saneados = [];
     const idsParaPrecio = [];
+
     for (const it of items) {
       const itemId = it.itemId || it.id || it._id;
       const cantidad = Number(it.cantidad ?? it.qty ?? 0);
+
       if (!it.nombre || !Number.isFinite(cantidad) || cantidad < 0) {
         return res.status(400).json({ msg: 'Ítem inválido' });
       }
+
       let castId = null;
       if (itemId) {
-        if (!mongoose.isValidObjectId(itemId)) return res.status(400).json({ msg: 'itemId inválido' });
+        if (!mongoose.isValidObjectId(itemId)) {
+          return res.status(400).json({ msg: 'itemId inválido' });
+        }
         castId = new mongoose.Types.ObjectId(itemId);
         idsParaPrecio.push(castId);
       }
+
       saneados.push({
         ...(castId ? { itemId: castId } : {}),
         nombre: it.nombre,
@@ -472,34 +1129,102 @@ router.put('/:id/utensilios', async (req, res) => {
 
     let invById = new Map();
     if (idsParaPrecio.length) {
-      const prods = await Producto.find({ _id: { $in: idsParaPrecio } }).select('precio descripcion').lean();
-      invById = new Map(prods.map(p => [String(p._id), { precio: Number(p.precio ?? 0), descripcion: p.descripcion || '' }]));
+      const prods = await Producto.find({ _id: { $in: idsParaPrecio } })
+        .select('precio descripcion')
+        .lean();
+
+      invById = new Map(
+        prods.map(p => [
+          String(p._id),
+          {
+            precio: Number(p.precio ?? 0),
+            descripcion: p.descripcion || ''
+          }
+        ])
+      );
     }
 
     const snapshot = saneados.map(s => {
       const key = s.itemId ? String(s.itemId) : null;
       const prev = key && prevById.get(key);
       const prevPrice = prev ? Number(prev.precio) : undefined;
-      const prevDesc  = prev ? (prev.descripcion || '') : '';
+      const prevDesc = prev ? (prev.descripcion || '') : '';
       const inv = key && invById.get(key);
       const invPrice = inv ? inv.precio : undefined;
-      const invDesc  = inv ? inv.descripcion : '';
+      const invDesc = inv ? inv.descripcion : '';
+
       const finalPrice =
         Number.isFinite(Number(s._precioInput)) ? Number(s._precioInput)
         : (Number.isFinite(prevPrice) && prevPrice > 0) ? prevPrice
         : (Number.isFinite(invPrice) && invPrice > 0) ? invPrice
         : 0;
-      const hasInputDesc = s._descInput != null && String(s._descInput).trim() !== '';
-      const finalDesc = hasInputDesc ? String(s._descInput) : (prevDesc || invDesc || '');
+
+      const hasInputDesc =
+        s._descInput != null && String(s._descInput).trim() !== '';
+
+      const finalDesc = hasInputDesc
+        ? String(s._descInput)
+        : (prevDesc || invDesc || '');
+
       const { _precioInput, _descInput, ...rest } = s;
-      return { ...rest, precio: finalPrice, descripcion: finalDesc };
+
+      return {
+        ...rest,
+        precio: finalPrice,
+        descripcion: finalDesc
+      };
     });
 
-    const updated = await Reserva.findByIdAndUpdate(id, { $set: { utensilios: snapshot } }, { new: true });
+    const updated = await Reserva.findByIdAndUpdate(
+      id,
+      { $set: { utensilios: snapshot } },
+      { new: true }
+    );
+
     const subtotal = calcSubtotalFromUtensilios(updated.utensilios || []);
-    const precios  = applyDiscount(subtotal, updated.precios?.descuento || { tipo:'monto', valor:0 });
+    const precios = applyDiscount(
+      subtotal,
+      updated.precios?.descuento || { tipo: 'monto', valor: 0 }
+    );
+
     updated.precios = precios;
     await updated.save();
+
+// ===== WHATSAPP ALERTA =====
+if (reservaActual.tipoReserva === 'evento') {
+  try {
+    const payload = construirPayloadTemplateCambioEvento(
+      reservaActual,
+      updated.toObject(),
+      [] // aquí no usamos cambiosGenerales
+    );
+
+    await enviarWhatsAppTemplateCambioEvento({
+      to: process.env.WA_ALERT_NUMBER,
+      ...payload
+    });
+
+    await HistorialReserva.create({
+      reservaId: updated._id,
+      tipo: 'whatsapp',
+      accion: 'alert_sent',
+      destino: process.env.WA_ALERT_NUMBER,
+      mensaje: JSON.stringify(payload, null, 2)
+    });
+
+  } catch (err) {
+    console.error('ERROR ENVIANDO TEMPLATE EN PUT /:id/utensilios:', err);
+
+    await HistorialReserva.create({
+      reservaId: updated._id,
+      tipo: 'whatsapp',
+      accion: 'alert_error',
+      destino: process.env.WA_ALERT_NUMBER,
+      mensaje: 'Error enviando template',
+      error: err.message
+    });
+  }
+}
 
     return res.json({ ok: true, reserva: updated });
   } catch (e) {
@@ -624,30 +1349,70 @@ router.put('/:id/descuento', async (req, res) => {
   try {
     const { id } = req.params;
     const { tipo, valor, motivo = '' } = req.body || {};
-    if (!mongoose.isValidObjectId(id)) return res.status(400).json({ msg: 'ID inválido' });
-    if (!['monto', 'porcentaje'].includes(tipo)) return res.status(400).json({ msg: 'tipo debe ser "monto" o "porcentaje"' });
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ msg: 'ID inválido' });
+    }
+
+    if (!['monto', 'porcentaje'].includes(tipo)) {
+      return res.status(400).json({ msg: 'tipo debe ser "monto" o "porcentaje"' });
+    }
 
     let v = Number(valor);
-    if (!Number.isFinite(v) || v < 0) return res.status(400).json({ msg: 'valor inválido' });
-    if (tipo === 'porcentaje' && v > 100) v = 100;
+    if (!Number.isFinite(v) || v < 0) {
+      return res.status(400).json({ msg: 'valor inválido' });
+    }
+
+    if (tipo === 'porcentaje' && v > 100) {
+      v = 100;
+    }
 
     const r = await Reserva.findById(id);
-    if (!r) return res.status(404).json({ msg: 'Reserva no encontrada' });
+    if (!r) {
+      return res.status(404).json({ msg: 'Reserva no encontrada' });
+    }
+
+    // ===== Guardar valor anterior antes del cambio =====
+    const prevDesc = Number(r.precios?.descuento?.valor || 0);
 
     r.precios = r.precios || {};
-    r.precios.descuento = { tipo, valor: v, motivo: String(motivo || '') };
+    r.precios.descuento = {
+      tipo,
+      valor: v,
+      motivo: String(motivo || '')
+    };
+
     await r.save();
+
+    // ===== Historial: solo si ya es evento =====
+    if (r.tipoReserva === 'evento' && prevDesc !== v) {
+      await HistorialReserva.create({
+        reservaId: r._id,
+        tipo: 'descuento',
+        accion: v > 0 ? 'discount_add' : 'discount_remove',
+        descuentoAntes: prevDesc,
+        descuentoDespues: v
+      });
+    }
 
     const subTotal = calcularSubTotal(r.utensilios);
     const descuento = calcularDescuento(subTotal, r.precios.descuento);
     const total = Math.max(0, subTotal - descuento);
 
-    return res.json({ ok: true, precios: r.precios, subTotal, descuento, total, moneda: r.precios?.moneda || 'MXN' });
+    return res.json({
+      ok: true,
+      precios: r.precios,
+      subTotal,
+      descuento,
+      total,
+      moneda: r.precios?.moneda || 'MXN'
+    });
   } catch (e) {
     console.error('PUT /reservas/:id/descuento error:', e);
     return res.status(500).json({ msg: 'Error interno' });
   }
 });
+
 router.get('/:id/totales', async (req, res) => {
   try {
     const { id } = req.params;

@@ -29,9 +29,37 @@ const ResumenAccesorio = new mongoose.Schema({
   esPrestamo: { type: Boolean, default: true }
 }, { _id: false });
 
+//====== ARRGEGLO DE HISTORIAL ======
+const historialCambioSchema = new mongoose.Schema(
+  {
+    tipo: {
+      type: String,
+      enum: ['edicion', 'whatsapp_alerta'],
+      required: true,
+    },
 
+    campo: { type: String, default: '' },
+    etiqueta: { type: String, default: '' },
 
+    antes: { type: mongoose.Schema.Types.Mixed, default: null },
+    despues: { type: mongoose.Schema.Types.Mixed, default: null },
 
+    usuarioId: { type: mongoose.Schema.Types.ObjectId, ref: 'Usuario', default: null },
+    usuarioNombre: { type: String, default: 'Sistema' },
+
+    fecha: { type: Date, default: Date.now },
+
+    destino: { type: String, default: '' },
+    mensaje: { type: String, default: '' },
+    estado: {
+      type: String,
+      enum: ['pendiente', 'enviado', 'error'],
+      default: 'pendiente',
+    },
+    error: { type: String, default: '' },
+  },
+  { _id: true }
+);
 
 // -------- Esquema principal de Reserva --------
 const reservaSchema = new mongoose.Schema(
@@ -99,6 +127,9 @@ const reservaSchema = new mongoose.Schema(
     // Archivos / otros
     pdfUrl: { type: String, default: null },
     pdfPath: { type: String, default: null },
+
+    //Historial
+    historialCambios: { type: [historialCambioSchema], default: [] },
   },
   {
     timestamps: true,            // createdAt / updatedAt
