@@ -250,7 +250,7 @@ async function checarDisponibilidad({ fecha, horaInicio, horaFin, excluirId = nu
   return choca ? { disponible: false, motivo: 'Empalme con otra reserva' } : { disponible: true };
 }
 
-async function checarEventoEnFecha({ fecha, excluirId = null }) {
+/*async function checarEventoEnFecha({ fecha, excluirId = null }) {
   const fechaStr = ymd(fecha);
   if (!fechaStr) return { disponible: false, motivo: 'Fecha inválida' };
 
@@ -263,6 +263,34 @@ async function checarEventoEnFecha({ fecha, excluirId = null }) {
 
   return existeEvento
     ? { disponible: false, motivo: 'Ya existe un evento registrado en esa fecha' }
+    : { disponible: true };
+}*/
+async function checarEventoEnFecha({ fecha, horaInicio, horaFin, excluirId = null }) {
+  const fechaStr = ymd(fecha);
+
+  if (!fechaStr || !horaInicio || !horaFin) {
+    return { disponible: false, motivo: 'Datos incompletos' };
+  }
+
+  const ini = timeToMinutes(horaInicio);
+  const fin = timeToMinutes(horaFin);
+
+  const eventosDelDia = await Reserva.find({
+    ...sameDayFilter(fechaStr, excluirId),
+    tipoReserva: 'evento'
+  }).lean();
+
+  const choca = eventosDelDia.some(e =>
+    overlap(
+      ini,
+      fin,
+      timeToMinutes(e.horaInicio),
+      timeToMinutes(e.horaFin)
+    )
+  );
+
+  return choca
+    ? { disponible: false, motivo: 'Ya existe un evento en ese horario' }
     : { disponible: true };
 }
 
@@ -281,7 +309,12 @@ router.post('/', async (req, res) => {
     // - Pero si ya existe un evento en esa fecha, no se permite
     //   ni otra cotización ni otro evento
     if (tipoReserva === 'cotizacion' || tipoReserva === 'evento') {
-      const disp = await checarEventoEnFecha({ fecha: req.body.fecha });
+      const disp = await checarEventoEnFecha({
+        fecha: req.body.fecha,
+        horaInicio: req.body.horaInicio,
+        horaFin: req.body.horaFin
+      });
+      //const disp = await checarEventoEnFecha({ fecha: req.body.fecha });
       if (!disp.disponible) {
         return res.status(409).json({ msg: disp.motivo });
       }
@@ -816,8 +849,14 @@ router.put('/:id', async (req, res) => {
     if (nextTipo === 'cotizacion' || nextTipo === 'evento') {
       const disp = await checarEventoEnFecha({
         fecha: req.body.fecha,
+        horaInicio: req.body.horaInicio || prev.horaInicio,
+        horaFin: req.body.horaFin || prev.horaFin,
         excluirId: id
       });
+      /*const disp = await checarEventoEnFecha({
+        fecha: req.body.fecha,
+        excluirId: id
+      });*/
 
       if (!disp.disponible) {
         return res.status(409).json({ msg: disp.motivo });
