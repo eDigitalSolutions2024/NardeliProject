@@ -15,6 +15,8 @@ import Dashboard from './components/Dashboard';
 import Reservar from './components/ReservarEvento';
 import DashboardCliente from './components/DashboardCliente';
 import IngresarCodigo from './pages/IngresarCodigo';
+import IngresaCodigoInvitacion from './pages/tmpCodigoInvitacion';
+import ScanInvitacionQR from './pages/ScanInvitacionQR';
 
 function AppWrapper() {
   // ✅ Levanta la sesión desde localStorage si existe
@@ -60,13 +62,10 @@ function AppWrapper() {
 
   return (
     <Routes>
-      {/* 🏠 Página pública de inicio */}
       <Route path="/" element={<Home user={user} onLogout={handleLogout} />} />
 
-      {/* 🔑 Login habilitado nuevamente */}
       <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} />} />
 
-      {/* 📊 Dashboard protegido */}
       <Route
         path="/dashboard"
         element={
@@ -76,10 +75,8 @@ function AppWrapper() {
         }
       />
 
-      {/* 🎉 Reservar (déjala pública si así lo quieres) */}
       <Route path="/reservar" element={<Reservar />} />
 
-      {/* 👤 Dashboard del cliente (protegido) */}
       <Route
         path="/cliente/dashboard"
         element={
@@ -89,11 +86,13 @@ function AppWrapper() {
         }
       />
 
-      {/* ✅ Página para códigos (pública) */}
       <Route path="/ingresar-codigo" element={<IngresarCodigo />} />
 
-      {/* 404 */}
+      <Route path="/invitaciones/:token" element={<IngresaCodigoInvitacion />} />
+
       <Route path="*" element={<div style={{ padding: 24 }}>404 — Página no encontrada</div>} />
+
+      <Route path="/invitacion-qr/:qrToken" element={<ScanInvitacionQR />} />
     </Routes>
   );
 }

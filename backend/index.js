@@ -13,6 +13,14 @@ const FRONT = process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
 
 const path = require('path');
 
+const invitacionesPortalRoutes = require('./routes/invitacionesPortal');
+
+const invitacionesQRRoutes = require('./routes/invitacionesQR');
+
+const scanInvitacionQRRoutes = require('./routes/scanInvitacionQR');
+
+
+
 // (Opcional) si usarás cookies secure detrás de proxy:
 // app.set('trust proxy', 1);
 
@@ -48,6 +56,15 @@ app.use('/api', require('./routes/receipts'));
 
 // ✅ Reportes
 app.use('/api/reportes', require('./routes/reportes'));
+
+//Invitaciones QR
+app.use('/api/invitaciones-portal', invitacionesPortalRoutes);
+
+//Ingresar código de invitación
+app.use('/api/invitaciones-qr', invitacionesQRRoutes);
+
+//scaneo de invitación QR
+app.use('/api/scan-invitacion-qr', scanInvitacionQRRoutes);
 
 
 
