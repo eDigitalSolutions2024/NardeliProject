@@ -83,6 +83,17 @@ app.use((err, _req, res, _next) => {
   res.status(err.status || 500).json({ msg: err.message || 'Error del servidor' });
 });
 
+// 👇 AGREGA AQUÍ
+app.get('/privacy', (req, res) => {
+  res.send(`
+    <h1>Política de Privacidad - Nardeli</h1>
+    <p>Recopilamos nombre y número telefónico para gestionar invitaciones a eventos.</p>
+    <p>No compartimos información con terceros.</p>
+    <p>Puedes solicitar la eliminación de tus datos en cualquier momento.</p>
+    <p>Contacto: soporte@nardeli.mx</p>
+  `);
+});
+
 // ✅ 6) Conectar DB y arrancar
 connectDB()
   .then(() => {
