@@ -30,6 +30,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // ✅ 4) Middlewares
 const allowedOrigins = [
   FRONT,
+  'https://www.sistemanardeli.com',
   'http://localhost:3000',
   'http://localhost:3001',
   'http://192.168.1.90:3000',
