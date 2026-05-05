@@ -308,7 +308,7 @@ const Dashboard = ({ onLogout }) => {
   const abrirPanelArticulosAdmin = () => {
     if (!cotEdit?.id) return;
     const qs = new URLSearchParams({ reservaId: cotEdit.id, mode: 'admin' }).toString();
-    window.open(`/cliente/dashboard?${qs}`, '_blank', 'noopener,noreferrer');
+    window.open(`${window.location.origin}/#/cliente/dashboard?${qs}`, '_blank');
   };
 
  const normalizeFolio = (s) =>
