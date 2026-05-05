@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const Reserva = require('../models/Reservas');
 
 const InvitacionPortal = require('../models/InvitacionPortal');
 const InvitacionQR = require('../models/InvitacionQR');
@@ -73,6 +74,36 @@ router.post('/:token', async (req, res) => {
       });
     }
 
+
+    const reserva = await Reserva.findById(portal.reservaId);
+
+if (!reserva) {
+  return res.status(404).json({ msg: 'Reserva no encontrada' });
+}
+
+const capacidadEvento = Number(reserva.cantidadPersonas || 0);
+
+const invitacionesActivas = await InvitacionQR.find({
+  reservaId: portal.reservaId,
+  estado: { $ne: 'cancelada' },
+});
+
+const pasesGenerados = invitacionesActivas.reduce(
+  (acc, inv) => acc + Number(inv.personasAutorizadas || 0),
+  0
+);
+
+const disponibles = capacidadEvento - pasesGenerados;
+
+if (personas > disponibles) {
+  return res.status(400).json({
+    msg: `No se puede generar este QR. Solo quedan ${Math.max(disponibles, 0)} pases disponibles para este evento.`,
+    capacidadEvento,
+    pasesGenerados,
+    disponibles: Math.max(disponibles, 0),
+  });
+}
+
     const qrToken = crypto.randomBytes(20).toString('hex');
 
     console.log('QR TOKEN GENERADO:', qrToken);
@@ -91,6 +122,8 @@ router.post('/:token', async (req, res) => {
     console.log('INVITACION A GUARDAR:', invitacion);
 
     await invitacion.save();
+
+  
 
     console.log('INVITACION GUARDADA OK');
 
