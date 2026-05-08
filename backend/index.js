@@ -71,6 +71,16 @@ app.use('/api/scan-invitacion-qr', scanInvitacionQRRoutes);
 // Si tienes inventario por separado:
 // app.use('/api/inventario', require('./routes/inventario'));
 
+app.get('/privacy', (req, res) => {
+  res.send(`
+    <h1>Política de Privacidad - Nardeli</h1>
+    <p>Recopilamos nombre y número telefónico para gestionar invitaciones a eventos.</p>
+    <p>No compartimos información con terceros.</p>
+    <p>Puedes solicitar la eliminación de tus datos en cualquier momento.</p>
+    <p>Contacto: soporte@nardeli.mx</p>
+  `);
+});
+
 // 404 JSON
 app.use((req, res) => {
   res.status(404).json({ msg: 'No encontrado' });
@@ -83,16 +93,6 @@ app.use((err, _req, res, _next) => {
   res.status(err.status || 500).json({ msg: err.message || 'Error del servidor' });
 });
 
-// 👇 AGREGA AQUÍ
-app.get('/privacy', (req, res) => {
-  res.send(`
-    <h1>Política de Privacidad - Nardeli</h1>
-    <p>Recopilamos nombre y número telefónico para gestionar invitaciones a eventos.</p>
-    <p>No compartimos información con terceros.</p>
-    <p>Puedes solicitar la eliminación de tus datos en cualquier momento.</p>
-    <p>Contacto: soporte@nardeli.mx</p>
-  `);
-});
 
 // ✅ 6) Conectar DB y arrancar
 connectDB()
