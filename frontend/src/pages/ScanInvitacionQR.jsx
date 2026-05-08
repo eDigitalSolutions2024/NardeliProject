@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import API_BASE_URL from '../api';
+import { QRCodeCanvas } from 'qrcode.react';
+
 
 export default function ScanInvitacionQR() {
   const { qrToken } = useParams();
@@ -91,6 +93,14 @@ export default function ScanInvitacionQR() {
         </div>
 
         <h1 style={styles.title}>Control de acceso</h1>
+
+        <div style={styles.qrContainer}>
+  <QRCodeCanvas
+    value={window.location.href}
+    size={200}
+    includeMargin={true}
+  />
+</div>
         <p style={styles.subtitle}>
           Escanea el código y registra la entrada del invitado.
         </p>
@@ -249,4 +259,9 @@ const styles = {
     fontWeight: 700,
     fontSize: 16,
   },
+  qrContainer: {
+  display: 'flex',
+  justifyContent: 'center',
+  marginBottom: 20,
+},
 };

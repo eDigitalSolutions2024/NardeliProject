@@ -8,7 +8,7 @@ const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
 
 const app = express();
-const PORT = process.env.PORT || 8010;
+const PORT = process.env.PORT || 8020;
 const FRONT = process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
 
 const path = require('path');
@@ -28,10 +28,25 @@ const scanInvitacionQRRoutes = require('./routes/scanInvitacionQR');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ✅ 4) Middlewares
+const allowedOrigins = [
+  FRONT,
+  'https://www.sistemanardeli.com',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://192.168.1.90:3000',
+  'http://192.168.1.90:3001',
+];
+
 app.use(cors({
-  origin: FRONT,
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error('Origen no permitido por CORS: ' + origin));
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT','PATCH', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
@@ -66,7 +81,7 @@ app.use('/api/invitaciones-qr', invitacionesQRRoutes);
 //scaneo de invitación QR
 app.use('/api/scan-invitacion-qr', scanInvitacionQRRoutes);
 
-
+app.use('/api/app', require('./routes/appDashboard'));
 
 // Si tienes inventario por separado:
 // app.use('/api/inventario', require('./routes/inventario'));
@@ -97,9 +112,9 @@ app.use((err, _req, res, _next) => {
 // ✅ 6) Conectar DB y arrancar
 connectDB()
   .then(() => {
-    app.listen(PORT, () => {
-      console.log(`Servidor corriendo en http://localhost:${PORT}`);
-    });
+    app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Servidor corriendo en http://0.0.0.0:${PORT}`);
+});
   })
   .catch((e) => {
     console.error('No se pudo conectar a MongoDB:', e?.message || e);

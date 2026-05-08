@@ -36,6 +36,16 @@ router.get('/:qrToken', async (req, res) => {
 router.post('/:qrToken/scan', async (req, res) => {
   try {
     const { qrToken } = req.params;
+    const { cantidad } = req.body;
+
+    const cantidadEntradas = Number(cantidad || 1);
+
+    if (!Number.isFinite(cantidadEntradas) || cantidadEntradas < 1) {
+      return res.status(400).json({
+        ok: false,
+        msg: 'La cantidad de personas debe ser mayor a 0',
+      });
+    }
 
     const invitacion = await InvitacionQR.findOne({ qrToken });
 
@@ -59,21 +69,32 @@ router.post('/:qrToken/scan', async (req, res) => {
       });
     }
 
-    invitacion.entradasRestantes -= 1;
+    if (cantidadEntradas > invitacion.entradasRestantes) {
+      return res.status(400).json({
+        ok: false,
+        msg: `Solo quedan ${invitacion.entradasRestantes} entradas disponibles`,
+        entradasRestantes: invitacion.entradasRestantes,
+        estado: invitacion.estado,
+      });
+    }
+
+    invitacion.entradasRestantes -= cantidadEntradas;
 
     if (invitacion.entradasRestantes <= 0) {
       invitacion.estado = 'agotada';
+      invitacion.entradasRestantes = 0;
     }
 
     await invitacion.save();
 
     return res.json({
       ok: true,
-      msg: 'Acceso permitido',
+      msg: `Acceso permitido para ${cantidadEntradas} persona(s)`,
       nombreFamilia: invitacion.nombreFamilia,
       personasAutorizadas: invitacion.personasAutorizadas,
       entradasRestantes: invitacion.entradasRestantes,
       estado: invitacion.estado,
+      cantidadRegistrada: cantidadEntradas,
     });
   } catch (error) {
     console.error('POST scan invitacion error:', error);

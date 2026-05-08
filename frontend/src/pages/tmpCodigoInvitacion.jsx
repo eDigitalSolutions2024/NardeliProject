@@ -21,9 +21,14 @@ export default function IngresaCodigoInvitacion() {
   const [nombreFamilia, setNombreFamilia] = useState('');
   const [personasAutorizadas, setPersonasAutorizadas] = useState('');
   const [notas, setNotas] = useState('');
+  const [telefono, setTelefono] = useState('');
   const [guardandoInvitacion, setGuardandoInvitacion] = useState(false);
 
   const [invitacionSeleccionada, setInvitacionSeleccionada] = useState(null);
+
+  const [modalWhatsapp, setModalWhatsapp] = useState(false);
+const [telefonoEnvio, setTelefonoEnvio] = useState('');
+const [invitacionSeleccionadaEnvio, setInvitacionSeleccionadaEnvio] = useState(null);
 
   useEffect(() => {
     const cargarInfo = async () => {
@@ -112,6 +117,35 @@ export default function IngresaCodigoInvitacion() {
     }
   };
 
+const enviarWhatsApp = (telefono, invitacion) => {
+  if (!telefono || !invitacion) return;
+
+  let numero = telefono.replace(/\D/g, '');
+  if (!numero.startsWith('52')) numero = '52' + numero;
+
+  const urlQR = `${window.location.origin}/invitacion-qr/${invitacion.qrToken}`;
+
+  const mensaje = `
+🎉 Invitación NARDELI
+
+Familia: ${invitacion.nombreFamilia}
+Personas: ${invitacion.personasAutorizadas}
+
+📍 Presenta este QR:
+${urlQR}
+  `;
+
+  const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
+
+  window.open(url, '_blank');
+
+  // cerrar modal si está abierto
+  setModalWhatsapp(false);
+  setTelefonoEnvio('');
+};
+
+
+
   const crearInvitacion = async (e) => {
     e.preventDefault();
 
@@ -140,19 +174,23 @@ export default function IngresaCodigoInvitacion() {
           nombreFamilia,
           personasAutorizadas: personas,
           notas,
+          telefono,
           creadoPor: 'cliente',
         }),
       });
 
       const json = await resp.json();
+      
 
       if (!resp.ok) {
         throw new Error(json.msg || 'No se pudo crear la invitación');
       }
+enviarWhatsApp(telefono, json);
 
       setNombreFamilia('');
       setPersonasAutorizadas('');
       setNotas('');
+      setTelefono('');
       await cargarInvitaciones();
     } catch (err) {
       setError(err.message || 'No se pudo crear la invitación');
@@ -297,6 +335,17 @@ export default function IngresaCodigoInvitacion() {
                     />
                   </div>
 
+                  <div style={styles.fieldBlock}>
+                  <label style={styles.label}>Teléfono WhatsApp</label>
+                  <input
+                    style={styles.input}
+                    type="text"
+                    value={telefono}
+                    onChange={(e) => setTelefono(e.target.value)}
+                    placeholder="Ej. 9991234567 o +5219991234567"
+                  />
+                </div>
+
                   {error && <p style={{ color: '#dc2626', marginTop: 8 }}>{error}</p>}
 
                   <div style={styles.actions}>
@@ -345,17 +394,32 @@ export default function IngresaCodigoInvitacion() {
 
                           </div>
 
-                          <div>
-                            {inv.estado !== 'cancelada' && (
-                              <button
-                                type="button"
-                                style={styles.cancelBtn}
-                                onClick={() => cancelarInvitacion(inv._id)}
-                              >
-                                Cancelar
-                              </button>
-                            )}
-                          </div>
+                          <div style={{ display: 'flex', gap: 8 }}>
+  <button
+    type="button"
+    style={styles.whatsappBtn}
+    onClick={(e) => {
+      e.stopPropagation();
+      setInvitacionSeleccionadaEnvio(inv);
+      setModalWhatsapp(true);
+    }}
+  >
+    📲 Enviar
+  </button>
+
+  {inv.estado !== 'cancelada' && (
+    <button
+      type="button"
+      style={styles.cancelBtn}
+      onClick={(e) => {
+        e.stopPropagation();
+        cancelarInvitacion(inv._id);
+      }}
+    >
+      Cancelar
+    </button>
+  )}
+</div>
                         </div>
                       ))}
                     </div>
@@ -414,6 +478,42 @@ export default function IngresaCodigoInvitacion() {
 
         </div>
       </div>
+      {modalWhatsapp && (
+  <div style={styles.modalOverlay}>
+    <div style={styles.modal}>
+      <h3>Enviar por WhatsApp</h3>
+
+      <input
+        style={styles.input}
+        type="text"
+        placeholder="Ej. 9991234567"
+        value={telefonoEnvio}
+        onChange={(e) => setTelefonoEnvio(e.target.value)}
+      />
+
+      <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+        <button
+          style={styles.primaryBtn}
+          onClick={() =>
+            enviarWhatsApp(telefonoEnvio, invitacionSeleccionadaEnvio)
+          }
+        >
+          Enviar
+        </button>
+
+        <button
+          style={styles.cancelBtn}
+          onClick={() => {
+            setModalWhatsapp(false);
+            setTelefonoEnvio('');
+          }}
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }
@@ -570,5 +670,34 @@ cancelBtn: {
   color: '#fff',
   fontWeight: 700,
   cursor: 'pointer',
+},
+whatsappBtn: {
+  border: 'none',
+  borderRadius: 10,
+  padding: '10px 14px',
+  background: '#16a34a',
+  color: '#fff',
+  fontWeight: 700,
+  cursor: 'pointer',
+},
+
+modalOverlay: {
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  width: '100%',
+  height: '100%',
+  background: 'rgba(0,0,0,0.4)',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  zIndex: 999,
+},
+
+modal: {
+  background: '#fff',
+  padding: 24,
+  borderRadius: 16,
+  width: 320,
 },
 };
