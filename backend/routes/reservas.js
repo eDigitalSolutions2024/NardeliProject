@@ -1042,7 +1042,7 @@ router.get('/:id', async (req, res) => {
 router.put('/:id/utensilios', async (req, res) => {
   try {
     const { id } = req.params;
-    const { items = [] } = req.body;
+    const { items = [], discountItems = {} } = req.body;
 
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({ msg: 'ID inválido' });
@@ -1210,7 +1210,9 @@ router.put('/:id/utensilios', async (req, res) => {
       return {
         ...rest,
         precio: finalPrice,
-        descripcion: finalDesc
+        descripcion: finalDesc,
+         // ✅ NUEVO
+  aplicarDescuento: !!discountItems[String(s.itemId)]
       };
     });
 

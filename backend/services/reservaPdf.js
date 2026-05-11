@@ -500,8 +500,33 @@ doc.y = idCard.y + 72;
 
   if (showPrices) {
   const d = reserva?.precios?.descuento || reserva?.descuento;
-  const descuentoInfo = calcularDescuento(subTotal, d);
-  const total = Math.max(0, subTotal - descuentoInfo.monto);
+
+// Subtotal SOLO de productos con descuento
+let subtotalConDescuento = 0;
+
+lista.forEach((u) => {
+
+  // ⚠️ AJUSTAR ESTE CAMPO AL NOMBRE REAL
+  // dependiendo de cómo guardes el checkbox
+  const aplicaDescuento =
+    u?.aplicarDescuento === true ||
+    u?.descuento === true ||
+    u?.tieneDescuento === true;
+
+  if (aplicaDescuento) {
+
+    const pu = precioFila(u, productosById);
+    const cant = Number(u?.cantidad || 0);
+    const importe = Number.isFinite(pu) ? pu * cant : 0;
+
+    subtotalConDescuento += importe;
+  }
+});
+
+// Aplicar descuento SOLO al subtotal marcado
+descuentoInfo = calcularDescuento(subtotalConDescuento, d);
+
+total = Math.max(0, subTotal - descuentoInfo.monto);
 
   // === Descripción de utensilios (debajo de la tabla, tenue) ===
   const descBullets = [];

@@ -391,6 +391,19 @@ const priceFor = (productId) => {
       }
       next[sid] = { item: base, qty: Number(s.cantidad ?? s.qty ?? 0) };
     });
+    const descuentosIniciales = {};
+
+savedArr.forEach(s => {
+
+  const sid = String(s.itemId || s.id || s._id);
+
+  if (s.aplicarDescuento === true) {
+    descuentosIniciales[sid] = true;
+  }
+});
+
+setDiscountItems(descuentosIniciales);
+
     setSeleccion(next);
   };
 
@@ -579,7 +592,7 @@ const saldoRestante = useMemo(() => {
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : undefined,
         },
-        body: JSON.stringify({ items: itemsPayload, updatedAt: new Date().toISOString() }),
+        body: JSON.stringify({ items: itemsPayload,  discountItems, updatedAt: new Date().toISOString() }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));

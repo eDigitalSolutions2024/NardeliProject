@@ -13,6 +13,8 @@ const utensilioSchema = new mongoose.Schema(
     precio: { type: Number, min: 0, default: 0 },
     descripcion: { type: String, default: '' },
     imagen: { type: String, default: '' },
+
+    aplicarDescuento: { type: Boolean, default: false },
   },
   { _id: true } // <- necesario para editar líneas por ID
 );
