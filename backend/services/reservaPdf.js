@@ -2,6 +2,7 @@
 const PDFDocument = require('pdfkit');
 const path = require('path');
 const fs = require('fs');
+const TZ = 'America/Ciudad_Juarez';
 
 /** === Helpers numéricos/formatos === **/
 function money(n) {
@@ -17,7 +18,16 @@ function pct(n) {
   return `${s}%`;
 }
 function ymd(d) {
-  try { return new Date(d).toISOString().slice(0,10); } catch { return ''; }
+  try {
+    return new Intl.DateTimeFormat('sv-SE', {
+      timeZone: TZ,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date(d));
+  } catch {
+    return '';
+  }
 }
 
 function time12(hhmmOrDate) {
@@ -36,6 +46,7 @@ function time12(hhmmOrDate) {
   }
   if (!d) return String(hhmmOrDate);
   return new Intl.DateTimeFormat('es-MX', {
+    timeZone: TZ,
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
@@ -377,7 +388,7 @@ function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} 
   sectionTitle(doc, 'Evento', c2.x, c2.y, '🎉');
   let y2 = c2.y + 22;
   const fechaTxt = reserva?.fecha
-    ? new Date(reserva.fecha).toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    ? new Date(reserva.fecha).toLocaleDateString('es-MX', { timeZone: TZ, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
     : '—';
   y2 += labelValue(doc, { x: c2.x, y: y2, label: 'Tipo:', value: reserva?.tipoEvento, wLabel: 65, wValue: c2.w - 65 - 8, boldValue: true }) + 6;
   y2 += labelValue(doc, { x: c2.x, y: y2, label: 'Fecha:', value: fechaTxt, wLabel: 65, wValue: c2.w - 65 - 8 }) + 6;
@@ -410,6 +421,7 @@ doc.text(
 const fechaCreacionRaw = reserva?.createdAt || reserva?.fechaCreacion || reserva?.creadaEn;
 if (fechaCreacionRaw) {
   const fechaCreacionTxt = new Date(fechaCreacionRaw).toLocaleString('es-MX', {
+     timeZone: TZ,
   weekday: 'long',
   year: 'numeric',
   month: 'long',

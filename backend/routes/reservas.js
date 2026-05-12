@@ -86,11 +86,27 @@ function applyDiscount(subtotal, desc = { tipo: 'monto', valor: 0 }) {
 // ===== Helpers de fecha/horario =====
 function normalizeFechaNoonUTC(input) {
   if (!input) return null;
+
   let ymd;
-  if (typeof input === 'string') ymd = input.slice(0, 10);
-  else ymd = new Date(input).toISOString().slice(0, 10);
-  return new Date(`${ymd}T12:00:00Z`);
+
+  if (typeof input === 'string') {
+    ymd = input.slice(0, 10);
+  } else {
+    const d = new Date(input);
+
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+
+    ymd = `${year}-${month}-${day}`;
+  }
+
+  const [year, month, day] = ymd.split('-').map(Number);
+
+  return new Date(year, month - 1, day);
 }
+
+
 function timeToMinutes(t) {
   const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '').trim());
   if (!m) return NaN;
