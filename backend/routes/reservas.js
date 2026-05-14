@@ -1623,11 +1623,27 @@ router.patch('/:id/precios', async (req, res) => {
     r.precios = r.precios || { moneda: 'MXN' };
     r.precios.descuento = { tipo, valor, motivo: String(nuevoDesc.motivo || '') };
 
-    const subTotal = (r.utensilios || []).reduce((a,u)=>a + Number(u.precio||0)*Number(u.cantidad||0), 0);
-    const descuento = tipo === 'porcentaje'
-      ? Math.min(subTotal, subTotal * (Math.max(0, Math.min(100, valor)) / 100))
-      : Math.min(subTotal, Math.max(0, valor));
-    const total = Math.max(0, subTotal - descuento);
+    const subTotal = (r.utensilios || []).reduce((a, u) => {
+  return a + Number(u.precio || 0) * Number(u.cantidad || 0);
+}, 0);
+
+// ✅ SOLO productos marcados
+const subtotalDescuento = (r.utensilios || []).reduce((a, u) => {
+
+  if (!u.aplicarDescuento) return a;
+
+  return a + Number(u.precio || 0) * Number(u.cantidad || 0);
+
+}, 0);
+
+const descuento = tipo === 'porcentaje'
+  ? Math.min(
+      subtotalDescuento,
+      subtotalDescuento * (Math.max(0, Math.min(100, valor)) / 100)
+    )
+  : Math.min(subtotalDescuento, Math.max(0, valor));
+
+const total = Math.max(0, subTotal - descuento);
 
     r.precios.subtotal = subTotal;
     r.precios.total = total;

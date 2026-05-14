@@ -1195,10 +1195,24 @@ function openReceiptPdfById(id) {
                   (async () => {
                     if (!reservaId) return alert('No hay reservaId');
                     try {
+                          const hayProductosConDescuento =
+                          Object.values(discountItems).some(v => v === true);
+
+                        if (!hayProductosConDescuento) {
+                          alert('Debes seleccionar al menos un producto para aplicar descuento.');
+                          return;
+                        }
+
                       const res = await fetch(`${API_BASE_URL}/reservas/${reservaId}/precios`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ descuento: { tipo: descTipo, valor: Number(descValor) || 0 } })
+                        body: JSON.stringify({
+                        descuento: {
+                          tipo: descTipo,
+                          valor: Number(descValor) || 0
+                        },
+                        discountItems
+                      })
                       });
                       if (!res.ok) throw new Error(`HTTP ${res.status}`);
                       alert('Descuento guardado');
