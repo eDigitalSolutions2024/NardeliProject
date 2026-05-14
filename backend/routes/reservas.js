@@ -103,7 +103,7 @@ function normalizeFechaNoonUTC(input) {
 
   const [year, month, day] = ymd.split('-').map(Number);
 
-  return new Date(year, month - 1, day);
+  return new Date(year, month - 1, day, 12, 0, 0);
 }
 
 

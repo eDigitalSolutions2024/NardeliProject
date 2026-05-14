@@ -170,7 +170,7 @@ const Dashboard = ({ onLogout }) => {
             folio: (r.shortId || r.folio || '').toUpperCase(),
             folioLabel: `#${(r.shortId || r.folio || '').toUpperCase()}`,
             titulo: `Cotización - ${getCliente(r)}`,
-            subtitulo: `Para el ${getFecha(r).toLocaleDateString()}`,
+            subtitulo: `Para el ${dayjs(getFecha(r)).format('DD [de] MMMM [de] YYYY')}`,
             icon: '📝',
             pdfUrl: buildPdfUrl(r._id),
             cliente: getCliente(r),
