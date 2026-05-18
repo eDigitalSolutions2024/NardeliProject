@@ -691,6 +691,17 @@ const saldoRestante = useMemo(() => {
   }
 };
 
+const actualizarReserva = async () => {
+  try {
+    await guardarSeleccion();
+    await aplicarAccesorios();
+    alert('Saldos Actualizados');
+  } catch (e) {
+    console.error('Actualizar Saldo', e);
+    alert('No se pudo Actualizar el saldo de la reserva');
+  }
+};
+
   // ====== Editar precio (solo admin) — modifica SOLO el snapshot de utensilios
   const editarPrecio = async (item) => {
     if (!isAdmin) return;
@@ -1249,15 +1260,35 @@ function openReceiptPdfById(id) {
 
           <button
             className="save"
+            onMouseEnter={(e) => {
+  e.target.style.transform = 'translateY(-1px)'
+  e.target.style.boxShadow = '0 6px 14px rgba(183, 219, 45, 0.45)'
+}}
+
+onMouseLeave={(e) => {
+  e.target.style.transform = 'translateY(0)'
+  e.target.style.boxShadow = '0 4px 10px rgba(183, 219, 45, 0.35)'
+}}
             disabled={saving || Object.values(seleccion).length === 0}
             onClick={finalizarReserva}
           >
             {saving ? 'Guardando…' : 'Finalizar Reserva'}
           </button>
 
+          
+
           <button
               className="pdf"
               type="button"
+              onMouseEnter={(e) => {
+  e.target.style.transform = 'translateY(-1px)'
+  e.target.style.boxShadow = '0 6px 14px rgba(183, 219, 45, 0.45)'
+}}
+
+onMouseLeave={(e) => {
+  e.target.style.transform = 'translateY(0)'
+  e.target.style.boxShadow = '0 4px 10px rgba(183, 219, 45, 0.35)'
+}}
               onClick={async () => {
                 if (!reservaId) return alert('No hay reservaId');
                 const url = `${API_BASE_URL}/reservas/${reservaId}/pdf`;
@@ -1279,9 +1310,47 @@ function openReceiptPdfById(id) {
             </button>
 
             <button
+            className="pdf"
+            style={{
+              background: 'linear-gradient(135deg, #d4ff3f, #b7db2d)',
+              color: '#1a1a1a',
+              marginTop: 8,
+              border: 'none',
+              borderRadius: 10,
+              padding: '10px 18px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              boxShadow: '0 4px 10px rgba(183, 219, 45, 0.35)',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'translateY(-1px)'
+              e.target.style.boxShadow = '0 6px 14px rgba(183, 219, 45, 0.45)'
+            }}
+
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0)'
+              e.target.style.boxShadow = '0 4px 10px rgba(183, 219, 45, 0.35)'
+            }}
+            disabled={saving || Object.values(seleccion).length === 0}
+            onClick={actualizarReserva}
+          >
+            {saving ? 'Guardando…' : 'Actualizar Saldo de la Reserva'}
+          </button>
+
+            <button
               className="pdf"
               type="button"
               style={{ background: '#7c3aed', color: '#fff', marginTop: 8 }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-1px)'
+                e.target.style.boxShadow = '0 6px 14px rgba(183, 219, 45, 0.45)'
+              }}
+
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)'
+                e.target.style.boxShadow = '0 4px 10px rgba(183, 219, 45, 0.35)'
+              }}
               onClick={() => {
                 console.log('click invitaciones', reservaId);
                 abrirModalInvitaciones(reservaId);
@@ -1298,6 +1367,15 @@ function openReceiptPdfById(id) {
                 className="pdf"
                 type="button"
                 style={{ background: '#6d28d9', color: '#fff' }}
+                onMouseEnter={(e) => {
+  e.target.style.transform = 'translateY(-1px)'
+  e.target.style.boxShadow = '0 6px 14px rgba(183, 219, 45, 0.45)'
+}}
+
+onMouseLeave={(e) => {
+  e.target.style.transform = 'translateY(0)'
+  e.target.style.boxShadow = '0 4px 10px rgba(183, 219, 45, 0.35)'
+}}
                 onClick={openReceiptModalPrefill}
                 title="Generar recibo a partir de esta selección"
               >
@@ -1308,6 +1386,15 @@ function openReceiptPdfById(id) {
                 className="pdf"
                 type="button"
                 style={{ background: '#0f766e', color: '#fff' }}
+                onMouseEnter={(e) => {
+  e.target.style.transform = 'translateY(-1px)'
+  e.target.style.boxShadow = '0 6px 14px rgba(183, 219, 45, 0.45)'
+}}
+
+onMouseLeave={(e) => {
+  e.target.style.transform = 'translateY(0)'
+  e.target.style.boxShadow = '0 4px 10px rgba(183, 219, 45, 0.35)'
+}}
                 onClick={() => setShowHistoryModal(true)}
                 title="Ver historial de pagos / recibos de esta reserva"
               >
@@ -1317,6 +1404,15 @@ function openReceiptPdfById(id) {
               <button
                 className="pdf"
                 type="button"
+                onMouseEnter={(e) => {
+  e.target.style.transform = 'translateY(-1px)'
+  e.target.style.boxShadow = '0 6px 14px rgba(183, 219, 45, 0.45)'
+}}
+
+onMouseLeave={(e) => {
+  e.target.style.transform = 'translateY(0)'
+  e.target.style.boxShadow = '0 4px 10px rgba(183, 219, 45, 0.35)'
+}}
                 onClick={cargarHistorial}
               >
                 Ver historial de cambios
