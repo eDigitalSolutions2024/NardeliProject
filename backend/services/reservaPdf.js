@@ -30,27 +30,25 @@ function ymd(d) {
   }
 }
 
-function time12(hhmmOrDate) {
-  if (!hhmmOrDate) return '—';
-  // Si viene "HH:mm"
-  const m = String(hhmmOrDate).match(/^(\d{1,2}):(\d{2})$/);
-  let d;
-  if (m) {
-    const h = Number(m[1]), min = Number(m[2]);
-    d = new Date();
-    d.setHours(h, min, 0, 0);
-  } else {
-    // Si viene fecha/hora parseable
-    const dt = new Date(hhmmOrDate);
-    d = isNaN(dt) ? null : dt;
+function time12(hhmm) {
+  if (!hhmm) return '—';
+
+  const match = String(hhmm).match(/^(\d{1,2}):(\d{2})$/);
+
+  if (!match) return String(hhmm);
+
+  let hour = Number(match[1]);
+  const minute = match[2];
+
+  const period = hour >= 12 ? 'p.m.' : 'a.m.';
+
+  hour = hour % 12;
+
+  if (hour === 0) {
+    hour = 12;
   }
-  if (!d) return String(hhmmOrDate);
-  return new Intl.DateTimeFormat('es-MX', {
-    timeZone: TZ,
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  }).format(d);
+
+  return `${hour}:${minute} ${period}`;
 }
 
 
