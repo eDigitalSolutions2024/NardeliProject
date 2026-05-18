@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import API_BASE_URL from '../api';
 import { QRCodeCanvas } from 'qrcode.react';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 
 export default function IngresaCodigoInvitacion() {
   const { token } = useParams();
@@ -120,8 +122,7 @@ const [invitacionSeleccionadaEnvio, setInvitacionSeleccionadaEnvio] = useState(n
 const enviarWhatsApp = (telefono, invitacion) => {
   if (!telefono || !invitacion) return;
 
-  let numero = telefono.replace(/\D/g, '');
-  if (!numero.startsWith('52')) numero = '52' + numero;
+const numero = telefono.replace(/\D/g, '');
 
   const urlQR = `${window.location.origin}/invitacion-qr/${invitacion.qrToken}`;
 
@@ -227,8 +228,8 @@ enviarWhatsApp(telefono, json);
       <div style={styles.container}>
         <div style={styles.leftCard}>
           <div style={styles.badge}>DEMO · NARDELI EVENTOS</div>
-          <h1 style={styles.title}>Invitación digital con control de acceso QR</h1>
-          <p style={styles.subtitle}>
+          <h1 style={styles.title}></h1>
+          <p style={styles.subtitle}>Invitación digital con control de acceso QR
             Ingresa tu código para administrar las invitaciones del evento.
           </p>
 
@@ -336,15 +337,35 @@ enviarWhatsApp(telefono, json);
                   </div>
 
                   <div style={styles.fieldBlock}>
-                  <label style={styles.label}>Teléfono WhatsApp</label>
-                  <input
-                    style={styles.input}
-                    type="text"
-                    value={telefono}
-                    onChange={(e) => setTelefono(e.target.value)}
-                    placeholder="Ej. 9991234567 o +5219991234567"
-                  />
-                </div>
+  <label style={styles.label}>Teléfono WhatsApp</label>
+
+  <PhoneInput
+    country={'mx'}
+    value={telefono}
+    onChange={setTelefono}
+    enableSearch={true}
+    disableSearchIcon={false}
+    countryCodeEditable={false}
+    placeholder="Número de WhatsApp"
+    inputStyle={{
+      width: '100%',
+      height: '54px',
+      borderRadius: '14px',
+      border: '1px solid #e5d8ef',
+      fontSize: '16px',
+      paddingLeft: '48px',
+    }}
+    buttonStyle={{
+      borderTopLeftRadius: '14px',
+      borderBottomLeftRadius: '14px',
+      border: '1px solid #e5d8ef',
+      background: '#fff',
+    }}
+    dropdownStyle={{
+      borderRadius: '14px',
+    }}
+  />
+</div>
 
                   {error && <p style={{ color: '#dc2626', marginTop: 8 }}>{error}</p>}
 
@@ -483,13 +504,35 @@ enviarWhatsApp(telefono, json);
     <div style={styles.modal}>
       <h3>Enviar por WhatsApp</h3>
 
-      <input
-        style={styles.input}
-        type="text"
-        placeholder="Ej. 9991234567"
-        value={telefonoEnvio}
-        onChange={(e) => setTelefonoEnvio(e.target.value)}
-      />
+     <PhoneInput
+  country={'mx'}
+  onlyCountries={['mx', 'us']}
+  preferredCountries={['mx', 'us']}
+  enableSearch={false}
+  disableDropdown={false}
+  value={telefono}
+  onChange={setTelefono}
+  countryCodeEditable={false}
+  placeholder="Número de WhatsApp"
+  inputStyle={{
+    width: '100%',
+    height: '54px',
+    borderRadius: '14px',
+    border: '1px solid #e5d8ef',
+    fontSize: '16px',
+    paddingLeft: '48px',
+  }}
+  buttonStyle={{
+    borderTopLeftRadius: '14px',
+    borderBottomLeftRadius: '14px',
+    border: '1px solid #e5d8ef',
+    background: '#fff',
+  }}
+  localization={{
+  us: 'Estados Unidos',
+  mx: 'México',
+}}
+/>
 
       <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
         <button
