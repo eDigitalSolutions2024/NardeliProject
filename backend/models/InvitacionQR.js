@@ -46,6 +46,10 @@ const invitacionQRSchema = new mongoose.Schema(
       default: '',
       trim: true,
     },
+    ultimaCantidadRegistrada: {
+  type: Number,
+  default: 0,
+},
     creadoPor: {
       type: String,
       default: 'cliente',

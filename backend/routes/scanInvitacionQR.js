@@ -80,6 +80,9 @@ router.post('/:qrToken/scan', async (req, res) => {
 
     invitacion.entradasRestantes -= cantidadEntradas;
 
+    invitacion.ultimaCantidadRegistrada =
+      cantidadEntradas;
+
     if (invitacion.entradasRestantes <= 0) {
       invitacion.estado = 'agotada';
       invitacion.entradasRestantes = 0;
