@@ -479,7 +479,7 @@ y+=70;
 // UTENSILIOS
 ////////////////////
 
-title(doc,'UTENSILIOS',y);
+title(doc,'RESERVA',y);
 
 y+=45;
 
@@ -755,19 +755,151 @@ y+=34;
 
 
 
+const movimientos=[];
+
+for(
+let i=1;
+i<receipts.length;
+i++
+){
+
+const anterior=
+Number(
+receipts[
+i-1
+]
+?.snapshot
+?.total
+||
+0
+);
+
+const actual=
+Number(
+receipts[
+i
+]
+?.snapshot
+?.total
+||
+0
+);
+
+const cambio=
+actual-
+anterior;
+
+if(
+cambio!==0
+){
+
+const anteriorItems=
+receipts[
+i-1
+]
+?.snapshot
+?.productos
+||
+[];
+
+const actualItems=
+receipts[
+i
+]
+?.snapshot
+?.productos
+||
+[];
+
+const anteriores=
+new Map(
+anteriorItems.map(
+p=>[
+p.nombre,
+p
+]
+)
+);
+
+const actuales=
+new Map(
+actualItems.map(
+p=>[
+p.nombre,
+p
+]
+)
+);
+
+const cambios=[];
+
+// agregados
+actuales.forEach(
+(v,k)=>{
+
+if(
+!anteriores.has(k)
+){
+
+cambios.push(
+`+ ${v.nombre}${v.cantidad>1?` ×${v.cantidad}`:''}`
+);
+
+}
+
+}
+);
+
+// eliminados
+anteriores.forEach(
+(v,k)=>{
+
+if(
+!actuales.has(k)
+){
+
+cambios.push(
+`− ${v.nombre}`
+);
+
+}
+
+}
+);
+
+movimientos.push({
+
+fecha:
+receipts[
+i
+].issuedAt,
+
+cambio,
+
+nuevoTotal:
+actual,
+
+detalle:
+cambios.join(
+' • '
+)
+
+});
+
+}
+
+}
+
 ////////////////////
 // RESUMEN FINAL
 ////////////////////
 
 if(
-y+180>
+y+220>
 760
 ){
-
 doc.addPage();
-
 y=60;
-
 }
 
 title(
@@ -776,33 +908,161 @@ doc,
 y
 );
 
-y+=45;
+y+=40;
+
+let resumenAlto=
+55+
+(
+movimientos.length*
+18
+);
 
 card(
 doc,
 45,
 y,
 505,
-50
+resumenAlto
+);
+
+let ry=
+y+16;
+
+doc
+.fillColor(
+COLORS.text
+)
+.font(
+'Helvetica-Bold'
+)
+.fontSize(
+9
+)
+.text(
+`Total inicial: ${money(totalOriginal)}`,
+65,
+ry
+);
+
+ry+=22;
+
+movimientos.forEach(
+m=>{
+
+const incremento=
+m.cambio>0;
+
+doc
+.fillColor(
+incremento
+?'#16a34a'
+:'#dc2626'
+)
+.font(
+'Helvetica'
+)
+.fontSize(
+8
+)
+.text(
+
+`${incremento?'+':'−'} ${date(m.fecha)}`,
+
+65,
+
+ry
+
 );
 
 doc
 .fillColor(
 COLORS.text
 )
-.fontSize(10)
+.text(
+
+`${incremento?'Incremento':'Reducción'} ${money(Math.abs(m.cambio))}`,
+
+180,
+
+ry
+
+);
+
+doc
+.fillColor(
+COLORS.muted
+)
+.text(
+
+`Nuevo total ${money(m.nuevoTotal)}`,
+
+360,
+
+ry
+
+);
+
+if(
+m.detalle
+){
+
+doc
+.fillColor(
+'#94a3b8'
+)
 .font(
 'Helvetica'
+)
+.fontSize(
+6
+)
+.text(
+m.detalle,
+180,
+ry+8,
+{
+width:300
+}
+);
+
+ry+=18;
+
+}else{
+
+ry+=16;
+
+}
+
+}
+);
+
+ry+=5;
+
+doc
+.fillColor(
+COLORS.text
+)
+.font(
+'Helvetica-Bold'
+)
+.fontSize(
+9
+)
+.text(
+`Pagado: ${money(pagado)}`,
+65,
+ry
 );
 
 doc.text(
-`Total: ${money(totalActual)}    Pagado: ${money(pagado)}    Saldo: ${money(saldo)}`,
-65,
-y+18
+`Saldo pendiente: ${money(saldo)}`,
+250,
+ry
 );
 
-y+=70;
-
+y+=
+resumenAlto+
+30;
 
 ////////////////////
 // FOOTER
