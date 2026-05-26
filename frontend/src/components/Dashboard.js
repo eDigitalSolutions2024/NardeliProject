@@ -438,13 +438,15 @@ const actividadFiltrada = actividad.filter(a => {
                 Ver PDF
               </a>
             )}
-            <button
-              className="btn btn-sm btn-outline-danger"
-              onClick={() => eliminarCotizacion(a.id)}
-              title="Eliminar cotización"
-            >
-              🗑️ Eliminar
-            </button>
+            {!isAsistente && (
+  <button
+    className="btn btn-sm btn-outline-danger"
+    onClick={() => eliminarCotizacion(a.id)}
+    title="Eliminar cotización"
+  >
+    🗑️ Eliminar
+  </button>
+)}
           </div>
         </div>
       </div>

@@ -467,8 +467,8 @@ i===2
 .fontSize(10)
 .text(
 v[1],
-65+(i*165),
-y+26
+100+(i*165),
+y+27
 );
 
 });
@@ -575,6 +575,7 @@ uy-2,
 
 }
 
+// nombre
 doc
 .fillColor(
 COLORS.text
@@ -593,8 +594,42 @@ doc.text(
 70,
 uy,
 {
-width:240
+lineBreak:false
 }
+);
+
+// precio compacto
+doc
+.fillColor(
+COLORS.muted
+)
+.font(
+'Helvetica'
+)
+.fontSize(
+6
+)
+.text(
+
+money(
+Number(
+u.precio||0
+)
+*
+(
+u.cantidad||1
+)
+),
+
+250,
+
+uy,
+
+{
+width:45,
+align:'right'
+}
+
 );
 
 if(nuevo){

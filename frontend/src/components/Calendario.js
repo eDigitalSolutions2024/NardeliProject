@@ -21,6 +21,9 @@ const Calendario = () => {
   const [activeStartDate, setActiveStartDate] = useState(null);
   const [searchEventos, setSearchEventos] = useState('');
 
+  const usuario = JSON.parse(localStorage.getItem('user') || '{}');
+const role = usuario.role;
+
   const obtenerIcono = (tipo) => {
     switch ((tipo || '').toLowerCase()) {
       case 'boda': return '💒';
@@ -320,14 +323,17 @@ const convertirACotizacion = async (id) => {
             >
               ✏️ Editar
             </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                manejarEliminar(evento.id);
-              }}
-            >
-              🗑️ Eliminar
-            </button>
+            {/* Solo administrador puede eliminar */}
+{role !== 'asistente' && (
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      manejarEliminar(evento.id);
+    }}
+  >
+    🗑️ Eliminar
+  </button>
+)}
             <button
               onClick={(e) => {
                 e.stopPropagation();
