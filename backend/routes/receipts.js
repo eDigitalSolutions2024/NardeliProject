@@ -47,12 +47,109 @@ router.post('/receipts', async (req, res) => {
       return res.status(400).json({ error: `No puedes pagar más del saldo (${totals.remaining.toFixed(2)})` });
     }
 
-    const rc = await Receipt.create({
-      orderId, amount: Number(amount), paymentMethod, currency,
-      concept, customerName, issuedAt: issuedAt || new Date(),
-      notes, issuedBy, taxRate: Number(taxRate||0),
-      folio: 'R-' + Math.random().toString(36).slice(2,8).toUpperCase(),
-    });
+   const reserva=totals.reserva;
+
+    const subtotal=Number(reserva.subTotal||0);
+
+    const descuento=Number(reserva.descuentoCalculado||0);
+
+    const total=Math.max(0,subtotal-descuento);
+
+    const nuevoPagado=
+    totals.paid+
+    Number(
+    amount
+    );
+
+    const saldo=
+    Math.max(
+    0,
+    total-
+    nuevoPagado
+    );
+
+    // detectar productos actuales
+  const origen=
+reserva.utensilios||
+[];
+
+const productos=
+Array.isArray(origen)
+?origen.map(p=>({
+
+itemId:p.itemId,
+nombre:p.nombre,
+cantidad:p.cantidad||1,
+unidad:p.unidad||'',
+categoria:p.categoria||'',
+precio:p.precio||0,
+descripcion:p.descripcion||'',
+fechaAgregado:
+p.fechaAgregado||
+reserva.createdAt||
+new Date()
+}))
+:[];
+
+    const rc=
+    await Receipt.create({
+
+    orderId,
+
+    amount:
+    Number(
+    amount
+    ),
+
+    paymentMethod,
+
+    currency,
+
+    concept,
+
+    customerName,
+
+   issuedAt:
+issuedAt
+?new Date(issuedAt)
+:new Date(),
+
+    notes,
+
+    issuedBy,
+
+    taxRate:
+    Number(
+    taxRate||
+    0
+    ),
+
+    folio:
+    'R-'+
+    Math
+    .random()
+    .toString(36)
+    .slice(2,8)
+    .toUpperCase(),
+    snapshot:{
+ fecha:
+ issuedAt
+ ?new Date(issuedAt)
+ :new Date(),
+
+ productos:
+ Array.isArray(productos)
+ ?productos
+ :[],
+
+ subtotal,
+
+ descuento,
+
+ total,
+
+ saldo
+}});
 
     return res.status(201).json({ ok: true, receipt: rc });
   } catch (e) {

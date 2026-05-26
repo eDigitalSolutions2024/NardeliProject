@@ -7,6 +7,7 @@ const mongoose = require('mongoose');
 const Reserva = require('../models/Reservas');
 const Producto = require('../models/Producto');
 const { streamReservaPDF } = require('../services/reservaPdf');
+const {streamEstadoCuentaPdf} = require('../services/edocuentaPDF');
 const jwt = require('jsonwebtoken');
 const Accesorio = require('../models/Accesorio');
 
@@ -1199,38 +1200,140 @@ router.put('/:id/utensilios', async (req, res) => {
       );
     }
 
-    const snapshot = saneados.map(s => {
-      const key = s.itemId ? String(s.itemId) : null;
-      const prev = key && prevById.get(key);
-      const prevPrice = prev ? Number(prev.precio) : undefined;
-      const prevDesc = prev ? (prev.descripcion || '') : '';
-      const inv = key && invById.get(key);
-      const invPrice = inv ? inv.precio : undefined;
-      const invDesc = inv ? inv.descripcion : '';
+    const snapshot=saneados.map(s=>{
 
-      const finalPrice =
-        Number.isFinite(Number(s._precioInput)) ? Number(s._precioInput)
-        : (Number.isFinite(prevPrice) && prevPrice > 0) ? prevPrice
-        : (Number.isFinite(invPrice) && invPrice > 0) ? invPrice
-        : 0;
+const key=s.itemId
+?String(s.itemId)
+:null;
 
-      const hasInputDesc =
-        s._descInput != null && String(s._descInput).trim() !== '';
+const prev=
+key
+?prevById.get(key)
+:null;
 
-      const finalDesc = hasInputDesc
-        ? String(s._descInput)
-        : (prevDesc || invDesc || '');
+const prevPrice=
+prev
+?Number(prev.precio)
+:undefined;
 
-      const { _precioInput, _descInput, ...rest } = s;
+const prevDesc=
+prev
+?(prev.descripcion||'')
+:'';
 
-      return {
-        ...rest,
-        precio: finalPrice,
-        descripcion: finalDesc,
-         // ✅ NUEVO
-  aplicarDescuento: !!discountItems[String(s.itemId)]
-      };
-    });
+const inv=
+key
+&&
+invById.get(key);
+
+const invPrice=
+inv
+?inv.precio
+:undefined;
+
+const invDesc=
+inv
+?inv.descripcion
+:'';
+
+const finalPrice=
+Number.isFinite(
+Number(
+s._precioInput
+)
+)
+?Number(
+s._precioInput
+)
+:
+(
+Number.isFinite(
+prevPrice
+)
+&&
+prevPrice>0
+)
+?prevPrice
+:
+(
+Number.isFinite(
+invPrice
+)
+&&
+invPrice>0
+)
+?invPrice
+:
+0;
+
+const hasInputDesc=
+s._descInput!=null
+&&
+String(
+s._descInput
+)
+.trim()!=='';
+
+const finalDesc=
+hasInputDesc
+?String(
+s._descInput
+)
+:
+(
+prevDesc
+||
+invDesc
+||
+''
+);
+
+const fechaAgregado=
+
+prev
+?.fechaAgregado
+
+||
+
+new Date(
+new Date()
+.toLocaleString(
+'en-US',
+{
+timeZone:
+TZ
+}
+)
+);
+
+const {
+_precioInput,
+_descInput,
+...rest
+}=s;
+
+return{
+
+...rest,
+
+precio:
+finalPrice,
+
+descripcion:
+finalDesc,
+
+aplicarDescuento:
+!!discountItems[
+String(
+s.itemId
+)
+],
+
+fechaAgregado
+
+};
+
+});
 
     const updated = await Reserva.findByIdAndUpdate(
       id,
@@ -1384,6 +1487,46 @@ router.get('/:id/pdf', async (req, res) => {
     return res.status(500).json({ msg: 'Error interno al generar PDF' });
   }
 });
+
+router.get(
+  '/:id/estado-cuenta/pdf',
+  async (req, res) => {
+
+    try {
+
+      const { id } = req.params;
+
+      if (!mongoose.isValidObjectId(id)) {
+        return res
+          .status(400)
+          .json({
+            msg:'ID inválido'
+          });
+      }
+
+      await streamEstadoCuentaPdf(
+        res,
+        id
+      );
+
+    } catch (e) {
+
+      console.error(
+        'estado cuenta:',
+        e
+      );
+
+      return res
+        .status(500)
+        .json({
+          msg:
+          'Error al generar estado de cuenta'
+        });
+
+    }
+
+  }
+);
 
 // ===== Descuento y totales =====
 function calcularSubTotal(utensilios = []) {

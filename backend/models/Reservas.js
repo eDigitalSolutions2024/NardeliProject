@@ -15,6 +15,8 @@ const utensilioSchema = new mongoose.Schema(
     imagen: { type: String, default: '' },
 
     aplicarDescuento: { type: Boolean, default: false },
+
+    fechaAgregado:{ type:Date, default:Date.now}
   },
   { _id: true } // <- necesario para editar líneas por ID
 );

@@ -984,6 +984,23 @@ function openReceiptPdfById(id) {
 
 
 
+function openEstadoCuentaPdf() {
+  if (!reservaId) {
+    alert('No hay reserva seleccionada');
+    return;
+  }
+
+  const url =
+    `${API_BASE_URL}/reservas/${reservaId}/estado-cuenta/pdf`;
+
+  window.open(
+    url,
+    '_blank',
+    'noopener'
+  );
+}
+
+
   return (
     <div className="cliente-dashboard">
       <div className="cd-header">
@@ -1417,6 +1434,30 @@ onMouseLeave={(e) => {
               >
                 Ver historial de cambios
               </button>
+
+
+              <button
+  className="pdf"
+  type="button"
+  style={{
+    background: '#9333ea',
+    color: '#fff',
+    marginTop: 8
+  }}
+  onMouseEnter={(e) => {
+    e.target.style.transform = 'translateY(-1px)';
+    e.target.style.boxShadow =
+      '0 6px 14px rgba(147,51,234,.35)';
+  }}
+  onMouseLeave={(e) => {
+    e.target.style.transform = 'translateY(0)';
+    e.target.style.boxShadow =
+      '0 4px 10px rgba(147,51,234,.25)';
+  }}
+  onClick={openEstadoCuentaPdf}
+>
+  Estado de cuenta
+</button>
             </div>
           )}
 
