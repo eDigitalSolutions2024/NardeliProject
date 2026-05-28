@@ -164,9 +164,9 @@ ${urlQR}
         throw new Error('La cantidad de personas debe ser mayor a 0');
       }
 
-      if (personas > 12) {
+      /*if (personas > 12) {
         throw new Error('Máximo 12 personas por código QR. Si tu grupo supera ese límite, genera otro QR para las personas restantes.');
-      }
+      }*/
 
       const resp = await fetch(`${API_BASE_URL}/invitaciones-qr/${token}`, {
         method: 'POST',
@@ -292,10 +292,12 @@ enviarWhatsApp(telefono, json);
                 <div style={{ marginBottom: 20 }}>
                   <h3 style={{ marginBottom: 8, color: '#2d143d' }}>Gestionar invitaciones</h3>
                   <p style={{ color: '#6b7280', margin: 0 }}>
-                    Crea invitaciones por familia o grupo. Cada código QR permite máximo 12 accesos.
-                    Si tu grupo supera ese límite, genera otro QR para las personas restantes.
+                     Crea invitaciones por familia o grupo.
+  El límite de personas depende de la disponibilidad del evento.
                   </p>
                 </div>
+
+                
 
                 <form onSubmit={crearInvitacion}>
                   <div style={styles.fieldBlock}>
@@ -315,14 +317,15 @@ enviarWhatsApp(telefono, json);
                       style={styles.input}
                       type="number"
                       min="1"
-                      max="12"
+                      max={portalInfo?.disponibles || undefined}
+                      //max="12"
                       value={personasAutorizadas}
                       onChange={(e) => setPersonasAutorizadas(e.target.value)}
-                      placeholder="Máximo 12"
+                      //placeholder="Máximo 12"
                     />
-                    <small style={{ color: '#6b7280' }}>
+                    {/*<small style={{ color: '#6b7280' }}>
                       Máximo 12 personas por código QR. Si tu grupo supera ese límite, genera otro QR para las personas restantes.
-                    </small>
+                    </small>*/}
                   </div>
 
                   <div style={styles.fieldBlock}>

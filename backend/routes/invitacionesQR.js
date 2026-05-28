@@ -68,11 +68,11 @@ router.post('/:token', async (req, res) => {
       return res.status(400).json({ msg: 'La cantidad de personas debe ser mayor a 0' });
     }
 
-    if (personas > 12) {
+    /*if (personas > 12) {
       return res.status(400).json({
         msg: 'Máximo 12 personas por código QR. Genera otro QR para las personas restantes.'
       });
-    }
+    }*/
 
 
     const reserva = await Reserva.findById(portal.reservaId);

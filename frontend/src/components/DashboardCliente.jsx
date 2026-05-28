@@ -51,6 +51,9 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
   const [showModalInvitaciones, setShowModalInvitaciones] = useState(false);
   const [reservaSeleccionadaId, setReservaSeleccionadaId] = useState(null);
 
+
+  const role = localStorage.getItem('role');
+  
   const abrirModalInvitaciones = (reservaId) => {
     setReservaSeleccionadaId(reservaId);
     setShowModalInvitaciones(true);
