@@ -818,28 +818,28 @@ const actualizarReserva = async () => {
     alert('Aún no se carga la reserva. Intenta de nuevo en unos segundos.');
     return;
   }
-  // Cargar tipo de cambio global
+
+  // Cargar tipo de cambio global primero
+  let globalTC = null;
   try {
     const tcRes = await fetch(`${API_BASE_URL}/settings/tipo-cambio`);
     const tcData = await tcRes.json();
-    if (tcData.value) setReceiptForm(f => ({ ...f, exchangeRate: Number(tcData.value) }));
+    if (tcData.value) globalTC = Number(tcData.value);
   } catch {}
 
- const fmtFechaMX = (d) => {
-  try {
-    const dt = d ? new Date(d) : null;
-    return dt ? dt.toLocaleDateString('es-MX') : '';
-  } catch { return ''; }
-};
-  const cliente = (reservaData?.cliente || '').trim() || 'Cliente';
+  const fmtFechaMX = (d) => {
+    try {
+      const dt = d ? new Date(d) : null;
+      return dt ? dt.toLocaleDateString('es-MX') : '';
+    } catch { return ''; }
+  };
 
+  const cliente = (reservaData?.cliente || '').trim() || 'Cliente';
   const conceptoBase = [
     (reservaData?.tipoEvento || 'Evento'),
     fmtFechaMX(reservaData?.fecha)
   ].filter(Boolean).join(' – ');
-
   const concept = `${conceptoBase}${conceptoBase ? ' • ' : ''}Reserva ${reservaId || ''}`.trim();
-
   const notasParts = [
     reservaData?.descripcion && `Descripción: ${reservaData.descripcion}`,
     (reservaData?.horaInicio && reservaData?.horaFin) && `Horario: ${reservaData.horaInicio}–${reservaData.horaFin}`,
@@ -848,18 +848,18 @@ const actualizarReserva = async () => {
     reservaData?.telefono && `Tel: ${reservaData.telefono}`
   ].filter(Boolean);
 
+  // Una sola llamada con todos los datos incluyendo el tipo de cambio
   setReceiptForm(f => ({
     ...f,
     customerName: cliente,
     concept,
     issuedAt: todayStr,
     currency: reservaData?.precios?.moneda || f.currency || 'MXN',
-    notes: notasParts.join(' • ')
+    notes: notasParts.join(' • '),
+    ...(globalTC ? { exchangeRate: globalTC } : {}),
   }));
 
-  // ⬇️ Prefill del monto a cobrar = saldo actual
   setPaymentAmount(Number(saldoRestante || 0));
-
   setShowReceiptModal(true);
 }
 
@@ -1678,7 +1678,7 @@ onMouseLeave={(e) => {
                 <select
                   className="cd-select"
                   value={receiptForm.currency}
-                  onChange={(e)=>setReceiptForm(s=>({...s, currency:e.target.value, exchangeRate:''}))}
+                  onChange={(e)=>setReceiptForm(s=>({...s, currency:e.target.value}))}
                 >
                   <option value="MXN">MXN — Pesos mexicanos</option>
                   <option value="USD">USD — Dólares</option>
