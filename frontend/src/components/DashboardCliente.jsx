@@ -813,11 +813,18 @@ const actualizarReserva = async () => {
 
  
 
- function openReceiptModalPrefill() {
+ async function openReceiptModalPrefill() {
   if (!reservaData) {
     alert('Aún no se carga la reserva. Intenta de nuevo en unos segundos.');
     return;
   }
+  // Cargar tipo de cambio global
+  try {
+    const tcRes = await fetch(`${API_BASE_URL}/settings/tipo-cambio`);
+    const tcData = await tcRes.json();
+    if (tcData.value) setReceiptForm(f => ({ ...f, exchangeRate: Number(tcData.value) }));
+  } catch {}
+
  const fmtFechaMX = (d) => {
   try {
     const dt = d ? new Date(d) : null;
@@ -1686,8 +1693,11 @@ onMouseLeave={(e) => {
                     step="0.01"
                     min="1"
                     value={receiptForm.exchangeRate}
-                    onChange={(e)=>setReceiptForm(s=>({...s, exchangeRate:e.target.value}))}
+                    onChange={(e)=> me?.role === 'admin' && setReceiptForm(s=>({...s, exchangeRate:e.target.value}))}
+                    readOnly={me?.role !== 'admin'}
+                    style={me?.role !== 'admin' ? { background: '#f3f4f6', cursor: 'not-allowed' } : {}}
                     placeholder="Ej. 18.50"
+                    title={me?.role !== 'admin' ? 'Solo el administrador puede modificar el tipo de cambio' : ''}
                   />
                   {receiptForm.exchangeRate > 0 && paymentAmount > 0 && (
                     <small className="small" style={{color:'#6D28D9', fontWeight:600}}>

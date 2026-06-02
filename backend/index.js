@@ -83,6 +83,7 @@ app.use('/api/invitaciones-qr', invitacionesQRRoutes);
 app.use('/api/scan-invitacion-qr', scanInvitacionQRRoutes);
 
 app.use('/api/app', require('./routes/appDashboard'));
+app.use('/api/settings', require('./routes/settings'));
 
 // Si tienes inventario por separado:
 // app.use('/api/inventario', require('./routes/inventario'));

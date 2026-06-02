@@ -35,9 +35,14 @@ const Dashboard = ({ onLogout }) => {
 
 
 
-  // === Nuevo: modal de edición de cotización ===
+  // === Modal edición cotización ===
   const [showEditCot, setShowEditCot] = useState(false);
   const [cotEdit, setCotEdit] = useState(null);
+
+  // === Tipo de cambio global ===
+  const [tipoCambio, setTipoCambio] = useState(18.00);
+  const [editandoTC, setEditandoTC] = useState(false);
+  const [tcInput, setTcInput] = useState('');
 
   // Helpers
   const obtenerIcono = (tipo = '') => {
@@ -105,6 +110,32 @@ const Dashboard = ({ onLogout }) => {
       }
     }
   }, []);
+
+  // ---- Tipo de cambio ----
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/settings/tipo-cambio`)
+      .then(r => r.json())
+      .then(d => { if (d.value) setTipoCambio(Number(d.value)); })
+      .catch(() => {});
+  }, []);
+
+  const guardarTipoCambio = async () => {
+    const v = Number(tcInput);
+    if (!v || v <= 0) return alert('Ingresa un valor válido.');
+    const token = localStorage.getItem('token') || '';
+    const r = await fetch(`${API_BASE_URL}/settings/tipo-cambio`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ value: v }),
+    });
+    if (r.ok) {
+      setTipoCambio(v);
+      setEditandoTC(false);
+    } else {
+      const err = await r.json().catch(() => ({}));
+      alert(err?.error || 'No se pudo guardar.');
+    }
+  };
 
   // ---- Carga de datos del dashboard (eventos + cotizaciones) ----
   const cargarDashboardData = async () => {
@@ -357,6 +388,62 @@ const actividadFiltrada = actividad.filter(a => {
                   <p className="stat-number">{kpis.proximosEventos}</p>
                 </div>
               </div>
+            </div>
+
+            {/* Widget Tipo de Cambio */}
+            <div style={{
+              background: '#fff',
+              border: '1px solid #e5e7eb',
+              borderRadius: 12,
+              padding: '12px 20px',
+              marginBottom: 16,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 16,
+              flexWrap: 'wrap',
+            }}>
+              <span style={{ fontSize: 20 }}>💵</span>
+              <div>
+                <span style={{ fontWeight: 700, fontSize: 14 }}>Tipo de cambio USD → MXN</span>
+                {!editandoTC ? (
+                  <span style={{ marginLeft: 10, fontSize: 16, color: '#6D28D9', fontWeight: 700 }}>
+                    ${tipoCambio.toFixed(2)} MXN
+                  </span>
+                ) : null}
+              </div>
+
+              {isAdmin && !editandoTC && (
+                <button
+                  onClick={() => { setTcInput(tipoCambio); setEditandoTC(true); }}
+                  style={{ background: 'none', border: '1px solid #6D28D9', color: '#6D28D9', borderRadius: 8, padding: '4px 12px', cursor: 'pointer', fontSize: 13 }}
+                >
+                  ✏️ Cambiar
+                </button>
+              )}
+
+              {isAdmin && editandoTC && (
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    value={tcInput}
+                    onChange={e => setTcInput(e.target.value)}
+                    style={{ width: 100, padding: '4px 8px', borderRadius: 8, border: '1px solid #6D28D9', fontSize: 14 }}
+                    autoFocus
+                  />
+                  <button onClick={guardarTipoCambio} style={{ background: '#6D28D9', color: '#fff', border: 'none', borderRadius: 8, padding: '4px 14px', cursor: 'pointer', fontSize: 13 }}>
+                    Guardar
+                  </button>
+                  <button onClick={() => setEditandoTC(false)} style={{ background: 'none', border: '1px solid #ccc', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 13 }}>
+                    Cancelar
+                  </button>
+                </div>
+              )}
+
+              {!isAdmin && (
+                <span style={{ fontSize: 12, color: '#9ca3af' }}>Solo el administrador puede modificarlo</span>
+              )}
             </div>
 
             {/* Cotizaciones pendientes */}
