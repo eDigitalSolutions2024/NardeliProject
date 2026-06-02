@@ -186,6 +186,9 @@ async function streamReceiptPdf(res, receiptId) {
   const metodo = (receipt.paymentMethod || '').toUpperCase();
   const amount = Number(receipt.amount || 0);
   const issuedAt = receipt.issuedAt ? fmtDate(receipt.issuedAt) : fmtDate(new Date());
+  const esDolar = receipt.currencyOriginal === 'USD' && receipt.amountOriginal != null;
+  const amountOriginal = Number(receipt.amountOriginal || 0);
+  const exchangeRate = Number(receipt.exchangeRate || 0);
 
   // Totales (usando virtuales de Reserva si existen)
   const subtotal = Number(reserva?.subTotal || 0);
@@ -290,14 +293,31 @@ async function streamReceiptPdf(res, receiptId) {
   y += 20;
 
   // Anticipo
-  drawLabeledLine(doc, {
-    label: 'Anticipo:',
-    value: money(amount),
-    x: contentX,
-    y,
-    w: contentW,
-  });
-  y += 20;
+  if (esDolar) {
+    drawLabeledLine(doc, {
+      label: 'Anticipo (USD):',
+      value: `$${amountOriginal.toFixed(2)} dólares`,
+      x: contentX, y, w: contentW,
+    });
+    y += 18;
+    drawLabeledLine(doc, {
+      label: 'Tipo de cambio:',
+      value: `$${exchangeRate.toFixed(2)} MXN por USD`,
+      x: contentX, y, w: contentW,
+    });
+    y += 18;
+    // Equivalente en MXN destacado
+    doc.font('Helvetica-Bold').fontSize(10).fillColor(THEME.primaryDk).text('Equivalente en MXN:', contentX, y, { width: 150 });
+    doc.font('Helvetica-Bold').fontSize(10).fillColor(THEME.primary).text(money(amount) + ' MXN', contentX + 158, y);
+    y += 20;
+  } else {
+    drawLabeledLine(doc, {
+      label: 'Anticipo:',
+      value: money(amount),
+      x: contentX, y, w: contentW,
+    });
+    y += 20;
+  }
 
   // Teléfono
   drawLabeledLine(doc, {
@@ -426,7 +446,7 @@ const totalsBoxH = rowsCount * 16 + 16;
   // Footer contacto
   doc.font('Helvetica').fontSize(9).fillColor('#6b7280');
   doc.text(
-    'Tel: 656 105 6717   •   nardelicentrodeeventos@gmail.com',
+    'Tel: 656 105 6717   •   eventosnardeli@gmail.com',
     contentX,
     pageH - 50,
     { width: pageW - contentX - 36, align: 'right' }

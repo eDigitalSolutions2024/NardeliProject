@@ -1,29 +1,65 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../api';
 import './Reservar.css';
+
+const BORRADOR_KEY = 'nardeli_reserva_borrador';
+
+const camposSignificativos = ['cliente', 'correo', 'tipoEvento', 'fecha', 'telefono', 'cantidadPersonas', 'descripcion', 'notaCotizacion'];
+const tieneContenido = (data) => camposSignificativos.some(k => String(data[k] || '').trim() !== '');
+
+const formInicial = {
+  cliente: '',
+  correo: '',
+  tipoEvento: '',
+  fecha: '',
+  horaInicio: '',
+  horaFin: '',
+  telefono: '',
+  cantidadPersonas: '',
+  descripcion: '',
+  tipoReserva: 'cotizacion',
+  notaCotizacion: ''
+};
 // ✅ Cuando quieras activar el envío de código, descomenta la línea de abajo:
 // import { iniciarAccesoPorCorreo } from '../api/auth';
 
 const ReservarEvento = () => {
-  const [formData, setFormData] = useState({
-    cliente: '',
-    correo: '',
-    tipoEvento: '',
-    fecha: '',
-    horaInicio: '',
-    horaFin: '',
-    telefono: '',
-    cantidadPersonas: '',
-    descripcion: '',
-    // Nuevo: distinguir cotización / evento
-    tipoReserva: 'cotizacion',   // 'evento' | 'cotizacion'
-    notaCotizacion: ''
+  const [formData, setFormData] = useState(() => {
+    try {
+      const guardado = localStorage.getItem(BORRADOR_KEY);
+      return guardado ? { ...formInicial, ...JSON.parse(guardado) } : formInicial;
+    } catch {
+      return formInicial;
+    }
   });
 
+  const [tieneBorrador, setTieneBorrador] = useState(() => {
+    try {
+      const guardado = localStorage.getItem(BORRADOR_KEY);
+      return guardado ? tieneContenido(JSON.parse(guardado)) : false;
+    } catch { return false; }
+  });
   const [mensaje, setMensaje] = useState('');
   const [enviando, setEnviando] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (tieneContenido(formData)) {
+      localStorage.setItem(BORRADOR_KEY, JSON.stringify(formData));
+      setTieneBorrador(true);
+    } else {
+      localStorage.removeItem(BORRADOR_KEY);
+      setTieneBorrador(false);
+    }
+  }, [formData]);
+
+  const limpiarBorrador = () => {
+    localStorage.removeItem(BORRADOR_KEY);
+    setFormData(formInicial);
+    setTieneBorrador(false);
+    setMensaje('');
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -119,20 +155,10 @@ function getDashboardModeFromRole(role) {
         return;
       }
 
-      // Limpiar formulario
-      setFormData({
-        cliente: '',
-        correo: '',
-        tipoEvento: '',
-        fecha: '',
-        horaInicio: '',
-        horaFin: '',
-        telefono: '',
-        cantidadPersonas: '',
-        descripcion: '',
-        tipoReserva: 'cotizacion',
-        notaCotizacion: ''
-      });
+      // Limpiar formulario y borrador
+      localStorage.removeItem(BORRADOR_KEY);
+      setFormData(formInicial);
+      setTieneBorrador(false);
 
 // ── Ir al dashboard (evento o cotización) con modo por rol ───────────────
       if (action === 'dashboard') {
@@ -189,6 +215,36 @@ function getDashboardModeFromRole(role) {
   return (
     <div className="reserva-form-container">
       <h2>Reservar Evento</h2>
+
+      {tieneBorrador && (
+        <div style={{
+          background: '#fff8e1',
+          border: '1px solid #f0a500',
+          borderRadius: 8,
+          padding: '8px 14px',
+          marginBottom: 12,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: 13,
+        }}>
+          <span>📋 Tienes datos guardados de un formulario anterior.</span>
+          <button
+            type="button"
+            onClick={limpiarBorrador}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#c0392b',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: 13,
+            }}
+          >
+            Limpiar ✕
+          </button>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         {/* Toggle cotización/evento */}

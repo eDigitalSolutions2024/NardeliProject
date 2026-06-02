@@ -808,6 +808,7 @@ const actualizarReserva = async () => {
     issuedAt: '', // YYYY-MM-DD
     notes: '',
     taxRate: 0.16,
+    exchangeRate: '',
   });
 
  
@@ -909,13 +910,27 @@ async function deleteReceiptById(id) {
         unitPrice: Number(priceFor(item.id) || 0),
       }));
       // === Validación: no sobrepagar ===
-const amt = Number(paymentAmount || 0);
-if (!Number.isFinite(amt) || amt <= 0) {
+const esUSD = receiptForm.currency === 'USD';
+const tipoCambio = Number(receiptForm.exchangeRate || 0);
+if (esUSD && (!tipoCambio || tipoCambio <= 0)) {
+  return alert('Ingresa el tipo de cambio (MXN por USD) para continuar.');
+}
+const amtOriginal = Number(paymentAmount || 0);
+let amt = esUSD ? amtOriginal * tipoCambio : amtOriginal;
+if (!Number.isFinite(amtOriginal) || amtOriginal <= 0) {
   return alert('El monto a cobrar debe ser mayor a cero.');
 }
-if (amt > saldoRestante + 0.0001) { // tolerancia flotantes
-  return alert(`No puedes cobrar más del saldo restante ($${saldoRestante.toFixed(2)}).`);
+// Tolerancia: USD puede generar diferencias de centavos por redondeo del tipo de cambio
+const tolerancia = esUSD ? 1.0 : 0.01;
+if (amt > saldoRestante + tolerancia) {
+  const maxUSD = esUSD ? (saldoRestante / tipoCambio).toFixed(2) : null;
+  return alert(esUSD
+    ? `No puedes cobrar más del saldo restante. Máximo: USD $${maxUSD} (= $${saldoRestante.toFixed(2)} MXN)`
+    : `No puedes cobrar más del saldo restante ($${saldoRestante.toFixed(2)}).`
+  );
 }
+// Si está dentro de la tolerancia, ajustar al saldo exacto para que el backend no rechace
+if (amt > saldoRestante) amt = saldoRestante;
 
 
       if (itemsPayload.length === 0) {
@@ -927,13 +942,18 @@ if (amt > saldoRestante + 0.0001) { // tolerancia flotantes
   concept: receiptForm.concept || `Reserva ${reservaId}`,
   items: itemsPayload,
   taxRate: Number(receiptForm.taxRate || 0),
-  currency: receiptForm.currency || 'MXN',
+  currency: 'MXN',
   paymentMethod: receiptForm.paymentMethod || 'EFECTIVO',
-  issuedAt: receiptForm.issuedAt || todayStr, // 'YYYY-MM-DD'
+  issuedAt: receiptForm.issuedAt || todayStr,
   issuedBy: me?.email || me?.name || 'centro de eventos Nardeli',
   notes: receiptForm.notes || '',
   tz: 'America/Ciudad_Juarez',
-  amount: amt,  // ⬅️ monto de este recibo/pago parcial
+  amount: amt,  // siempre en MXN
+  ...(esUSD && {
+    amountOriginal: amtOriginal,
+    currencyOriginal: 'USD',
+    exchangeRate: tipoCambio,
+  }),
 
 
   // 🔽 datos útiles de la reserva:
@@ -1647,16 +1667,35 @@ onMouseLeave={(e) => {
                 </select>
               </div>
               <div>
-                <label>Moneda</label>
+                <label>Moneda del pago</label>
                 <select
                   className="cd-select"
                   value={receiptForm.currency}
-                  onChange={(e)=>setReceiptForm(s=>({...s, currency:e.target.value}))}
+                  onChange={(e)=>setReceiptForm(s=>({...s, currency:e.target.value, exchangeRate:''}))}
                 >
-                  <option value="MXN">MXN</option>
-                  <option value="USD">USD</option>
+                  <option value="MXN">MXN — Pesos mexicanos</option>
+                  <option value="USD">USD — Dólares</option>
                 </select>
               </div>
+              {receiptForm.currency === 'USD' && (
+                <div>
+                  <label>Tipo de cambio (MXN por 1 USD)</label>
+                  <input
+                    className="cd-input"
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    value={receiptForm.exchangeRate}
+                    onChange={(e)=>setReceiptForm(s=>({...s, exchangeRate:e.target.value}))}
+                    placeholder="Ej. 18.50"
+                  />
+                  {receiptForm.exchangeRate > 0 && paymentAmount > 0 && (
+                    <small className="small" style={{color:'#6D28D9', fontWeight:600}}>
+                      USD ${Number(paymentAmount).toFixed(2)} × ${Number(receiptForm.exchangeRate).toFixed(2)} = ${(paymentAmount * receiptForm.exchangeRate).toFixed(2)} MXN
+                    </small>
+                  )}
+                </div>
+              )}
               <div>
                 <label>IVA / Tasa impuesto</label>
                 <input
@@ -1673,23 +1712,23 @@ onMouseLeave={(e) => {
               </div>
 
               <div>
-                <label>Monto a cobrar ahora</label>
+                <label>Monto a cobrar ahora ({receiptForm.currency === 'USD' ? 'USD $' : 'MXN $'})</label>
                 <input
                   className="cd-input"
                   type="number"
                   step="0.01"
                   min="0"
-                  max={Math.max(0, saldoRestante)}
                   value={paymentAmount}
-                  onChange={(e)=> {
-                    const v = Number(e.target.value || 0);
-                    // clamp para no pasar del saldo
-                    setPaymentAmount(Math.max(0, Math.min(v, Math.max(0, saldoRestante))));
-                  }}
-                  placeholder={saldoRestante.toFixed(2)}
+                  onChange={(e)=>setPaymentAmount(Math.max(0, Number(e.target.value || 0)))}
+                  placeholder={receiptForm.currency === 'USD' && receiptForm.exchangeRate > 0
+                    ? (saldoRestante / receiptForm.exchangeRate).toFixed(2)
+                    : saldoRestante.toFixed(2)}
                 />
                 <small className="small">
-                  Saldo restante actual: <strong>{money(saldoRestante)}</strong> (Total: ${totalConDescuento.toFixed(2)} • Pagado: ${totalPagado.toFixed(2)})
+                  Saldo restante: <strong>{money(saldoRestante)} MXN</strong>
+                  {receiptForm.currency === 'USD' && receiptForm.exchangeRate > 0 && (
+                    <> · USD máx: <strong>${(saldoRestante / receiptForm.exchangeRate).toFixed(2)}</strong></>
+                  )}
                 </small>
               </div>
 

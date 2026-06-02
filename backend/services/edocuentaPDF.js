@@ -1152,7 +1152,7 @@ COLORS.muted
 8
 )
 .text(
-'contacto@nardeli.mx · +52 656 105 6717',
+'eventosnardeli@gmail.com · +52 656 105 6717',
 45,
 fy+28
 );

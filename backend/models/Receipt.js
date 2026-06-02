@@ -84,6 +84,11 @@ const receiptSchema=new mongoose.Schema({
   default:0
  },
 
+ // Pago en dólares
+ amountOriginal:{ type:Number, default:null },
+ currencyOriginal:{ type:String, default:null },
+ exchangeRate:{ type:Number, default:null },
+
  snapshot:{
   type:snapshotSchema,
   default:null

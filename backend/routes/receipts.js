@@ -33,6 +33,7 @@ router.post('/receipts', async (req, res) => {
       orderId, amount, paymentMethod='EFECTIVO', currency='MXN',
       concept='', customerName='', issuedAt, notes='',
       issuedBy='sistema', taxRate=0,
+      amountOriginal=null, currencyOriginal=null, exchangeRate=null,
     } = req.body || {};
 
     if (!orderId) return res.status(400).json({ error: 'orderId requerido' });
@@ -43,9 +44,13 @@ router.post('/receipts', async (req, res) => {
     const totals = await getTotals(orderId);
     if (!totals) return res.status(404).json({ error: 'Reserva no encontrada' });
 
-    if (Number(amount) > totals.remaining + 1e-6) {
+    const esPagoUSD = currencyOriginal === 'USD';
+    const toleranciaBackend = esPagoUSD ? 1.0 : 0.01;
+    if (Number(amount) > totals.remaining + toleranciaBackend) {
       return res.status(400).json({ error: `No puedes pagar más del saldo (${totals.remaining.toFixed(2)})` });
     }
+    // Ajustar al saldo exacto si está dentro de la tolerancia
+    const amountFinal = Math.min(Number(amount), totals.remaining);
 
    const reserva=totals.reserva;
 
@@ -55,11 +60,7 @@ router.post('/receipts', async (req, res) => {
 
     const total=Math.max(0,subtotal-descuento);
 
-    const nuevoPagado=
-    totals.paid+
-    Number(
-    amount
-    );
+    const nuevoPagado= totals.paid + amountFinal;
 
     const saldo=
     Math.max(
@@ -96,10 +97,7 @@ new Date()
 
     orderId,
 
-    amount:
-    Number(
-    amount
-    ),
+    amount: amountFinal,
 
     paymentMethod,
 
@@ -123,6 +121,10 @@ issuedAt
     taxRate||
     0
     ),
+
+    amountOriginal: amountOriginal != null ? Number(amountOriginal) : null,
+    currencyOriginal: currencyOriginal || null,
+    exchangeRate: exchangeRate != null ? Number(exchangeRate) : null,
 
     folio:
     'R-'+

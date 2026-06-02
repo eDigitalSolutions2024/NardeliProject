@@ -20,6 +20,7 @@ const Calendario = () => {
   const [reservaEditando, setReservaEditando] = useState(null);
   const [activeStartDate, setActiveStartDate] = useState(null);
   const [searchEventos, setSearchEventos] = useState('');
+  const [eventoRapido, setEventoRapido] = useState(null);
 
   const usuario = JSON.parse(localStorage.getItem('user') || '{}');
 const role = usuario.role;
@@ -227,10 +228,16 @@ const convertirACotizacion = async (id) => {
   const eventosDelDia = getEventosDelDia(date);
 
   const eventosFiltrados = eventos.filter((e) => {
+  if (eventoRapido) return e.id === eventoRapido;
   if (!searchEventos.trim()) return true;
   const texto = `${e.titulo || ''} ${e.cliente || ''} ${formatearFecha(e.ymd)}`.toLowerCase();
   return texto.includes(searchEventos.toLowerCase());
 });
+
+  const seleccionarEventoRapido = (id) => {
+    setEventoRapido(prev => prev === id ? null : id);
+    setSearchEventos('');
+  };
 
   // Botón para ir al Panel (DashboardCliente) con reservaId y modo admin
   const irAlPanelAdmin = () => {
@@ -262,8 +269,27 @@ const convertirACotizacion = async (id) => {
     <span className="eventos-count">
       {eventosFiltrados.length} de {eventos.length} eventos
     </span>
+    {eventoRapido && (
+      <span
+        style={{
+          marginLeft: 8,
+          background: '#f0a500',
+          color: '#fff',
+          borderRadius: 12,
+          padding: '2px 10px',
+          fontSize: 12,
+          fontWeight: 600,
+          cursor: 'pointer',
+        }}
+        onClick={() => setEventoRapido(null)}
+        title="Limpiar filtro rápido"
+      >
+        Filtro rápido ✕
+      </span>
+    )}
   </div>
 
+  {!eventoRapido && (
   <input
     type="text"
     placeholder="Buscar por cliente, fecha o tipo..."
@@ -277,6 +303,7 @@ const convertirACotizacion = async (id) => {
       minWidth: 220,
     }}
   />
+  )}
 </div>
 
 
@@ -463,13 +490,31 @@ const convertirACotizacion = async (id) => {
               <div className="eventos-dia">
                 <h4>Eventos programados:</h4>
                 {eventosDelDia.map((evento) => (
-                  <div key={evento.id} className="evento-dia-item">
+                  <div
+                    key={evento.id}
+                    className="evento-dia-item"
+                    onClick={() => seleccionarEventoRapido(evento.id)}
+                    title="Clic para acceso rápido"
+                    style={{
+                      cursor: 'pointer',
+                      borderRadius: 8,
+                      padding: '4px 8px',
+                      background: eventoRapido === evento.id ? '#fff3cd' : 'transparent',
+                      border: eventoRapido === evento.id ? '1.5px solid #f0a500' : '1.5px solid transparent',
+                      transition: 'background 0.2s',
+                    }}
+                  >
                     <span className="evento-dia-icon">{evento.icon}</span>
                     <div className="evento-dia-info">
                       <strong>{evento.titulo}</strong>
                       <small>
                         {toHHmm(evento.horaInicio)} – {toHHmm(evento.horaFin)} · {evento.invitados} invitados
                       </small>
+                      {eventoRapido === evento.id && (
+                        <small style={{ display: 'block', color: '#f0a500', fontWeight: 600 }}>
+                          ← ver en Próximos Eventos
+                        </small>
+                      )}
                     </div>
                   </div>
                 ))}
