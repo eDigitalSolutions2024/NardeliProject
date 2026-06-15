@@ -19,6 +19,8 @@ export default function IngresaCodigoInvitacion() {
   );
   const [invitaciones, setInvitaciones] = useState([]);
   const [loadingInvitaciones, setLoadingInvitaciones] = useState(false);
+  const [capacidadTotal, setCapacidadTotal] = useState(0);
+  const [disponibles, setDisponibles] = useState(0);
 
   const [nombreFamilia, setNombreFamilia] = useState('');
   const [personasAutorizadas, setPersonasAutorizadas] = useState('');
@@ -75,8 +77,10 @@ const [invitacionSeleccionadaEnvio, setInvitacionSeleccionadaEnvio] = useState(n
         throw new Error(json.msg || 'No se pudieron cargar las invitaciones');
       }
 
-      const lista = Array.isArray(json) ? json : [];
+      const lista = Array.isArray(json.invitaciones) ? json.invitaciones : [];
       setInvitaciones(lista);
+      setCapacidadTotal(json.capacidadTotal || 0);
+      setDisponibles(json.disponibles ?? 0);
 
       if (lista.length > 0) {
         setInvitacionSeleccionada(lista[0]);
@@ -297,7 +301,26 @@ enviarWhatsApp(telefono, json);
                   </p>
                 </div>
 
-                
+                {capacidadTotal > 0 && (
+                  <div style={styles.counterBox}>
+                    <div style={styles.counterItem}>
+                      <span style={styles.counterNumber}>{capacidadTotal}</span>
+                      <span style={styles.counterLabel}>Total</span>
+                    </div>
+                    <div style={styles.counterDivider} />
+                    <div style={styles.counterItem}>
+                      <span style={styles.counterNumber}>{capacidadTotal - disponibles}</span>
+                      <span style={styles.counterLabel}>Asignados</span>
+                    </div>
+                    <div style={styles.counterDivider} />
+                    <div style={styles.counterItem}>
+                      <span style={{ ...styles.counterNumber, color: disponibles === 0 ? '#dc2626' : '#16a34a' }}>
+                        {disponibles}
+                      </span>
+                      <span style={styles.counterLabel}>Disponibles</span>
+                    </div>
+                  </div>
+                )}
 
                 <form onSubmit={crearInvitacion}>
                   <div style={styles.fieldBlock}>
@@ -745,5 +768,38 @@ modal: {
   padding: 24,
   borderRadius: 16,
   width: 320,
+},
+counterBox: {
+  display: 'flex',
+  justifyContent: 'space-around',
+  alignItems: 'center',
+  background: '#f6f1f8',
+  borderRadius: 16,
+  padding: '16px 12px',
+  marginBottom: 20,
+},
+counterItem: {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 4,
+},
+counterNumber: {
+  fontSize: 28,
+  fontWeight: 800,
+  color: '#2d143d',
+  lineHeight: 1,
+},
+counterLabel: {
+  fontSize: 12,
+  color: '#6b7280',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: 1,
+},
+counterDivider: {
+  width: 1,
+  height: 40,
+  background: '#e5d8ef',
 },
 };

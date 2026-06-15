@@ -29,7 +29,14 @@ router.get('/:token', async (req, res) => {
 
     console.log('INVITACIONES ENCONTRADAS:', invitaciones.length);
 
-    return res.json(invitaciones);
+    const reserva = await Reserva.findById(portal.reservaId);
+    const capacidadTotal = Number(reserva?.cantidadPersonas || 0);
+    const pasesGenerados = invitaciones
+      .filter(inv => inv.estado !== 'cancelada')
+      .reduce((acc, inv) => acc + Number(inv.personasAutorizadas || 0), 0);
+    const disponibles = Math.max(capacidadTotal - pasesGenerados, 0);
+
+    return res.json({ invitaciones, capacidadTotal, disponibles });
   } catch (error) {
     console.error('GET invitacionesQR error:', error);
     return res.status(500).json({ msg: 'Error al obtener invitaciones' });

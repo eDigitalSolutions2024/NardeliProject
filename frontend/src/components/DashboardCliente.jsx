@@ -3,6 +3,7 @@ import './DashboardCliente.css';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import API_BASE_URL, { API_ORIGIN } from '../api';
 import ModalAccesoInvitaciones from './ModalAccesoInvitaciones';
+import FormulariosNardeli from './FormulariosNardeli';
 
 // Placeholder si no hay imagen
 const PLACEHOLDER =
@@ -790,6 +791,7 @@ const actualizarReserva = async () => {
   // ====== RECIBO: estado, prefill y submit
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('panel');
 
 
   const todayStr = useMemo(() => {
@@ -1045,7 +1047,34 @@ function openEstadoCuentaPdf() {
         </div>
       </div>
 
-      <div className="cd-toolbar">
+      {isStaff && (
+        <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #ede9fe', marginBottom: 16 }}>
+          {[
+            { key: 'panel',    label: 'Panel Cliente' },
+            { key: 'formatos', label: 'Formatos' },
+          ].map(t => (
+            <button
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              style={{
+                padding: '9px 22px', border: 'none', borderRadius: '6px 6px 0 0',
+                fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                background: activeTab === t.key ? '#6d28d9' : '#f3e8ff',
+                color: activeTab === t.key ? '#fff' : '#6d28d9',
+                marginRight: 2,
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {activeTab === 'formatos' && isStaff && (
+        <FormulariosNardeli reservaId={reservaId} />
+      )}
+
+      <div className="cd-toolbar" style={{ display: activeTab !== 'panel' ? 'none' : undefined }}>
         <input
           className="cd-input"
           placeholder="Buscar (mesas, platos, sillas...)"
@@ -1060,7 +1089,7 @@ function openEstadoCuentaPdf() {
         </button>
       </div>
 
-      <div className="cd-content">
+      <div className="cd-content" style={{ display: activeTab !== 'panel' ? 'none' : undefined }}>
         {/* Inventario */}
         <div className="cd-card">
           {loading ? (

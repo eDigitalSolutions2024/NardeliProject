@@ -61,6 +61,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api', require('./routes/login'));
 app.use('/api/usuarios', require('./routes/usuarios'));
 app.use('/api/reservas', require('./routes/reservas'));
+app.use('/api/reservas', require('./routes/formatosReserva'));
 app.use('/api/productos', require('./routes/productos'));
 
 
@@ -83,6 +84,7 @@ app.use('/api/invitaciones-qr', invitacionesQRRoutes);
 app.use('/api/scan-invitacion-qr', scanInvitacionQRRoutes);
 
 app.use('/api/app', require('./routes/appDashboard'));
+app.use('/api/app', require('./routes/appChecklists'));
 app.use('/api/settings', require('./routes/settings'));
 
 // Si tienes inventario por separado:
