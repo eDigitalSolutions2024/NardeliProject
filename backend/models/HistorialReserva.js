@@ -9,7 +9,7 @@ const HistorialSchema = new mongoose.Schema({
 
   tipo: {
     type: String,
-    enum: ['producto', 'descuento', 'campo', 'whatsapp'],
+    enum: ['producto', 'descuento', 'campo', 'whatsapp', 'conversion'],
     required: true
   },
 
@@ -23,7 +23,9 @@ const HistorialSchema = new mongoose.Schema({
       'discount_remove',
       'field_update',
       'alert_sent',
-      'alert_error'
+      'alert_error',
+      'evento_a_cotizacion',
+      'cotizacion_a_evento'
     ],
     required: true
   },
@@ -57,6 +59,9 @@ const HistorialSchema = new mongoose.Schema({
     ref: 'Usuario',
     default: null
   },
+
+  usuarioEmail: { type: String, default: '' },
+  usuarioRole: { type: String, default: '' },
 
   fecha: {
     type: Date,

@@ -361,14 +361,16 @@ const convertirACotizacion = async (id) => {
     🗑️ Eliminar
   </button>
 )}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                convertirACotizacion(evento.id);
-              }}
-            >
-              💱 A cotización
-            </button>
+            {role === 'admin' && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  convertirACotizacion(evento.id);
+                }}
+              >
+                💱 A cotización
+              </button>
+            )}
           </div>
         </div>
       </div>

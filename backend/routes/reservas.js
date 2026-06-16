@@ -62,6 +62,20 @@ function auth(req, res, next) {
   catch { return res.status(401).json({ ok: false, msg: 'Token inválido' }); }
 }
 
+function extraerUsuarioToken(req) {
+  try {
+    const h = req.headers.authorization || '';
+    const t = h.startsWith('Bearer ') ? h.slice(7) : null;
+    if (!t) return { id: null, email: null, role: null };
+    const payload = jwt.verify(t, JWT_SECRET);
+    return {
+      id: payload.sub || payload.id || null,
+      email: payload.email || null,
+      role: payload.role || null
+    };
+  } catch { return { id: null, email: null, role: null }; }
+}
+
 // ===== Helpers de totales =====
 function calcSubtotalFromUtensilios(utensilios = []) {
   return (utensilios || []).reduce((acc, u) => {
@@ -670,11 +684,12 @@ function construirPayloadTemplateCambioEvento(prev, actualizada, cambiosGenerale
   };
 }
 
-function limpiarTextoTemplate(valor) {
+function limpiarTextoTemplate(valor, maxLen = 1024) {
   return String(valor ?? '')
     .replace(/[\n\r\t]+/g, ' ')
     .replace(/\s{2,}/g, ' ')
-    .trim();
+    .trim()
+    .slice(0, maxLen);
 }
 
 async function enviarWhatsAppTemplateCambioEvento({
@@ -731,26 +746,24 @@ async function enviarWhatsAppTemplateCambioEvento({
   console.log('PHONE_NUMBER_ID:', process.env.WA_PHONE_NUMBER_ID);
   console.log('TEMPLATE BODY:', JSON.stringify(requestBody, null, 2));
 
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(requestBody)
-  });
+  try {
+    const { data, status } = await axios.post(url, requestBody, {
+      headers: {
+        Authorization: `Bearer ${process.env.WA_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
 
-  const data = await resp.json();
+    console.log('META STATUS:', status);
+    console.log('META RESPONSE:', JSON.stringify(data, null, 2));
 
-  console.log('META STATUS:', resp.status);
-  console.log('META RESPONSE:', JSON.stringify(data, null, 2));
-
-  if (!resp.ok) {
-    console.error('ERROR META TEMPLATE:', JSON.stringify(data, null, 2));
-    throw new Error(data?.error?.message || 'Error enviando template de WhatsApp');
+    return data;
+  } catch (err) {
+    const metaError = err?.response?.data;
+    console.error('META STATUS:', err?.response?.status);
+    console.error('ERROR META TEMPLATE:', JSON.stringify(metaError, null, 2));
+    throw new Error(metaError?.error?.message || err.message || 'Error enviando template de WhatsApp');
   }
-
-  return data;
 }
 
 /*function construirMensajeCambioEvento(prev, actualizada, cambiosGenerales = []) {
@@ -898,6 +911,7 @@ router.put('/:id', async (req, res) => {
 
     // ===== Historial + WhatsApp solo si YA era evento antes del cambio =====
        if (prev.tipoReserva === 'evento' && cambios.length > 0) {
+      const _u = extraerUsuarioToken(req);
       // Guardar historial de campos
       await HistorialReserva.insertMany(
         cambios.map(c => ({
@@ -908,7 +922,9 @@ router.put('/:id', async (req, res) => {
           etiqueta: c.etiqueta,
           valorAntes: c.valorAntes,
           valorDespues: c.valorDespues,
-          usuario: req.user?.sub || null
+          usuario: _u.id,
+          usuarioEmail: _u.email || '',
+          usuarioRole: _u.role || ''
         }))
       );
 
@@ -1586,12 +1602,16 @@ router.put('/:id/descuento', async (req, res) => {
 
     // ===== Historial: solo si ya es evento =====
     if (r.tipoReserva === 'evento' && prevDesc !== v) {
+      const _uDesc = extraerUsuarioToken(req);
       await HistorialReserva.create({
         reservaId: r._id,
         tipo: 'descuento',
         accion: v > 0 ? 'discount_add' : 'discount_remove',
         descuentoAntes: prevDesc,
-        descuentoDespues: v
+        descuentoDespues: v,
+        usuario: _uDesc.id,
+        usuarioEmail: _uDesc.email || '',
+        usuarioRole: _uDesc.role || ''
       });
     }
 
@@ -1698,6 +1718,17 @@ router.put('/:id/aceptar-cotizacion', async (req, res) => {
     };
 
     await r.save();
+
+    const _uAcep = extraerUsuarioToken(req);
+    await HistorialReserva.create({
+      reservaId: r._id,
+      tipo: 'conversion',
+      accion: 'cotizacion_a_evento',
+      usuario: _uAcep.id,
+      usuarioEmail: _uAcep.email || '',
+      usuarioRole: _uAcep.role || ''
+    });
+
     return res.json({ ok: true, reserva: r });
   } catch (e) {
     console.error('aceptar-cotizacion error:', e);
@@ -1740,6 +1771,17 @@ router.put('/:id/convertir-a-cotizacion', async (req, res) => {
     };
 
     await r.save();
+
+    const _uConv = extraerUsuarioToken(req);
+    await HistorialReserva.create({
+      reservaId: r._id,
+      tipo: 'conversion',
+      accion: 'evento_a_cotizacion',
+      usuario: _uConv.id,
+      usuarioEmail: _uConv.email || '',
+      usuarioRole: _uConv.role || ''
+    });
+
     return res.json({ ok: true, reserva: r });
   } catch (e) {
     console.error('convertir-a-cotizacion error:', e);

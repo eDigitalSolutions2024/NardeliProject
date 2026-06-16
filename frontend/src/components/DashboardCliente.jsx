@@ -622,7 +622,9 @@ const saldoRestante = useMemo(() => {
       return;
     }
 
-    const res = await fetch(`${API_BASE_URL}/reservas/${reservaId}/historial`);
+    const res = await fetch(`${API_BASE_URL}/reservas/${reservaId}/historial`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` }
+    });
     const data = await res.json();
 
     if (!res.ok) {
@@ -638,17 +640,33 @@ const saldoRestante = useMemo(() => {
 };
 
   const formatearCambio = (item) => {
+  if (item.tipo === 'conversion') {
+    if (item.accion === 'evento_a_cotizacion') return 'Convertido de evento a cotización';
+    if (item.accion === 'cotizacion_a_evento') return 'Convertido de cotización a evento';
+  }
+
+  if (item.tipo === 'campo') {
+    const antes = item.valorAntes ?? '—';
+    const despues = item.valorDespues ?? '—';
+    return `${item.etiqueta || item.campo}: "${antes}" → "${despues}"`;
+  }
+
   if (item.tipo === 'producto') {
-    if (item.accion === 'add') return `Se agregó ${item.producto?.nombre}`;
-    if (item.accion === 'remove') return `Se eliminó ${item.producto?.nombre}`;
-    if (item.accion === 'update') return `Se actualizó ${item.producto?.nombre}`;
+    if (item.accion === 'add') return `Producto agregado: ${item.producto?.nombre || ''}`;
+    if (item.accion === 'remove') return `Producto eliminado: ${item.producto?.nombre || ''}`;
+    if (item.accion === 'update') return `Cantidad actualizada: ${item.producto?.nombre || ''} (${item.cantidadAntes ?? '?'} → ${item.cantidadDespues ?? '?'})`;
   }
 
   if (item.tipo === 'descuento') {
-    return 'Se actualizó el descuento';
+    return `Descuento actualizado: $${item.descuentoAntes ?? 0} → $${item.descuentoDespues ?? 0}`;
   }
 
-  return 'Cambio realizado';
+  if (item.tipo === 'whatsapp') {
+    if (item.accion === 'alert_sent') return 'Notificación WhatsApp enviada';
+    if (item.accion === 'alert_error') return 'Error al enviar notificación WhatsApp';
+  }
+
+  return item.etiqueta || item.campo || 'Cambio registrado';
 };
 
   // ====== Aplicar accesorios como préstamo (precio $0) a la reserva
@@ -1880,20 +1898,15 @@ onMouseLeave={(e) => {
         <div key={h._id} className="historial-item">
           <strong>{formatearCambio(h)}</strong>
 
-          <div>
-            Antes: {h.tipo === 'descuento'
-              ? `$${h.descuentoAntes}`
-              : h.cantidadAntes}
-          </div>
+          {(h.usuarioRole || h.usuarioEmail) && (
+            <div style={{ fontSize: '12px', color: '#444', marginTop: 3 }}>
+              Por: <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{h.usuarioRole || 'usuario'}</span>
+              {h.usuarioEmail ? ` — ${h.usuarioEmail}` : ''}
+            </div>
+          )}
 
-          <div>
-            Después: {h.tipo === 'descuento'
-              ? `$${h.descuentoDespues}`
-              : h.cantidadDespues}
-          </div>
-
-          <div style={{ fontSize: '12px', color: '#666' }}>
-            {new Date(h.fecha).toLocaleString()}
+          <div style={{ fontSize: '12px', color: '#666', marginTop: 2 }}>
+            {new Date(h.fecha).toLocaleString('es-MX')}
           </div>
         </div>
       ))}
