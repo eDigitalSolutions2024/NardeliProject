@@ -357,6 +357,41 @@ router.delete('/checklists/:checklistId/items/:itemId/evidence/:evId', async (re
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// GET /api/app/stats/storage — estadísticas de almacenamiento de evidencias
+router.get('/stats/storage', async (req, res) => {
+  try {
+    const now = new Date();
+    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [global] = await EventChecklist.aggregate([
+      { $unwind: '$items' },
+      { $unwind: '$items.evidence' },
+      {
+        $group: {
+          _id: null,
+          totalPhotos: { $sum: 1 },
+          totalSize: { $sum: '$items.evidence.size' },
+          photosThisMonth: {
+            $sum: {
+              $cond: [{ $gte: ['$items.evidence.uploadedAt', firstOfMonth] }, 1, 0]
+            }
+          },
+          sizeThisMonth: {
+            $sum: {
+              $cond: [{ $gte: ['$items.evidence.uploadedAt', firstOfMonth] }, '$items.evidence.size', 0]
+            }
+          }
+        }
+      }
+    ]);
+
+    const stats = global || { totalPhotos: 0, totalSize: 0, photosThisMonth: 0, sizeThisMonth: 0 };
+    stats.avgSize = stats.totalPhotos > 0 ? Math.round(stats.totalSize / stats.totalPhotos) : 0;
+
+    res.json(stats);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // Sync offline
 router.post('/checklists/sync', async (req, res) => {
   try {
