@@ -26,6 +26,7 @@ const scanInvitacionQRRoutes = require('./routes/scanInvitacionQR');
 
 // ✅ 3) Static
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/api/media', express.static(path.join(__dirname, 'uploads')));
 
 // ✅ 4) Middlewares
 const allowedOrigins = [

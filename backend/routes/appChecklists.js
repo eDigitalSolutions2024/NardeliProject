@@ -338,7 +338,7 @@ router.post('/checklists/:checklistId/items/:itemId/evidence', upload.single('ph
     if (!cl) return res.status(404).json({ error: 'Checklist no encontrado' });
     const item = cl.items.id(req.params.itemId);
     if (!item) return res.status(404).json({ error: 'Tarea no encontrada' });
-    const evidence = { url: `/uploads/checklists/${req.file.filename}`, filename: req.file.originalname, uploadedAt: new Date() };
+    const evidence = { url: `/api/media/checklists/${req.file.filename}`, filename: req.file.originalname, uploadedAt: new Date() };
     item.evidence.push(evidence);
     await cl.save();
     res.json(evidence);
