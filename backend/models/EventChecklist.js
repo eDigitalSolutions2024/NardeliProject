@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const evidenceSchema = new mongoose.Schema({
   url: String,
   filename: String,
+  size: Number,
   uploadedAt: { type: Date, default: Date.now }
 });
 
