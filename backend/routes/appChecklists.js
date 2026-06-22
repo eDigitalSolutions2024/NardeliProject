@@ -116,63 +116,78 @@ router.delete('/checklist-templates/:id/items/:itemId', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// POST /api/app/checklist-templates/seed — datos iniciales (una sola vez)
+// POST /api/app/checklist-templates/seed — reemplaza las plantillas con las oficiales de Nardeli
 router.post('/checklist-templates/seed', async (req, res) => {
   try {
-    const existing = await ChecklistTemplate.countDocuments();
-    if (existing > 0) return res.json({ msg: 'Las plantillas ya existen', count: existing });
+    await ChecklistTemplate.deleteMany({});
     const plantillas = [
-      { category: 'salon', name: 'Salón', icon: '🏛️', items: [
-        { title: 'Revisión de mesas y sillas', requiresPhoto: true, order: 1 },
-        { title: 'Mantelería limpia y bien colocada', requiresPhoto: true, order: 2 },
-        { title: 'Centros de mesa instalados', requiresPhoto: true, order: 3 },
-        { title: 'Iluminación funcionando', requiresObservation: true, order: 4 },
-        { title: 'Temperatura del aire acondicionado', requiresObservation: true, order: 5 },
-        { title: 'Pista de baile limpia', order: 6 },
-        { title: 'Música de ambiente lista', requiresObservation: true, order: 7 },
+      { category: 'salon', name: 'Salón', icon: '🏛️', active: true, items: [
+        { title: 'Revisión mesas',        requiresPhoto: true, order: 1 },
+        { title: 'Revisión sillas',        requiresPhoto: true, order: 2 },
+        { title: 'Revisión mantelería',    requiresPhoto: true, order: 3 },
+        { title: 'Revisión loza',          requiresPhoto: true, order: 4 },
+        { title: 'Revisión de servilletas',requiresPhoto: true, order: 5 },
+        { title: 'Revisión de cristalería',requiresPhoto: true, order: 6 },
+        { title: 'Revisión arreglos',      requiresPhoto: true, order: 7 },
+        { title: 'Revisión de cubiertos',  requiresPhoto: true, order: 8 },
+        { title: 'Limpieza',               requiresPhoto: true, order: 9 },
+        { title: 'Limpieza de pista',      requiresPhoto: true, order: 10 },
       ]},
-      { category: 'candy_bar', name: 'Candy Bar', icon: '🍬', items: [
-        { title: 'Mesa decorada según tema', requiresPhoto: true, order: 1 },
-        { title: 'Dulces y bocadillos surtidos', requiresPhoto: true, order: 2 },
-        { title: 'Recipientes limpios y etiquetados', order: 3 },
-        { title: 'Bolsas o empaques disponibles', order: 4 },
-        { title: 'Personal asignado presente', requiresObservation: true, order: 5 },
+      { category: 'candy_bar', name: 'Candy Bar', icon: '🍬', active: true, items: [
+        { title: 'Mobiliario',      requiresPhoto: true, order: 1 },
+        { title: 'Aumento buffet',  requiresPhoto: true, order: 2 },
+        { title: 'Decoraciones',    requiresPhoto: true, order: 3 },
+        { title: 'Etiquetas',       requiresPhoto: true, order: 4 },
+        { title: 'Flores',          requiresPhoto: true, order: 5 },
+        { title: 'Jarrones',        requiresPhoto: true, order: 6 },
+        { title: 'Pinzas',          requiresPhoto: true, order: 7 },
+        { title: 'Bases',           requiresPhoto: true, order: 8 },
+        { title: 'Mantelería',      requiresPhoto: true, order: 9 },
       ]},
-      { category: 'banos', name: 'Baños', icon: '🚿', items: [
-        { title: 'Baños limpios y desinfectados', requiresPhoto: true, order: 1 },
-        { title: 'Papel higiénico abastecido', order: 2 },
-        { title: 'Jabón y toallas disponibles', order: 3 },
-        { title: 'Aromatizante aplicado', order: 4 },
-        { title: 'Basureros vacíos', order: 5 },
-        { title: 'Espejos limpios', requiresPhoto: true, order: 6 },
+      { category: 'banos_mujeres', name: 'Baños Mujeres', icon: '🚺', active: true, items: [
+        { title: 'Revisión sanitarios',       requiresPhoto: true, order: 1 },
+        { title: 'Revisión lavamanos',        requiresPhoto: true, order: 2 },
+        { title: 'Revisión jaboneras',        requiresPhoto: true, order: 3 },
+        { title: 'Revisión llave de agua',    requiresPhoto: true, order: 4 },
+        { title: 'Revisión Sprite',           requiresPhoto: true, order: 5 },
+        { title: 'Revisión broches',          requiresPhoto: true, order: 6 },
+        { title: 'Revisión toallas sanitarias',requiresPhoto: true, order: 7 },
+        { title: 'Revisión luces',            requiresPhoto: true, order: 8 },
+        { title: 'Revisión papel higiénico',  requiresPhoto: true, order: 9 },
+        { title: 'Revisión servilletas',      requiresPhoto: true, order: 10 },
+        { title: 'Revisión velas aromáticas', requiresPhoto: true, order: 11 },
+        { title: 'Revisión de limpieza',      requiresPhoto: true, order: 12 },
       ]},
-      { category: 'lobby', name: 'Lobby', icon: '🚪', items: [
-        { title: 'Recepción decorada', requiresPhoto: true, order: 1 },
-        { title: 'Señalización del evento colocada', requiresPhoto: true, order: 2 },
-        { title: 'Personal de bienvenida en posición', requiresObservation: true, order: 3 },
-        { title: 'Área de registro lista', order: 4 },
-        { title: 'Iluminación exterior funcionando', order: 5 },
+      { category: 'banos_hombres', name: 'Baños Hombres', icon: '🚹', active: true, items: [
+        { title: 'Revisión sanitarios',      requiresPhoto: true, order: 1 },
+        { title: 'Revisión mingitorios',     requiresPhoto: true, order: 2 },
+        { title: 'Revisión lavamanos',       requiresPhoto: true, order: 3 },
+        { title: 'Revisión jaboneras',       requiresPhoto: true, order: 4 },
+        { title: 'Revisión llave de agua',   requiresPhoto: true, order: 5 },
+        { title: 'Revisión luces',           requiresPhoto: true, order: 6 },
+        { title: 'Revisión papel higiénico', requiresPhoto: true, order: 7 },
+        { title: 'Revisión servilletas',     requiresPhoto: true, order: 8 },
+        { title: 'Revisión velas aromáticas',requiresPhoto: true, order: 9 },
+        { title: 'Revisión de limpieza',     requiresPhoto: true, order: 10 },
       ]},
-      { category: 'barra', name: 'Barra', icon: '🍹', items: [
-        { title: 'Barra limpia y organizada', requiresPhoto: true, order: 1 },
-        { title: 'Bebidas e hielo abastecidos', requiresPhoto: true, order: 2 },
-        { title: 'Copas y vasos limpios', order: 3 },
-        { title: 'Barman presente y uniformado', requiresObservation: true, order: 4 },
-        { title: 'Carta de cócteles disponible', order: 5 },
+      { category: 'lobby', name: 'Lobby', icon: '🚪', active: true, items: [
+        { title: 'Luces entrada',   requiresPhoto: true, order: 1 },
+        { title: 'Limpieza',        requiresPhoto: true, order: 2 },
+        { title: 'Pantallas listas',requiresPhoto: true, order: 3 },
+        { title: 'Aroma',           requiresPhoto: true, order: 4 },
+        { title: 'Velas',           requiresPhoto: true, order: 5 },
+        { title: 'Alfombra',        requiresPhoto: true, order: 6 },
       ]},
-      { category: 'proveedores', name: 'Proveedores', icon: '🚚', items: [
-        { title: 'Proveedor de audio/video instalado', requiresObservation: true, order: 1 },
-        { title: 'Proveedor de flores/decoración listo', requiresPhoto: true, order: 2 },
-        { title: 'Catering confirmado y en tiempo', requiresObservation: true, order: 3 },
-        { title: 'Fotógrafo/videógrafo presente', requiresObservation: true, order: 4 },
-        { title: 'Todos los contratos firmados', order: 5 },
-      ]},
-      { category: 'degustacion', name: 'Degustación', icon: '🍽️', items: [
-        { title: 'Menú degustación preparado', requiresPhoto: true, order: 1 },
-        { title: 'Presentación de platillos correcta', requiresPhoto: true, order: 2 },
-        { title: 'Temperatura adecuada de alimentos', requiresObservation: true, order: 3 },
-        { title: 'Meseros uniformados y listos', requiresObservation: true, order: 4 },
-        { title: 'Cocina limpia y organizada', requiresPhoto: true, order: 5 },
+      { category: 'barra', name: 'Barra', icon: '🍹', active: true, items: [
+        { title: 'Sodas',            requiresPhoto: true, order: 1 },
+        { title: 'Botellas de agua', requiresPhoto: true, order: 2 },
+        { title: 'Hielo',            requiresPhoto: true, order: 3 },
+        { title: 'Limpieza',         requiresPhoto: true, order: 4 },
+        { title: 'Cristalería',      requiresPhoto: true, order: 5 },
+        { title: 'Trapos',           requiresPhoto: true, order: 6 },
+        { title: 'Jabón',            requiresPhoto: true, order: 7 },
+        { title: 'Botellas de licor',requiresPhoto: true, order: 8 },
+        { title: 'Barriles',         requiresPhoto: true, order: 9 },
       ]},
     ];
     await ChecklistTemplate.insertMany(plantillas);
@@ -184,12 +199,35 @@ router.post('/checklist-templates/seed', async (req, res) => {
 // CHECKLISTS DE EVENTO
 // ═══════════════════════════════════════════════════════════════
 
-// GET /api/app/checklists/evento/:eventId — checklists asignados al evento
+// GET /api/app/checklists/evento/:eventId — checklists asignados al evento (auto-asigna si vacío)
 router.get('/checklists/evento/:eventId', async (req, res) => {
   try {
-    const checklists = await EventChecklist.find({ eventExternalId: req.params.eventId })
+    let checklists = await EventChecklist.find({ eventExternalId: req.params.eventId })
       .select('category categoryName icon status completedCount totalCount template')
       .sort({ createdAt: 1 });
+
+    if (checklists.length === 0) {
+      const templates = await ChecklistTemplate.find({ active: true }).sort({ name: 1 });
+      for (const tpl of templates) {
+        const items = tpl.items.map(i => ({
+          templateItemId: i._id, title: i.title, description: i.description,
+          requiresPhoto: i.requiresPhoto, requiresObservation: i.requiresObservation, order: i.order
+        }));
+        await EventChecklist.create({
+          eventExternalId: req.params.eventId,
+          template: tpl._id,
+          category: tpl.category,
+          categoryName: tpl.name,
+          icon: tpl.icon || '📋',
+          items,
+          totalCount: items.length
+        });
+      }
+      checklists = await EventChecklist.find({ eventExternalId: req.params.eventId })
+        .select('category categoryName icon status completedCount totalCount template')
+        .sort({ createdAt: 1 });
+    }
+
     res.json(checklists);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
