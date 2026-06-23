@@ -4,6 +4,7 @@ import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import API_BASE_URL, { API_ORIGIN } from '../api';
 import ModalAccesoInvitaciones from './ModalAccesoInvitaciones';
 import FormulariosNardeli from './FormulariosNardeli';
+import ChecklistsReserva from './ChecklistsReserva';
 
 // Placeholder si no hay imagen
 const PLACEHOLDER =
@@ -1068,8 +1069,9 @@ function openEstadoCuentaPdf() {
       {isStaff && (
         <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #ede9fe', marginBottom: 16 }}>
           {[
-            { key: 'panel',    label: 'Panel Cliente' },
-            { key: 'formatos', label: 'Formatos' },
+            { key: 'panel',      label: 'Panel Cliente' },
+            { key: 'formatos',   label: 'Formatos' },
+            { key: 'checklists', label: '✅ Checklists' },
           ].map(t => (
             <button
               key={t.key}
@@ -1090,6 +1092,10 @@ function openEstadoCuentaPdf() {
 
       {activeTab === 'formatos' && isStaff && (
         <FormulariosNardeli reservaId={reservaId} />
+      )}
+
+      {activeTab === 'checklists' && isStaff && (
+        <ChecklistsReserva reservaId={reservaId} />
       )}
 
       <div className="cd-toolbar" style={{ display: activeTab !== 'panel' ? 'none' : undefined }}>

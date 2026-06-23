@@ -115,11 +115,24 @@ app.use((err, _req, res, _next) => {
 
 
 // ✅ 6) Conectar DB y arrancar
+const { startCleanupJob, cleanupOldEventPhotos } = require('./jobs/cleanupPhotos');
+
+// Endpoint manual para forzar limpieza (útil para pruebas)
+app.post('/api/admin/cleanup-photos', async (_req, res) => {
+  try {
+    await cleanupOldEventPhotos();
+    res.json({ ok: true, msg: 'Limpieza ejecutada' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 connectDB()
   .then(() => {
     app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Servidor corriendo en http://0.0.0.0:${PORT}`);
-});
+      console.log(`Servidor corriendo en http://0.0.0.0:${PORT}`);
+      startCleanupJob();
+    });
   })
   .catch((e) => {
     console.error('No se pudo conectar a MongoDB:', e?.message || e);
