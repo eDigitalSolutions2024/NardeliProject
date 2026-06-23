@@ -27,12 +27,14 @@ const item = (label, checked = false) => ({ label, checked });
 const DEFAULT_TABLA_TRABAJO = {
   fecha_llenado: '', nombre_cliente: '', nombre_festejado: '',
   fecha_evento: '', tipo_evento: '', num_invitados: '',
-  montaje: '', num_mesas: '', num_sillas: '', tipo_sillas: '', color_sillas: '',
+  montaje: '', num_mesas: '', tipo_mesa: '', num_sillas: '', tipo_sillas: '', color_sillas: '',
   mantel_camino: '', plaque: '', cubierto: '', cristaleria: '', plato_basse: '',
   horario_servir: '', alimentos: '', tiempos: '',
   bebidas:      [item('Vino'), item('Cerveza'), item('Soda')],
   req_tecnicos: [item('Baile en las Nubes'), item('Chisperos'), item('Confeti'), item('Grupo Musical')],
   programa_dj:  [item('Vals'), item('Presentación'), item('Brindis'), item('Baile Moderno'), item('Proyección de video')],
+  accesorios:   [],
+  servicios:    [item('Candy bar'), item('Barra coctelera'), item('Mesa de postres'), item('Photo booth'), item('Guardarropa')],
   proveedores_externos: '', telefono: '', horario_montaje: '', horario_desmontaje: '', notas: '',
   extras: [],
 };
@@ -511,9 +513,10 @@ function FormTablaTrabajoContent({ data, set }) {
       <div style={S.row3}>
         {inp('montaje',    'Montaje')}
         {inp('num_mesas',  'Núm. de mesas',  'number')}
-        {inp('num_sillas', 'Núm. de sillas', 'number')}
+        {inp('tipo_mesa',  'Tipo de mesa')}
       </div>
-      <div style={S.row2}>
+      <div style={S.row3}>
+        {inp('num_sillas', 'Núm. de sillas', 'number')}
         {inp('tipo_sillas',  'Tipo de sillas')}
         {inp('color_sillas', 'Color de sillas')}
       </div>
@@ -538,6 +541,9 @@ function FormTablaTrabajoContent({ data, set }) {
             <option value="1">1 tiempo</option>
             <option value="2">2 tiempos</option>
             <option value="3">3 tiempos</option>
+            <option value="buffet-pizza">Buffet de pizza</option>
+            <option value="buffet-desayuno">Buffet desayuno</option>
+            <option value="taquiza">Taquiza</option>
           </select>
         </F>
       </div>
@@ -561,6 +567,18 @@ function FormTablaTrabajoContent({ data, set }) {
       <DynamicChecklist
         items={data.programa_dj || []}
         onChange={v => set('programa_dj', v)}
+      />
+
+      <div style={S.secTitle}>Accesorios</div>
+      <DynamicChecklist
+        items={data.accesorios || []}
+        onChange={v => set('accesorios', v)}
+      />
+
+      <div style={S.secTitle}>Servicios</div>
+      <DynamicChecklist
+        items={data.servicios || []}
+        onChange={v => set('servicios', v)}
       />
 
       <div style={S.secTitle}>Proveedores externos y logística</div>

@@ -313,6 +313,7 @@ function streamTablaTrabajosPdf(res, data) {
   gridRow(doc, [
     { label: 'Montaje',              value: data.montaje },
     { label: 'Núm. de mesas',        value: data.num_mesas },
+    { label: 'Tipo de mesa',         value: data.tipo_mesa },
   ], 34);
   gridRow(doc, [
     { label: 'Núm. de sillas',       value: data.num_sillas },
@@ -352,6 +353,12 @@ function streamTablaTrabajosPdf(res, data) {
 
   sectionRow(doc, 'Programa DJ');
   checkboxGrid(doc, data.programa_dj, 4);
+
+  sectionRow(doc, 'Accesorios');
+  checkboxGrid(doc, data.accesorios, 4);
+
+  sectionRow(doc, 'Servicios');
+  checkboxGrid(doc, data.servicios, 4);
 
   sectionRow(doc, 'Proveedores Externos y Logística');
   gridRow(doc, [
