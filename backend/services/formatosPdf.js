@@ -153,13 +153,21 @@ function ensureSpace(doc, need) {
 function menuSection(doc, items, single = false) {
   if (!Array.isArray(items) || items.length === 0) return;
   const totalW = doc.page.width - M * 2;
-  const itemH = 22;
-  const blockH = items.length * itemH + 10;
+  const textW = totalW - 30;
+
+  // Pre-calculate height per item based on label length
+  const itemHeights = items.map(item => {
+    doc.font(item.checked ? 'Helvetica-Bold' : 'Helvetica').fontSize(8);
+    return Math.max(22, doc.heightOfString(item.label || '', { width: textW }) + 10);
+  });
+
+  const blockH = itemHeights.reduce((s, h) => s + h, 0) + 10;
   ensureSpace(doc, blockH);
   const startY = doc.y;
   doc.rect(M, startY, totalW, blockH).lineWidth(0.5).strokeColor('#888').stroke();
   let cy = startY + 6;
-  items.forEach((item) => {
+  items.forEach((item, idx) => {
+    const itemH = itemHeights[idx];
     const x = M + 8;
     const y = cy;
     if (single) {
@@ -174,7 +182,7 @@ function menuSection(doc, items, single = false) {
     }
     doc.font(item.checked ? 'Helvetica-Bold' : 'Helvetica')
        .fontSize(8).fillColor(item.checked ? PRIMARY : '#1e293b')
-       .text(item.label || '', x + 16, y + 1, { width: totalW - 30, lineBreak: false });
+       .text(item.label || '', x + 16, y + 1, { width: textW });
     cy += itemH;
   });
   doc.y = startY + blockH;
@@ -228,17 +236,27 @@ function sectionRow(doc, text) {
   doc.y = y + 20;
 }
 
-function gridRow(doc, cells, rowH) {
-  ensureSpace(doc, rowH);
-  const y = doc.y;
+function gridRow(doc, cells, minH = 34) {
   const totalW = doc.page.width - M * 2;
   const fixedW = cells.reduce((s, c) => s + (c.w || 0), 0);
   const flexCount = cells.filter(c => !c.w).length;
   const flexW = flexCount > 0 ? (totalW - fixedW) / flexCount : 0;
+  const pad = 4;
+
+  // Calculate dynamic height from the tallest cell content
+  const rowH = Math.max(minH, ...cells.map(cell => {
+    const cw = (cell.w || flexW) - pad * 2;
+    if (!cell.value) return minH;
+    doc.font('Helvetica').fontSize(8.5);
+    const valH = doc.heightOfString(String(cell.value), { width: cw });
+    return pad + (cell.label ? 14 : pad) + valH + pad;
+  }));
+
+  ensureSpace(doc, rowH);
+  const y = doc.y;
   let cx = M;
   cells.forEach((cell) => {
     const cw = cell.w || flexW;
-    const pad = 4;
     doc.rect(cx, y, cw, rowH).lineWidth(0.5).strokeColor('#888').stroke();
     if (cell.label) {
       doc.font('Helvetica-Bold').fontSize(7).fillColor(MUTED)
@@ -247,7 +265,7 @@ function gridRow(doc, cells, rowH) {
     if (cell.value !== undefined && cell.value !== null) {
       doc.font('Helvetica').fontSize(8.5).fillColor('#1e293b')
         .text(String(cell.value || ''), cx + pad, y + (cell.label ? 14 : pad),
-          { width: cw - pad * 2, height: rowH - 20, ellipsis: true });
+          { width: cw - pad * 2 });
     }
     cx += cw;
   });
@@ -506,22 +524,29 @@ function streamProveedoresPdf(res, data) {
     : CATEGORIAS_DEFAULT.map(cat => ({ categoria: cat, nombre: '', telefono: '', notas: '' }));
 
   proveedores.forEach((p, i) => {
-    ensureSpace(doc, rowH);
+    const values = [p.categoria || '', p.nombre || '', p.telefono || '', p.notas || ''];
+
+    // Dynamic row height based on tallest cell
+    const dynamicRowH = Math.max(rowH, ...cols.map(({ w }, ci) => {
+      doc.font('Helvetica').fontSize(8);
+      return doc.heightOfString(values[ci], { width: w - 8 }) + 10;
+    }));
+
+    ensureSpace(doc, dynamicRowH);
     const ry = doc.y;
-    if (i % 2 === 1) doc.rect(M, ry, totalW, rowH).fill('#faf5ff');
+    if (i % 2 === 1) doc.rect(M, ry, totalW, dynamicRowH).fill('#faf5ff');
     let rx = M;
     cols.forEach(({ w }) => {
-      doc.rect(rx, ry, w, rowH).lineWidth(0.3).strokeColor(BORDER).stroke();
+      doc.rect(rx, ry, w, dynamicRowH).lineWidth(0.3).strokeColor(BORDER).stroke();
       rx += w;
     });
-    const values = [p.categoria || '', p.nombre || '', p.telefono || '', p.notas || ''];
     rx = M;
     cols.forEach(({ w }, ci) => {
       doc.font('Helvetica').fontSize(8).fillColor('#1e293b')
-        .text(values[ci], rx + 4, ry + 5, { width: w - 8, lineBreak: false, ellipsis: true });
+        .text(values[ci], rx + 4, ry + 5, { width: w - 8 });
       rx += w;
     });
-    doc.y = ry + rowH;
+    doc.y = ry + dynamicRowH;
   });
 
   // ── FIRMA CLIENTE ──
