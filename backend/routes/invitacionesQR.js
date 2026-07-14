@@ -1,10 +1,30 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 const Reserva = require('../models/Reservas');
 
 const InvitacionPortal = require('../models/InvitacionPortal');
 const InvitacionQR = require('../models/InvitacionQR');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'secreto-temporal';
+
+// Solo deja pasar si el JWT trae role === 'admin'
+function requireAdmin(req, res, next) {
+  const h = req.headers.authorization || '';
+  const t = h.startsWith('Bearer ') ? h.slice(7) : null;
+  if (!t) return res.status(401).json({ msg: 'No autorizado' });
+  try {
+    const payload = jwt.verify(t, JWT_SECRET);
+    if (payload.role !== 'admin') {
+      return res.status(403).json({ msg: 'Solo un administrador puede editar esta invitación' });
+    }
+    req.user = payload;
+    next();
+  } catch {
+    return res.status(401).json({ msg: 'Token inválido' });
+  }
+}
 
 // =====================================
 // Listar invitaciones por token de portal
@@ -170,6 +190,87 @@ router.patch('/:token/:id/cancelar', async (req, res) => {
   } catch (error) {
     console.error('PATCH cancelar invitacionesQR error:', error);
     return res.status(500).json({ msg: 'Error al cancelar invitación' });
+  }
+});
+
+// =====================================
+// Editar invitación QR (solo admin)
+// Corrige personas autorizadas / entradas restantes cuando
+// el staff se equivocó al registrar el escaneo en la entrada.
+// =====================================
+router.patch('/:token/:id', requireAdmin, async (req, res) => {
+  try {
+    const { token, id } = req.params;
+    const { personasAutorizadas, entradasRestantes } = req.body;
+
+    const portal = await InvitacionPortal.findOne({ token });
+
+    if (!portal || !portal.activo) {
+      return res.status(404).json({ msg: 'Portal no válido' });
+    }
+
+    const invitacion = await InvitacionQR.findOne({
+      _id: id,
+      portalId: portal._id,
+    });
+
+    if (!invitacion) {
+      return res.status(404).json({ msg: 'Invitación no encontrada' });
+    }
+
+    const personas = Number(personasAutorizadas);
+    const entradas = Number(entradasRestantes);
+
+    if (!Number.isFinite(personas) || personas < 1) {
+      return res.status(400).json({ msg: 'La cantidad de personas debe ser mayor a 0' });
+    }
+
+    if (!Number.isFinite(entradas) || entradas < 0) {
+      return res.status(400).json({ msg: 'Las entradas restantes no pueden ser negativas' });
+    }
+
+    if (entradas > personas) {
+      return res.status(400).json({ msg: 'Las entradas restantes no pueden ser mayores a las personas autorizadas' });
+    }
+
+    const reserva = await Reserva.findById(portal.reservaId);
+
+    if (!reserva) {
+      return res.status(404).json({ msg: 'Reserva no encontrada' });
+    }
+
+    const capacidadEvento = Number(reserva.cantidadPersonas || 0);
+
+    const otrasActivas = await InvitacionQR.find({
+      reservaId: portal.reservaId,
+      estado: { $ne: 'cancelada' },
+      _id: { $ne: invitacion._id },
+    });
+
+    const pasesOtras = otrasActivas.reduce(
+      (acc, inv) => acc + Number(inv.personasAutorizadas || 0),
+      0
+    );
+
+    if (invitacion.estado !== 'cancelada' && (pasesOtras + personas) > capacidadEvento) {
+      return res.status(400).json({
+        msg: `No se puede editar. Solo hay ${Math.max(capacidadEvento - pasesOtras, 0)} pases disponibles para este evento.`,
+      });
+    }
+
+    invitacion.personasAutorizadas = personas;
+    invitacion.entradasRestantes = entradas;
+
+    if (invitacion.estado !== 'cancelada') {
+      invitacion.estado = entradas <= 0 ? 'agotada' : 'activa';
+    }
+
+    await invitacion.save();
+
+    return res.json({ ok: true, invitacion });
+  } catch (error) {
+    console.error('PATCH editar invitacionesQR error:', error);
+    return res.status(500).json({ msg: 'Error al editar invitación' });
   }
 });
 

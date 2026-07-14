@@ -15,12 +15,18 @@ router.get('/reservas', async (req, res) => {
       0
     );
 
+    const limiteInferior = new Date(hoy);
+
+    limiteInferior.setDate(
+      limiteInferior.getDate() - 2
+    );
+
     const reservas =
       await Reserva.find({
         tipoReserva: 'evento',
         estado: 'confirmada',
         fecha: {
-          $gte: hoy,
+          $gte: limiteInferior,
         },
       })
         .sort({

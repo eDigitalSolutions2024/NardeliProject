@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
 import API_BASE_URL from '../api';
 import { QRCodeCanvas } from 'qrcode.react';
 import PhoneInput from 'react-phone-input-2';
@@ -7,6 +8,19 @@ import 'react-phone-input-2/lib/style.css';
 
 export default function IngresaCodigoInvitacion() {
   const { token } = useParams();
+
+  // Admin = el navegador ya tiene sesión iniciada en el sistema con role 'admin'
+  const [isAdminUser, setIsAdminUser] = useState(false);
+  useEffect(() => {
+    const authToken = localStorage.getItem('token');
+    if (!authToken) return;
+    try {
+      const decoded = jwtDecode(authToken);
+      setIsAdminUser(decoded?.role === 'admin');
+    } catch {
+      setIsAdminUser(false);
+    }
+  }, []);
 
   const [codigo, setCodigo] = useState('');
   const [loading, setLoading] = useState(true);
@@ -33,6 +47,12 @@ export default function IngresaCodigoInvitacion() {
   const [modalWhatsapp, setModalWhatsapp] = useState(false);
 const [telefonoEnvio, setTelefonoEnvio] = useState('');
 const [invitacionSeleccionadaEnvio, setInvitacionSeleccionadaEnvio] = useState(null);
+
+  const [modalEditar, setModalEditar] = useState(false);
+  const [invitacionEditando, setInvitacionEditando] = useState(null);
+  const [editPersonas, setEditPersonas] = useState('');
+  const [editEntradas, setEditEntradas] = useState('');
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
 
   useEffect(() => {
     const cargarInfo = async () => {
@@ -223,6 +243,61 @@ enviarWhatsApp(telefono, json);
       await cargarInvitaciones();
     } catch (err) {
       setError(err.message || 'No se pudo cancelar la invitación');
+    }
+  };
+
+  const abrirEditar = (inv) => {
+    setInvitacionEditando(inv);
+    setEditPersonas(String(inv.personasAutorizadas ?? ''));
+    setEditEntradas(String(inv.entradasRestantes ?? ''));
+    setModalEditar(true);
+  };
+
+  const guardarEdicion = async () => {
+    if (!invitacionEditando) return;
+
+    const personas = Number(editPersonas);
+    const entradas = Number(editEntradas);
+
+    if (!Number.isFinite(personas) || personas < 1) {
+      alert('La cantidad de personas debe ser mayor a 0');
+      return;
+    }
+    if (!Number.isFinite(entradas) || entradas < 0) {
+      alert('Las entradas restantes no pueden ser negativas');
+      return;
+    }
+    if (entradas > personas) {
+      alert('Las entradas restantes no pueden ser mayores a las personas autorizadas');
+      return;
+    }
+
+    try {
+      setGuardandoEdicion(true);
+
+      const authToken = localStorage.getItem('token') || '';
+      const resp = await fetch(`${API_BASE_URL}/invitaciones-qr/${token}/${invitacionEditando._id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: authToken ? `Bearer ${authToken}` : '',
+        },
+        body: JSON.stringify({ personasAutorizadas: personas, entradasRestantes: entradas }),
+      });
+
+      const json = await resp.json();
+
+      if (!resp.ok) {
+        throw new Error(json.msg || 'No se pudo editar la invitación');
+      }
+
+      setModalEditar(false);
+      setInvitacionEditando(null);
+      await cargarInvitaciones();
+    } catch (err) {
+      alert(err.message || 'No se pudo editar la invitación');
+    } finally {
+      setGuardandoEdicion(false);
     }
   };
 
@@ -454,6 +529,19 @@ enviarWhatsApp(telefono, json);
     📲 Enviar
   </button>
 
+  {isAdminUser && (
+    <button
+      type="button"
+      style={styles.editBtn}
+      onClick={(e) => {
+        e.stopPropagation();
+        abrirEditar(inv);
+      }}
+    >
+      ✏️ Editar
+    </button>
+  )}
+
   {inv.estado !== 'cancelada' && (
     <button
       type="button"
@@ -583,6 +671,58 @@ enviarWhatsApp(telefono, json);
     </div>
   </div>
 )}
+      {modalEditar && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <h3>Editar invitación</h3>
+            <p style={{ color: '#6b7280', fontSize: 13, marginTop: 4 }}>
+              {invitacionEditando?.nombreFamilia}
+            </p>
+
+            <div style={styles.fieldBlock}>
+              <label style={styles.label}>Personas autorizadas</label>
+              <input
+                style={styles.input}
+                type="number"
+                min="1"
+                value={editPersonas}
+                onChange={(e) => setEditPersonas(e.target.value)}
+              />
+            </div>
+
+            <div style={styles.fieldBlock}>
+              <label style={styles.label}>Entradas restantes</label>
+              <input
+                style={styles.input}
+                type="number"
+                min="0"
+                value={editEntradas}
+                onChange={(e) => setEditEntradas(e.target.value)}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+              <button
+                style={styles.primaryBtn}
+                disabled={guardandoEdicion}
+                onClick={guardarEdicion}
+              >
+                {guardandoEdicion ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+
+              <button
+                style={styles.cancelBtn}
+                onClick={() => {
+                  setModalEditar(false);
+                  setInvitacionEditando(null);
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -745,6 +885,15 @@ whatsappBtn: {
   borderRadius: 10,
   padding: '10px 14px',
   background: '#16a34a',
+  color: '#fff',
+  fontWeight: 700,
+  cursor: 'pointer',
+},
+editBtn: {
+  border: 'none',
+  borderRadius: 10,
+  padding: '10px 14px',
+  background: '#2563eb',
   color: '#fff',
   fontWeight: 700,
   cursor: 'pointer',
