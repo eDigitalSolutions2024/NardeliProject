@@ -1366,7 +1366,7 @@ fechaAgregado
     updated.precios = precios;
     await updated.save();
 
-// ===== WHATSAPP ALERTA =====
+// ===== WHATSAPP ALERTA (solo si hubo cambios reales) =====
 if (reservaActual.tipoReserva === 'evento') {
   try {
     const payload = construirPayloadTemplateCambioEvento(
@@ -1375,18 +1375,20 @@ if (reservaActual.tipoReserva === 'evento') {
       [] // aquí no usamos cambiosGenerales
     );
 
-    await enviarWhatsAppTemplateCambioEvento({
-      to: process.env.WA_ALERT_NUMBER,
-      ...payload
-    });
+    if (payload.cambios !== 'Sin cambios detectados') {
+      await enviarWhatsAppTemplateCambioEvento({
+        to: process.env.WA_ALERT_NUMBER,
+        ...payload
+      });
 
-    await HistorialReserva.create({
-      reservaId: updated._id,
-      tipo: 'whatsapp',
-      accion: 'alert_sent',
-      destino: process.env.WA_ALERT_NUMBER,
-      mensaje: JSON.stringify(payload, null, 2)
-    });
+      await HistorialReserva.create({
+        reservaId: updated._id,
+        tipo: 'whatsapp',
+        accion: 'alert_sent',
+        destino: process.env.WA_ALERT_NUMBER,
+        mensaje: JSON.stringify(payload, null, 2)
+      });
+    }
 
   } catch (err) {
     console.error('ERROR ENVIANDO TEMPLATE EN PUT /:id/utensilios:', err);

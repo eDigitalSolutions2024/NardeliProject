@@ -97,9 +97,16 @@ const reservaSchema = new mongoose.Schema(
     // Estado de la reserva de flujo interno (para /reservas/activa)
     estado: {
       type: String,
-      enum: ['borrador', 'confirmada', 'cancelada'],
+      enum: ['borrador', 'confirmada', 'cancelada', 'finalizado'],
       default: 'confirmada',
       index: true,
+    },
+
+    // Confirmación de cierre del evento (app de invitaciones)
+    finalizacion: {
+      confirmadoEn: { type: Date, default: null },
+      confirmadoPor: { type: mongoose.Schema.Types.ObjectId, ref: 'Usuario', default: null },
+      pospuestoHasta: { type: Date, default: null },
     },
 
     // Cotización / Evento

@@ -15,6 +15,14 @@
   border-radius: 8px;
 }
 
+/* Eventos anteriores: solo se marcan en el calendario, en gris */
+.react-calendar__tile.evento-pasado {
+  background: #d9d9d9 !important;
+  color: #7a7a7a !important;
+  font-weight: bold;
+  border-radius: 8px;
+}
+
 
 /* Panel de eventos (izquierda) */
 .eventos-panel {

@@ -1,8 +1,55 @@
 const express = require('express');
 const router = express.Router();
 
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 const Reserva = require('../models/Reservas');
 const InvitacionQR = require('../models/InvitacionQR');
+
+const TZ = process.env.APP_TIMEZONE || 'America/Ciudad_Juarez';
+
+// Margen de gracia tras la hora de fin antes de pedir confirmación de cierre
+const HORAS_GRACIA_FIN = 2;
+
+// Calcula el instante real de fin del evento, considerando eventos
+// que cruzan la medianoche (ej. 21:00 -> 02:00 del día siguiente)
+function calcularFinReal(fecha, horaInicio, horaFin) {
+  const fechaStr = dayjs(fecha).tz(TZ).format('YYYY-MM-DD');
+
+  const inicio = dayjs.tz(`${fechaStr} ${horaInicio}`, 'YYYY-MM-DD HH:mm', TZ);
+  let fin = dayjs.tz(`${fechaStr} ${horaFin}`, 'YYYY-MM-DD HH:mm', TZ);
+
+  if (!fin.isAfter(inicio)) {
+    fin = fin.add(1, 'day');
+  }
+
+  return fin;
+}
+
+function calcularRequiereConfirmarFin(reserva, finReal) {
+  if (reserva.estado !== 'confirmada') return false;
+
+  const pospuestoHasta = reserva.finalizacion?.pospuestoHasta;
+  if (pospuestoHasta && dayjs().isBefore(dayjs(pospuestoHasta))) {
+    return false;
+  }
+
+  return dayjs().isAfter(finReal.add(HORAS_GRACIA_FIN, 'hour'));
+}
+
+function conInfoFin(reservaDoc) {
+  const reserva = reservaDoc.toObject({ virtuals: true });
+  const finReal = calcularFinReal(reserva.fecha, reserva.horaInicio, reserva.horaFin);
+
+  reserva.finReal = finReal.toISOString();
+  reserva.requiereConfirmarFin = calcularRequiereConfirmarFin(reserva, finReal);
+
+  return reserva;
+}
 
 router.get('/reservas', async (req, res) => {
   try {
@@ -24,7 +71,7 @@ router.get('/reservas', async (req, res) => {
     const reservas =
       await Reserva.find({
         tipoReserva: 'evento',
-        estado: 'confirmada',
+        estado: { $in: ['confirmada', 'finalizado'] },
         fecha: {
           $gte: limiteInferior,
         },
@@ -35,7 +82,7 @@ router.get('/reservas', async (req, res) => {
         .limit(100);
 
     return res.json(
-      reservas
+      reservas.map(conInfoFin)
     );
 
   } catch (error) {
@@ -224,7 +271,7 @@ router.get(
 
       return res.json({
 
-        reserva,
+        reserva: conInfoFin(reserva),
 
         resumen: {
 
@@ -277,6 +324,83 @@ router.get(
     }
   }
 );
+
+// Confirma el cierre del evento (irreversible salvo /reactivar)
+router.patch('/reservas/:id/finalizar', async (req, res) => {
+  try {
+    const reserva = await Reserva.findById(req.params.id);
+
+    if (!reserva) {
+      return res.status(404).json({ msg: 'Evento no encontrado' });
+    }
+
+    reserva.estado = 'finalizado';
+    reserva.finalizacion = {
+      confirmadoEn: new Date(),
+      confirmadoPor: null,
+      pospuestoHasta: null,
+    };
+
+    await reserva.save();
+
+    return res.json({ ok: true, reserva: conInfoFin(reserva) });
+  } catch (error) {
+    console.error('PATCH /app/reservas/:id/finalizar error:', error);
+    return res.status(500).json({ msg: 'Error al finalizar el evento' });
+  }
+});
+
+// Pospone el aviso de cierre unas horas más (por defecto 2)
+router.patch('/reservas/:id/posponer-fin', async (req, res) => {
+  try {
+    const reserva = await Reserva.findById(req.params.id);
+
+    if (!reserva) {
+      return res.status(404).json({ msg: 'Evento no encontrado' });
+    }
+
+    const horas = Number(req.body?.horas) > 0 ? Number(req.body.horas) : 2;
+    const pospuestoHasta = dayjs().add(horas, 'hour').toDate();
+
+    reserva.finalizacion = {
+      confirmadoEn: reserva.finalizacion?.confirmadoEn || null,
+      confirmadoPor: reserva.finalizacion?.confirmadoPor || null,
+      pospuestoHasta,
+    };
+
+    await reserva.save();
+
+    return res.json({ ok: true, pospuestoHasta });
+  } catch (error) {
+    console.error('PATCH /app/reservas/:id/posponer-fin error:', error);
+    return res.status(500).json({ msg: 'Error al posponer el cierre' });
+  }
+});
+
+// Reabre un evento marcado como finalizado por error
+router.patch('/reservas/:id/reactivar', async (req, res) => {
+  try {
+    const reserva = await Reserva.findById(req.params.id);
+
+    if (!reserva) {
+      return res.status(404).json({ msg: 'Evento no encontrado' });
+    }
+
+    reserva.estado = 'confirmada';
+    reserva.finalizacion = {
+      confirmadoEn: null,
+      confirmadoPor: null,
+      pospuestoHasta: null,
+    };
+
+    await reserva.save();
+
+    return res.json({ ok: true, reserva: conInfoFin(reserva) });
+  } catch (error) {
+    console.error('PATCH /app/reservas/:id/reactivar error:', error);
+    return res.status(500).json({ msg: 'Error al reactivar el evento' });
+  }
+});
 
 module.exports =
   router;

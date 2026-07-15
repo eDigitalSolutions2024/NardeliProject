@@ -73,11 +73,14 @@ const role = usuario.role;
           const ymd = reserva.fechaLocal || String(reserva.fecha).slice(0, 10);
           const hi = reserva.horaInicio || reserva.hora || reserva.horaEntrada || '';
           const hf = reserva.horaFin || reserva.horaSalida || reserva.hora || '';
+          const fecha = new Date(`${ymd}T12:00:00`);
+          const fechaComparar = new Date(fecha);
+          fechaComparar.setHours(0, 0, 0, 0);
           return {
             id: reserva._id,
             titulo: `${reserva.tipoEvento} - ${reserva.cliente}`,
             ymd,
-            fecha: new Date(`${ymd}T12:00:00`),
+            fecha,
             horaInicio: toHHmm(hi),
             horaFin: toHHmm(hf || hi), // fallback si no había fin
             tipo: (reserva.tipoEvento || '').toLowerCase(),
@@ -86,14 +89,13 @@ const role = usuario.role;
             cliente: reserva.cliente,
             tipoEvento: reserva.tipoEvento,
             tipoReserva: reserva.tipoReserva || 'evento',
+            telefono: reserva.telefono || '',
+            pasado: fechaComparar < hoy, // solo se usa para marcar el calendario en gris
           };
-        })
-        .filter(evento => {
-          const fechaEvento = new Date(evento.fecha);
-          fechaEvento.setHours(0, 0, 0, 0);
-          return fechaEvento >= hoy; // solo próximos
         });
 
+      // Se guardan TODOS los eventos (pasados y futuros): los pasados solo
+      // se usan para pintar el calendario en gris, no aparecen en el panel de lista.
       setEventos(formateados);
     } catch (error) {
       console.error('Error al cargar reservas:', error);
@@ -142,7 +144,8 @@ const convertirACotizacion = async (id) => {
       fecha: new Date(`${evento.ymd}T12:00:00`),
       horaInicio: toHHmm(evento.horaInicio || evento.hora),
       horaFin: toHHmm(evento.horaFin || evento.hora),
-      invitados: evento.invitados || evento.cantidadPersonas
+      invitados: evento.invitados || evento.cantidadPersonas,
+      telefono: evento.telefono || ''
     });
     setMostrarModal(true);
   };
@@ -175,7 +178,9 @@ const convertirACotizacion = async (id) => {
         horaInicio: toHHmm(reservaEditando.horaInicio),
         horaFin: toHHmm(reservaEditando.horaFin),
         cantidadPersonas: Number(reservaEditando.invitados || 0),
-        telefono: "N/A"
+        // Se reenvía el teléfono real del cliente (si lo tenemos) para no
+        // generar un "cambio" falso al comparar contra el valor guardado.
+        ...(reservaEditando.telefono ? { telefono: reservaEditando.telefono } : {})
       };
 
       const response = await fetch(`${API_BASE_URL}/reservas/${reservaEditando.id}`, {
@@ -219,15 +224,23 @@ const convertirACotizacion = async (id) => {
     return d.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   };
 
+  // Solo los eventos futuros/hoy se listan en el panel "Próximos Eventos"
+  const eventosFuturos = eventos.filter(evento => !evento.pasado);
+
   const getEventosDelDia = (fechaSeleccionada) =>
     eventos.filter(evento => evento.fecha.toDateString() === fechaSeleccionada.toDateString());
 
-  const tieneFecha = ({ date, view }) =>
-    view === 'month' && eventos.some(evento => evento.fecha.toDateString() === date.toDateString()) ? 'evento' : null;
+  const tieneFecha = ({ date, view }) => {
+    if (view !== 'month') return null;
+    const delDia = eventos.filter(evento => evento.fecha.toDateString() === date.toDateString());
+    if (delDia.length === 0) return null;
+    // Si al menos uno es futuro/hoy se marca normal; si todos son pasados, se marca en gris
+    return delDia.some(evento => !evento.pasado) ? 'evento' : 'evento-pasado';
+  };
 
   const eventosDelDia = getEventosDelDia(date);
 
-  const eventosFiltrados = eventos.filter((e) => {
+  const eventosFiltrados = eventosFuturos.filter((e) => {
   if (eventoRapido) return e.id === eventoRapido;
   if (!searchEventos.trim()) return true;
   const texto = `${e.titulo || ''} ${e.cliente || ''} ${formatearFecha(e.ymd)}`.toLowerCase();
@@ -267,7 +280,7 @@ const convertirACotizacion = async (id) => {
   <div>
     <h2>Próximos Eventos</h2>
     <span className="eventos-count">
-      {eventosFiltrados.length} de {eventos.length} eventos
+      {eventosFiltrados.length} de {eventosFuturos.length} eventos
     </span>
     {eventoRapido && (
       <span
@@ -313,7 +326,7 @@ const convertirACotizacion = async (id) => {
       <div className="evento-info">
         <h3 className="evento-titulo">Sin resultados</h3>
         <p className="evento-fecha">
-          {eventos.length === 0
+          {eventosFuturos.length === 0
             ? 'Cuando registres eventos aparecerán aquí.'
             : 'No hay eventos que coincidan con ese criterio de búsqueda.'}
         </p>
