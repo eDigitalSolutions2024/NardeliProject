@@ -259,6 +259,12 @@
   transition: all 0.3s ease;
   border-radius: 8px;
   margin: 2px;
+  /* react-calendar fija flex-basis: 100%/7 por casilla (inline, vía JS).
+     El margin de arriba se suma a ese ancho y hace que la 7ª columna
+     (domingo) no quepa y se recorra a la fila siguiente. Se descuenta
+     el margin del flex-basis para que las 7 columnas sigan cabiendo. */
+  flex-basis: calc(100% / 7 - 4px) !important;
+  max-width: calc(100% / 7 - 4px);
 }
 
 .calendario-wrapper .react-calendar__month-view__days__day:hover {
