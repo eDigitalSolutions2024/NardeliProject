@@ -8,3 +8,10 @@ export default API_BASE_URL;
 
 // 👇 NUEVO: origen del backend (p. ej. http://localhost:8020)
 export const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '');
+
+// Header de autorización para llamadas de staff (admin/asistente).
+// Úsalo junto a 'Content-Type' en peticiones que el backend protege con requireStaff.
+export function authHeaders() {
+  const token = localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}

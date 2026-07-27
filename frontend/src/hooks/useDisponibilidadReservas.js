@@ -17,9 +17,19 @@ function timeToMinutes(t) {
   return Number(m[1]) * 60 + Number(m[2]);
 }
 
+// Normaliza un horario [inicio, fin) a intervalos absolutos en una línea de
+// tiempo de 48h, duplicándolo 24h después. Así se puede comparar contra
+// otro horario sin importar si alguno cruza medianoche (ej. 21:00-02:00).
+function normalizeIntervals(startMin, endMin) {
+  if (!Number.isFinite(startMin) || !Number.isFinite(endMin)) return [];
+  const end = endMin <= startMin ? endMin + 1440 : endMin; // cruza medianoche
+  return [[startMin, end], [startMin + 1440, end + 1440]];
+}
+
 function overlap(s1, e1, s2, e2) {
-  if ([s1, e1, s2, e2].some((x) => !Number.isFinite(x))) return false;
-  return Math.max(s1, s2) < Math.min(e1, e2);
+  const a = normalizeIntervals(s1, e1);
+  const b = normalizeIntervals(s2, e2);
+  return a.some(([as, ae]) => b.some(([bs, be]) => Math.max(as, bs) < Math.min(ae, be)));
 }
 
 // Cachea por mes ("YYYY-MM") las fechas con eventos/cotizaciones que reporta el

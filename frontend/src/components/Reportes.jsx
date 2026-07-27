@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import API_BASE_URL from '../api';
+import API_BASE_URL, { authHeaders } from '../api';
 import * as XLSX from 'xlsx';
 
 const money = (n) =>
@@ -69,9 +69,8 @@ export default function Reportes() {
     try {
       const url = `${API_BASE_URL}/reportes/resumen?${buildQs()}`;
       const r = await fetch(url, {
-        credentials: 'include',
         cache: 'no-store',
-        headers: { Accept: 'application/json' },
+        headers: { Accept: 'application/json', ...authHeaders() },
         });
 
 
@@ -103,9 +102,8 @@ export default function Reportes() {
         pageSize: String(pageSize),
       })}`;
       const r = await fetch(url, {
-        credentials: 'include',
         cache: 'no-store',
-        headers: { Accept: 'application/json' },
+        headers: { Accept: 'application/json', ...authHeaders() },
         });
 
 

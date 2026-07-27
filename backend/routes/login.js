@@ -2,7 +2,7 @@ const Usuario = require('../models/Usuario');
 const router = require('express').Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const JWT_SECRET = process.env.JWT_SECRET || 'clave-super-secreta';
+const JWT_SECRET = require('../utils/jwtSecret');
 
 router.post('/login', async (req, res) => {
   try {

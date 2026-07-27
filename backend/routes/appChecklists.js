@@ -1,8 +1,28 @@
 const router = require('express').Router();
 const path = require('path');
 const fs = require('fs');
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = require('../utils/jwtSecret');
 const ChecklistTemplate = require('../models/ChecklistTemplate');
 const EventChecklist = require('../models/EventChecklist');
+
+// Solo staff logueado puede resetear las plantillas oficiales (borra todas
+// las existentes). Nada en la app llama esta ruta automáticamente.
+function requireStaff(req, res, next) {
+  const h = req.headers.authorization || '';
+  const t = h.startsWith('Bearer ') ? h.slice(7) : null;
+  if (!t) return res.status(401).json({ ok: false, msg: 'No autorizado' });
+  try {
+    const payload = jwt.verify(t, JWT_SECRET);
+    if (payload.role !== 'admin' && payload.role !== 'asistente') {
+      return res.status(403).json({ ok: false, msg: 'Requiere permisos de staff' });
+    }
+    req.user = payload;
+    next();
+  } catch {
+    return res.status(401).json({ ok: false, msg: 'Token inválido' });
+  }
+}
 
 // ── Multer ────────────────────────────────────────────────────────────────
 let upload;
@@ -117,7 +137,7 @@ router.delete('/checklist-templates/:id/items/:itemId', async (req, res) => {
 });
 
 // POST /api/app/checklist-templates/seed — reemplaza las plantillas con las oficiales de Nardeli
-router.post('/checklist-templates/seed', async (req, res) => {
+router.post('/checklist-templates/seed', requireStaff, async (req, res) => {
   try {
     await ChecklistTemplate.deleteMany({});
     const plantillas = [

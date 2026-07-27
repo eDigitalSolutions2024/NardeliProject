@@ -11,7 +11,7 @@ const mailer = require('../utils/mailer');
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
-const JWT_SECRET = process.env.JWT_SECRET || 'secreto-temporal';
+const JWT_SECRET = require('../utils/jwtSecret');
 const APP_ORIGIN = process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
 
 // Rate limit para reenvío de código

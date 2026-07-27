@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import './Calendario.css';
-import API_BASE_URL from '../api';
+import API_BASE_URL, { authHeaders } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -56,7 +56,7 @@ const role = usuario.role;
   const obtenerEventos = async () => {
     try {
       // Pide solo EVENTOS; si el backend no filtra, más abajo filtramos en front.
-      const response = await fetch(`${API_BASE_URL}/reservas?tipo=evento`);
+      const response = await fetch(`${API_BASE_URL}/reservas?tipo=evento`, { headers: authHeaders() });
       const data = await response.json();
 
       const hoy = new Date();
@@ -107,7 +107,7 @@ const role = usuario.role;
   const manejarEliminar = async (id) => {
     if (window.confirm('¿Estás seguro de eliminar esta reserva?')) {
       try {
-        const response = await fetch(`${API_BASE_URL}/reservas/${id}`, { method: 'DELETE' });
+        const response = await fetch(`${API_BASE_URL}/reservas/${id}`, { method: 'DELETE', headers: authHeaders() });
         if (response.ok) setEventos(prev => prev.filter(e => e.id !== id));
         else alert('Error al eliminar la reserva.');
       } catch (error) {
@@ -121,7 +121,7 @@ const convertirACotizacion = async (id) => {
   try {
     const resp = await fetch(`${API_BASE_URL}/reservas/${id}/convertir-a-cotizacion`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       // body: JSON.stringify({ nota: 'Opcional: texto para la cotización' })
     });
     if (!resp.ok) {
@@ -185,7 +185,7 @@ const convertirACotizacion = async (id) => {
 
       const response = await fetch(`${API_BASE_URL}/reservas/${reservaEditando.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(payload)
       });
 

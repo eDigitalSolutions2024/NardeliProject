@@ -1,9 +1,29 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = require('../utils/jwtSecret');
 const Producto = require('../models/Producto');
 const multer = require('multer');
 const path = require('path');
+
+// Solo staff administra el catálogo de productos (el inventario público de
+// consulta sigue abierto en GET /inventario, que usan los clientes).
+function requireStaff(req, res, next) {
+  const h = req.headers.authorization || '';
+  const t = h.startsWith('Bearer ') ? h.slice(7) : null;
+  if (!t) return res.status(401).json({ msg: 'No autorizado' });
+  try {
+    const payload = jwt.verify(t, JWT_SECRET);
+    if (payload.role !== 'admin' && payload.role !== 'asistente') {
+      return res.status(403).json({ msg: 'Requiere permisos de staff' });
+    }
+    req.user = payload;
+    next();
+  } catch {
+    return res.status(401).json({ msg: 'Token inválido' });
+  }
+}
 
 // ===== Multer (imagen opcional) =====
 const storage = multer.diskStorage({
@@ -22,7 +42,7 @@ const toNumber = (v, def = 0) => {
 };
 
 // ====== CREATE (con/sin imagen) ======
-router.post('/', upload.single('imagen'), async (req, res) => {
+router.post('/', requireStaff, upload.single('imagen'), async (req, res) => {
   try {
     const body = req.body || {};
     const nuevoProducto = new Producto({
@@ -43,7 +63,7 @@ router.post('/', upload.single('imagen'), async (req, res) => {
 });
 
 // ====== READ all ======
-router.get('/', async (_req, res) => {
+router.get('/', requireStaff, async (_req, res) => {
   try {
     const productos = await Producto.find().sort({ creadoEn: -1 });
     return res.json(productos);
@@ -99,7 +119,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // ====== UPDATE (con/sin nueva imagen) ======
-router.put('/:id', upload.single('imagen'), async (req, res) => {
+router.put('/:id', requireStaff, upload.single('imagen'), async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.isValidObjectId(id)) return res.status(400).json({ msg: 'ID inválido' });
@@ -130,7 +150,7 @@ router.put('/:id', upload.single('imagen'), async (req, res) => {
 });
 
 // ====== DELETE ======
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireStaff, async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.isValidObjectId(id)) return res.status(400).json({ msg: 'ID inválido' });

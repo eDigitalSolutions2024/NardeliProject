@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import './TablaProductos.css';
-import API_BASE_URL, { API_ORIGIN } from '../api';   // <-- usa API_ORIGIN para imágenes
+import API_BASE_URL, { API_ORIGIN, authHeaders } from '../api';   // <-- usa API_ORIGIN para imágenes
 const fntMXN = new Intl.NumberFormat('es-MX', {
   style: 'currency',
   currency: 'MXN',
@@ -31,7 +31,7 @@ export default function TablaProductos({ refresh = 0 } ) {
    const cargar = async () => {                          // <-- NUEVO helper
     try {
       setCargando(true);
-      const { data } = await axios.get(`${API_BASE_URL}/productos`);
+      const { data } = await axios.get(`${API_BASE_URL}/productos`, { headers: authHeaders() });
       const rows = Array.isArray(data) ? data : (data.items || []);
       setProductos(rows);
     } catch (e) {
@@ -96,7 +96,7 @@ export default function TablaProductos({ refresh = 0 } ) {
       const { data: actualizado } = await axios.put(
         `${API_BASE_URL}/productos/${form._id}`,
         fd,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
+        { headers: { 'Content-Type': 'multipart/form-data', ...authHeaders() } }
       );
 
       // Actualiza la fila en la tabla sin volver a pedir todo

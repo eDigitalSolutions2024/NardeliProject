@@ -34,7 +34,7 @@ const Login = ({ onLoginSuccess }) => {
 
       const payload = isLogin
         ? { email: formData.email, password: formData.password }
-        : { name: formData.fullname, email: formData.email, password: formData.password };
+        : { name: formData.fullname, email: formData.email, password: formData.password, codigoInvitacion: formData.codigoInvitacion };
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -153,6 +153,23 @@ const Login = ({ onLoginSuccess }) => {
                       name="fullname"
                       placeholder="Nombre Completo"
                       value={formData.fullname || ''}
+                      onChange={handleChange}
+                      className="form-input"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              {!isLogin && (
+                <div className="form-group">
+                  <div className="input-container">
+                    <span className="input-icon">🔑</span>
+                    <input
+                      type="text"
+                      name="codigoInvitacion"
+                      placeholder="Código de invitación"
+                      value={formData.codigoInvitacion || ''}
                       onChange={handleChange}
                       className="form-input"
                       required

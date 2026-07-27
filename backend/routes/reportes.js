@@ -2,8 +2,27 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = require('../utils/jwtSecret');
 
 const Reserva = require('../models/Reservas');
+
+// Reportes financieros: solo staff.
+function requireStaff(req, res, next) {
+  const h = req.headers.authorization || '';
+  const t = h.startsWith('Bearer ') ? h.slice(7) : null;
+  if (!t) return res.status(401).json({ error: 'No autorizado' });
+  try {
+    const payload = jwt.verify(t, JWT_SECRET);
+    if (payload.role !== 'admin' && payload.role !== 'asistente') {
+      return res.status(403).json({ error: 'Requiere permisos de staff' });
+    }
+    req.user = payload;
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Token inválido' });
+  }
+}
 
 // ===== Helpers fechas (YYYY-MM-DD) usando HORA LOCAL del server =====
 function parseYmdToDateStart(ymd) {
@@ -38,7 +57,7 @@ function escapeRegex(s) {
  * - page=1 (opcional)
  * - pageSize=20 (opcional)
  */
-router.get('/eventos', async (req, res) => {
+router.get('/eventos', requireStaff, async (req, res) => {
   try {
     const {
       from, to,
@@ -303,7 +322,7 @@ router.get('/eventos', async (req, res) => {
  * GET /api/reportes/resumen
  * (KPIs) por rango usando Reserva.fecha
  */
-router.get('/resumen', async (req, res) => {
+router.get('/resumen', requireStaff, async (req, res) => {
   try {
         const { from, to, tipoEvento, q } = req.query || {};
 

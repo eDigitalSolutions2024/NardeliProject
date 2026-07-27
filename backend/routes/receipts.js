@@ -2,10 +2,29 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = require('../utils/jwtSecret');
 
 const Reserva = require('../models/Reservas');
 const Receipt = require('../models/Receipt');
 const { streamReceiptPdf } = require('../services/receiptPdf');
+
+// Solo personal (admin/asistente) puede cobrar, generar o borrar recibos.
+function requireStaff(req, res, next) {
+  const h = req.headers.authorization || '';
+  const t = h.startsWith('Bearer ') ? h.slice(7) : null;
+  if (!t) return res.status(401).json({ ok: false, msg: 'No autorizado' });
+  try {
+    const payload = jwt.verify(t, JWT_SECRET);
+    if (payload.role !== 'admin' && payload.role !== 'asistente') {
+      return res.status(403).json({ ok: false, msg: 'Requiere permisos de staff' });
+    }
+    req.user = payload;
+    next();
+  } catch {
+    return res.status(401).json({ ok: false, msg: 'Token inválido' });
+  }
+}
 
 // Helper: totales
 async function getTotals(orderId) {
@@ -27,7 +46,7 @@ async function getTotals(orderId) {
 }
 
 /** POST /receipts  -> crear recibo/pago parcial */
-router.post('/receipts', async (req, res) => {
+router.post('/receipts', requireStaff, async (req, res) => {
   try {
     const {
       orderId, amount, paymentMethod='EFECTIVO', currency='MXN',
@@ -167,7 +186,7 @@ router.get('/reservas/:id/receipts', async (req, res) => {
 });
 
 /** GET /reservas/:id/saldo -> totales/pagado/saldo */
-router.get('/reservas/:id/saldo', async (req, res) => {
+router.get('/reservas/:id/saldo', requireStaff, async (req, res) => {
   const totals = await getTotals(req.params.id);
   if (!totals) return res.status(404).json({ error: 'Reserva no encontrada' });
   const { subtotal, descuento, total, paid, remaining } = totals;
@@ -175,7 +194,7 @@ router.get('/reservas/:id/saldo', async (req, res) => {
 });
 
 /** DELETE /receipts/:id -> eliminar un recibo */
-router.delete('/receipts/:id', async (req, res) => {
+router.delete('/receipts/:id', requireStaff, async (req, res) => {
   const { id } = req.params;
 
   try {

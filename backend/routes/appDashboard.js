@@ -319,6 +319,7 @@ router.get(
         .json({
           msg:
             'Error al obtener dashboard',
+            
         });
 
     }

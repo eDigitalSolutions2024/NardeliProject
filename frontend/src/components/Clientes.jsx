@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import API_BASE_URL from "../api";
+import API_BASE_URL, { authHeaders } from "../api";
 import "./Clientes.css";
 
 const PAGE_SIZE = 10;
@@ -49,7 +49,7 @@ export default function Clientes() {
     try {
       const [usuariosRes, reservasRes] = await Promise.all([
         fetch(`${API_BASE_URL}/usuarios?rol=cliente`),
-        fetch(`${API_BASE_URL}/reservas`),
+        fetch(`${API_BASE_URL}/reservas`, { headers: authHeaders() }),
       ]);
 
       const usuarios = usuariosRes.ok ? await usuariosRes.json() : [];
@@ -145,7 +145,7 @@ export default function Clientes() {
             return { ...row, pagoEstado: "—", pagoInfo: null };
           }
           try {
-            const r = await fetch(`${API_BASE_URL}/reservas/${row._id}/saldo`);
+            const r = await fetch(`${API_BASE_URL}/reservas/${row._id}/saldo`, { headers: authHeaders() });
             if (!r.ok) throw new Error(`HTTP ${r.status}`);
             const { total = 0, paid = 0, remaining = 0 } = await r.json();
             const pagoEstado = remaining > 0.0001 ? "Pendiente" : "Pagado";

@@ -7,7 +7,7 @@ const Reserva = require('../models/Reservas');
 const InvitacionPortal = require('../models/InvitacionPortal');
 const InvitacionQR = require('../models/InvitacionQR');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secreto-temporal';
+const JWT_SECRET = require('../utils/jwtSecret');
 
 // Solo deja pasar si el JWT trae role === 'admin'
 function requireAdmin(req, res, next) {

@@ -15,7 +15,7 @@ const HistorialReserva = require('../models/HistorialReserva');
 
 const isId = (v) => mongoose.isValidObjectId(String(v));
 const TZ = process.env.APP_TIMEZONE || 'America/Ciudad_Juarez';
-const JWT_SECRET = process.env.JWT_SECRET || 'secreto-temporal';
+const JWT_SECRET = require('../utils/jwtSecret');
 
 const axios = require('axios');
 
@@ -60,6 +60,26 @@ function auth(req, res, next) {
   if (!t) return res.status(401).json({ ok: false, msg: 'No token' });
   try { req.user = jwt.verify(t, JWT_SECRET); next(); }
   catch { return res.status(401).json({ ok: false, msg: 'Token inválido' }); }
+}
+
+// Requiere token válido Y rol de staff (admin o asistente). Para acciones que
+// solo el personal del salón debe poder hacer (listar todas las reservas,
+// borrar, aplicar descuentos, aceptar cotizaciones, etc.) — NO usar en rutas
+// que los clientes deben poder alcanzar por su link directo (ej. GET /:id).
+function requireStaff(req, res, next) {
+  const h = req.headers.authorization || '';
+  const t = h.startsWith('Bearer ') ? h.slice(7) : null;
+  if (!t) return res.status(401).json({ ok: false, msg: 'No autorizado' });
+  try {
+    const payload = jwt.verify(t, JWT_SECRET);
+    if (payload.role !== 'admin' && payload.role !== 'asistente') {
+      return res.status(403).json({ ok: false, msg: 'Requiere permisos de staff' });
+    }
+    req.user = payload;
+    next();
+  } catch {
+    return res.status(401).json({ ok: false, msg: 'Token inválido' });
+  }
 }
 
 function extraerUsuarioToken(req) {
@@ -129,9 +149,18 @@ function timeToMinutes(t) {
   if (!Number.isFinite(h) || !Number.isFinite(mi)) return NaN;
   return h * 60 + mi;
 }
+// Normaliza un horario [inicio, fin) a intervalos absolutos en una línea de
+// tiempo de 48h, duplicándolo 24h después. Así se puede comparar contra
+// otro horario sin importar si alguno cruza medianoche (ej. 21:00-02:00).
+function normalizeIntervals(startMin, endMin) {
+  if (!Number.isFinite(startMin) || !Number.isFinite(endMin)) return [];
+  const end = endMin <= startMin ? endMin + 1440 : endMin; // cruza medianoche
+  return [[startMin, end], [startMin + 1440, end + 1440]];
+}
 function overlap(s1, e1, s2, e2) {
-  if ([s1, e1, s2, e2].some(x => !Number.isFinite(x))) return false;
-  return Math.max(s1, s2) < Math.min(e1, e2);
+  const a = normalizeIntervals(s1, e1);
+  const b = normalizeIntervals(s2, e2);
+  return a.some(([as, ae]) => b.some(([bs, be]) => Math.max(as, bs) < Math.min(ae, be)));
 }
 function ymd(input) {
   if (!input) return null;
@@ -374,7 +403,7 @@ router.get('/activa', auth, async (req, res) => {
 });
   
 // GET /reservas
-router.get('/', async (req, res) => {
+router.get('/', requireStaff, async (req, res) => {
   try {
     const { correo } = req.query;
     const tipo = req.query.tipo || req.query.tipoReserva;
@@ -910,7 +939,7 @@ async function enviarWhatsAppTemplateCambioEvento({
   return data;
 }*/
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireStaff, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -1021,7 +1050,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireStaff, async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.isValidObjectId(id)) return res.status(400).json({ msg: 'ID inválido' });
@@ -1090,7 +1119,7 @@ router.get('/lookup/:key', async (req, res) => {
 });
 
 // ====== RUTA PODER VISUALIZAR EL HISTORIAL DE CAMBIOS =====
-router.get('/:id/historial', async (req, res) => {
+router.get('/:id/historial', requireStaff, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -1499,7 +1528,7 @@ router.get('/:id/utensilios', async (req, res) => {
   res.json(r.utensilios || []);
 });
 
-router.patch('/:id/utensilios/:itemId/precio', async (req, res) => {
+router.patch('/:id/utensilios/:itemId/precio', requireStaff, async (req, res) => {
   try {
     const { id, itemId } = req.params;
     if (!mongoose.isValidObjectId(id) || !mongoose.isValidObjectId(itemId)) {
@@ -1614,7 +1643,7 @@ function calcularDescuento(subTotal, descuento) {
   const monto = Math.max(0, Number(descuento.valor));
   return Math.min(subTotal, monto);
 }
-router.put('/:id/descuento', async (req, res) => {
+router.put('/:id/descuento', requireStaff, async (req, res) => {
   try {
     const { id } = req.params;
     const { tipo, valor, motivo = '' } = req.body || {};
@@ -1703,7 +1732,7 @@ router.get('/:id/totales', async (req, res) => {
 });
 
 // ===== Convertir cotización a evento =====
-router.put('/:id/aceptar-cotizacion', async (req, res) => {
+router.put('/:id/aceptar-cotizacion', requireStaff, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -1769,7 +1798,7 @@ router.put('/:id/aceptar-cotizacion', async (req, res) => {
 
 
 // ===== Convertir EVENTO -> COTIZACIÓN =====
-router.put('/:id/convertir-a-cotizacion', async (req, res) => {
+router.put('/:id/convertir-a-cotizacion', requireStaff, async (req, res) => {
   try {
     const { id } = req.params;
     const nota = (req.body?.nota ?? '').toString();
@@ -1821,7 +1850,7 @@ router.put('/:id/convertir-a-cotizacion', async (req, res) => {
 
 
 // ===== Alias: PATCH /reservas/:id/precios =====
-router.patch('/:id/precios', async (req, res) => {
+router.patch('/:id/precios', requireStaff, async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.isValidObjectId(id)) return res.status(400).json({ msg: 'ID inválido' });

@@ -3,7 +3,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const Setting = require('../models/Setting');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret';
+const JWT_SECRET = require('../utils/jwtSecret');
 const TIPO_CAMBIO_KEY = 'tipo_cambio_usd';
 const TIPO_CAMBIO_DEFAULT = 18.00;
 

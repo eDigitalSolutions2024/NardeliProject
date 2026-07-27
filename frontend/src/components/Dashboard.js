@@ -5,7 +5,7 @@ import './Dashboard.css';
 import Calendario from './Calendario';
 import FormProducto from './FormProducto';
 import TablaProductos from './TablaProductos';
-import API_BASE_URL from '../api';
+import API_BASE_URL, { authHeaders } from '../api';
 import Clientes from './Clientes';
 import Reserva from './ReservarEvento';
 import Reportes from './Reportes';
@@ -66,7 +66,8 @@ const Dashboard = ({ onLogout }) => {
 
   try {
     const resp = await fetch(`${API_BASE_URL}/reservas/${encodeURIComponent(id)}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: authHeaders()
     });
 
     if (!resp.ok) {
@@ -164,8 +165,8 @@ const Dashboard = ({ onLogout }) => {
     setLoadingDash(true);
     try {
       const [rawEventos, rawCots] = await Promise.all([
-        fetch(`${API_BASE_URL}/reservas?tipo=evento`).then(r => r.json()).catch(() => []),
-        fetch(`${API_BASE_URL}/reservas?tipo=cotizacion`).then(r => r.json()).catch(() => []),
+        fetch(`${API_BASE_URL}/reservas?tipo=evento`, { headers: authHeaders() }).then(r => r.json()).catch(() => []),
+        fetch(`${API_BASE_URL}/reservas?tipo=cotizacion`, { headers: authHeaders() }).then(r => r.json()).catch(() => []),
       ]);
 
       const eventos = soloEventos(rawEventos);
@@ -291,7 +292,7 @@ const Dashboard = ({ onLogout }) => {
 
       const r = await fetch(`${API_BASE_URL}/reservas/${cotEdit.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(payload),
       });
 
@@ -316,7 +317,7 @@ const Dashboard = ({ onLogout }) => {
 
       const resp = await fetch(url, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({})   // <-- importante
       });
 

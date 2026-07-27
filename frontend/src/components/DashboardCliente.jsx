@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './DashboardCliente.css';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
-import API_BASE_URL, { API_ORIGIN } from '../api';
+import API_BASE_URL, { API_ORIGIN, authHeaders } from '../api';
 import ModalAccesoInvitaciones from './ModalAccesoInvitaciones';
 import FormulariosNardeli from './FormulariosNardeli';
 import ChecklistsReserva from './ChecklistsReserva';
+import MiniCalendarioDisponibilidad from './MiniCalendarioDisponibilidad';
+import useDisponibilidadReservas from '../hooks/useDisponibilidadReservas';
 
 // Placeholder si no hay imagen
 const PLACEHOLDER =
@@ -265,6 +267,22 @@ const [discountItems, setDiscountItems] = useState({}); // { [itemId]: true }
 
   // Snapshot completo de la reserva para prefill del recibo (cliente, fechas, etc.)
   const [reservaData, setReservaData] = useState(null);
+
+  const { porFecha, precargarDesde } = useDisponibilidadReservas();
+  const fechaReserva = useMemo(() => {
+    if (!reservaData?.fecha) return null;
+    const d = new Date(reservaData.fecha);
+    if (isNaN(d)) return null;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, [reservaData?.fecha]);
+
+  useEffect(() => {
+    if (!reservaData?.fecha) return;
+    const d = new Date(reservaData.fecha);
+    if (isNaN(d)) return;
+    precargarDesde(d.getFullYear(), d.getMonth(), 0);
+  }, [reservaData?.fecha, precargarDesde]);
+
   // === Pagos parciales / historial de recibos ===
 const [receipts, setReceipts] = useState([]);     // historial de recibos de la reserva
 const [loadingReceipts, setLoadingReceipts] = useState(false);
@@ -894,6 +912,7 @@ async function deleteReceiptById(id) {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders(),
       },
     });
 
@@ -1003,7 +1022,7 @@ if (amt > saldoRestante) amt = saldoRestante;
 
       const r = await fetch(`${API_BASE_URL}/receipts`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(payload),
       });
 
@@ -1316,7 +1335,7 @@ function openEstadoCuentaPdf() {
 
                       const res = await fetch(`${API_BASE_URL}/reservas/${reservaId}/precios`, {
                         method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 'Content-Type': 'application/json', ...authHeaders() },
                         body: JSON.stringify({
                         descuento: {
                           tipo: descTipo,
@@ -1437,6 +1456,18 @@ onMouseLeave={(e) => {
           >
             {saving ? 'Guardando…' : 'Actualizar Saldo de la Reserva'}
           </button>
+
+          {fechaReserva && (
+            <div style={{ marginTop: 12, maxWidth: 360 }}>
+              <MiniCalendarioDisponibilidad
+                fecha={fechaReserva}
+                onSeleccionarFecha={() => {}}
+                excluirId={reservaId}
+                porFecha={porFecha}
+                precargarDesde={precargarDesde}
+              />
+            </div>
+          )}
 
             <button
               className="pdf"

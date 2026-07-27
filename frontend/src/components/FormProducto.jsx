@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import './FormProducto.css';
-import API_BASE_URL from '../api';
+import API_BASE_URL, { authHeaders } from '../api';
 
 const FormProducto = ({ onProductoAgregado = () => {} }) => {
   const [formData, setFormData] = useState({
@@ -39,7 +39,7 @@ const FormProducto = ({ onProductoAgregado = () => {} }) => {
     }
 
     const response = await axios.post(`${API_BASE_URL}/productos`, dataToSend, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'multipart/form-data', ...authHeaders() }
     });
 
     setMensaje('✅ Producto agregado correctamente');

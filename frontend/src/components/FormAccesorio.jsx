@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import './FormProducto.css';           // 👈 reutilizamos los mismos estilos
-import API_BASE_URL from '../api';
+import API_BASE_URL, { authHeaders } from '../api';
 
 const FormAccesorio = ({ onAccesorioAgregado = () => {} }) => {
   const [formData, setFormData] = useState({
@@ -49,7 +49,7 @@ const FormAccesorio = ({ onAccesorioAgregado = () => {} }) => {
       if (formData.imagen) dataToSend.append('imagen', formData.imagen);
 
       await axios.post(`${API_BASE_URL}/accesorios`, dataToSend, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data', ...authHeaders() }
       });
 
       setMensaje('✅ Accesorio agregado correctamente');

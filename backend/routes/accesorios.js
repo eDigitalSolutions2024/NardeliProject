@@ -4,10 +4,30 @@ const Accesorio = require('../models/Accesorio');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = require('../utils/jwtSecret');
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 } // 5 MB
 });
+
+// Solo staff da de alta accesorios en el catálogo (listar sigue abierto,
+// los clientes también consultan accesorios disponibles para su evento).
+function requireStaff(req, res, next) {
+  const h = req.headers.authorization || '';
+  const t = h.startsWith('Bearer ') ? h.slice(7) : null;
+  if (!t) return res.status(401).json({ error: 'No autorizado' });
+  try {
+    const payload = jwt.verify(t, JWT_SECRET);
+    if (payload.role !== 'admin' && payload.role !== 'asistente') {
+      return res.status(403).json({ error: 'Requiere permisos de staff' });
+    }
+    req.user = payload;
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Token inválido' });
+  }
+}
 
 // listar activos
 router.get('/', async (_req, res) => {
@@ -16,7 +36,7 @@ router.get('/', async (_req, res) => {
 });
 
 // crear (acepta JSON o FormData con campo "imagen")
-router.post('/', upload.single('imagen'), async (req, res) => {
+router.post('/', requireStaff, upload.single('imagen'), async (req, res) => {
   try {
     const b = req.body || {};
 
