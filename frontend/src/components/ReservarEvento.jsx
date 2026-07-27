@@ -58,7 +58,10 @@ const ReservarEvento = () => {
     precargarDesde(d.getFullYear(), d.getMonth(), 0);
   }, [formData.fecha, precargarDesde]);
 
-  const estadoFechaActual = formData.fecha ? estadoFecha(formData.fecha) : null;
+  const estadoFechaActual = formData.fecha
+    ? estadoFecha(formData.fecha, { horaInicio: formData.horaInicio, horaFin: formData.horaFin })
+    : null;
+  const horarioCompleto = !!(formData.horaInicio && formData.horaFin);
 
   useEffect(() => {
     if (tieneContenido(formData)) {
@@ -133,14 +136,19 @@ function getDashboardModeFromRole(role) {
     e.preventDefault();
     setMensaje('');
 
-    // Validación previa (front): si ya existe un evento activo esa fecha,
-    // no se manda el formulario. El backend vuelve a validar de todos modos.
-    const chequeo = estadoFecha(formData.fecha);
+    // Validación previa (front): solo bloquea si el horario elegido se
+    // traslapa con un evento ya existente ese día. El backend vuelve a
+    // validar de todos modos (es la autoridad final).
+    const chequeo = estadoFecha(formData.fecha, {
+      horaInicio: formData.horaInicio,
+      horaFin: formData.horaFin
+    });
     if (chequeo?.ocupado) {
+      const ev = chequeo.conflicto;
       await Swal.fire({
         icon: 'error',
-        title: 'Fecha ya está ocupada',
-        text: 'Ya existe un evento registrado en esa fecha. Selecciona otra fecha.',
+        title: 'Horario ya ocupado',
+        text: `Ya existe un evento (${ev?.tipoEvento || 'evento'} - ${ev?.cliente || 'cliente'}) en ese horario. Selecciona otro horario o fecha.`,
         confirmButtonColor: '#7b247f'
       });
       return;
@@ -187,8 +195,8 @@ function getDashboardModeFromRole(role) {
         if (response.status === 400 || response.status === 409) {
           await Swal.fire({
             icon: 'error',
-            title: 'Fecha ya está ocupada',
-            text: err.msg || 'Ya existe un evento registrado en esa fecha. Selecciona otra fecha.',
+            title: 'Horario ya ocupado',
+            text: err.msg || 'Ya existe un evento en ese horario. Selecciona otro horario o fecha.',
             confirmButtonColor: '#7b247f'
           });
         } else {
@@ -334,30 +342,57 @@ function getDashboardModeFromRole(role) {
             <input name="fecha" type="date" value={formData.fecha} onChange={handleChange} required />
 
             {formData.fecha && estadoFechaActual && (
-              <div className={`fecha-estado-badge ${estadoFechaActual.ocupado ? 'ocupado' : 'disponible'}`}>
-                {estadoFechaActual.ocupado ? '🔴 Fecha ocupada' : '🟢 Fecha disponible'}
-                {!estadoFechaActual.ocupado && estadoFechaActual.cotizaciones.length > 0 && (
-                  <small> · {estadoFechaActual.cotizaciones.length} cotización(es) en esta fecha</small>
+              <>
+                {horarioCompleto ? (
+                  <div className={`fecha-estado-badge ${estadoFechaActual.ocupado ? 'ocupado' : 'disponible'}`}>
+                    {estadoFechaActual.ocupado ? '🔴 Horario ocupado' : '🟢 Fecha y horario disponibles'}
+                  </div>
+                ) : (
+                  estadoFechaActual.eventos.length > 0 && (
+                    <div className="fecha-estado-badge neutral">
+                      🟡 Ya hay {estadoFechaActual.eventos.length} evento(s) ese día — indica el horario para verificar
+                    </div>
+                  )
                 )}
-              </div>
-            )}
 
-            {estadoFechaActual?.ocupado && (
-              <div className="evento-existente-card">
-                <strong>{estadoFechaActual.evento.tipoEvento || 'Evento'}</strong>
-                <span>Cliente: {estadoFechaActual.evento.cliente || 'N/D'}</span>
-                <span>Invitados: {estadoFechaActual.evento.cantidadPersonas ?? 'N/D'}</span>
-                <span>
-                  Horario: {estadoFechaActual.evento.horaInicio || '?'} – {estadoFechaActual.evento.horaFin || '?'}
-                </span>
-                <button
-                  type="button"
-                  className="evento-existente-btn"
-                  onClick={() => abrirEventoExistente(estadoFechaActual.evento)}
-                >
-                  Ver evento existente
-                </button>
-              </div>
+                {estadoFechaActual.eventos.length > 0 && (
+                  <div className="eventos-dia-lista">
+                    {estadoFechaActual.eventos.map((ev) => {
+                      const enConflicto = horarioCompleto && estadoFechaActual.conflicto?.id === ev.id;
+                      return (
+                        <div key={ev.id} className={`evento-existente-card ${enConflicto ? 'conflicto' : ''}`}>
+                          <strong>{ev.tipoEvento || 'Evento'}</strong>
+                          <span>Cliente: {ev.cliente || 'N/D'}</span>
+                          <span>Invitados: {ev.cantidadPersonas ?? 'N/D'}</span>
+                          <span>Horario: {ev.horaInicio || '?'} – {ev.horaFin || '?'}</span>
+                          {enConflicto && <span className="conflicto-tag">⛔ Se empalma con tu horario</span>}
+                          <button
+                            type="button"
+                            className="evento-existente-btn"
+                            onClick={() => abrirEventoExistente(ev)}
+                          >
+                            Ver evento
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {estadoFechaActual.cotizaciones.length > 0 && (
+                  <div className="cotizaciones-dia-lista">
+                    <small className="cotizaciones-dia-titulo">
+                      💬 Cotizaciones ese día (solo referencia, no bloquean):
+                    </small>
+                    {estadoFechaActual.cotizaciones.map((c) => (
+                      <div key={c.id} className="cotizacion-existente-card">
+                        <span>{c.tipoEvento || 'Evento'} — {c.cliente || 'N/D'}</span>
+                        <span className="cotizacion-hora">{c.horaInicio || '?'}–{c.horaFin || '?'}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -366,7 +401,6 @@ function getDashboardModeFromRole(role) {
               fecha={formData.fecha}
               onSeleccionarFecha={handleFechaCalendario}
               porFecha={porFecha}
-              estadoFecha={estadoFecha}
               precargarDesde={precargarDesde}
             />
           </div>

@@ -11,8 +11,20 @@ function rangoDelMes(year, month) {
   return { desde: fmtYmd(desde), hasta: fmtYmd(hasta) };
 }
 
-// Cachea por mes ("YYYY-MM") las fechas ocupadas/cotizadas que reporta el backend,
-// para no volver a pedir un mes ya cargado cada vez que el usuario cambia de día.
+function timeToMinutes(t) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '').trim());
+  if (!m) return NaN;
+  return Number(m[1]) * 60 + Number(m[2]);
+}
+
+function overlap(s1, e1, s2, e2) {
+  if ([s1, e1, s2, e2].some((x) => !Number.isFinite(x))) return false;
+  return Math.max(s1, s2) < Math.min(e1, e2);
+}
+
+// Cachea por mes ("YYYY-MM") las fechas con eventos/cotizaciones que reporta el
+// backend, para no volver a pedir un mes ya cargado cada vez que el usuario
+// cambia de día u horario.
 export default function useDisponibilidadReservas() {
   const cacheRef = useRef(new Map());
   const inFlightRef = useRef(new Map());
@@ -61,16 +73,26 @@ export default function useDisponibilidadReservas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [version]);
 
-  const estadoFecha = useCallback((fechaStr, excluirId = null) => {
+  // Un evento solo "ocupa" el horario indicado si se traslapa con el suyo;
+  // si no se pasa horaInicio/horaFin todavía no se puede saber si hay choque.
+  // Las cotizaciones siempre se devuelven aparte, solo como referencia.
+  const estadoFecha = useCallback((fechaStr, { horaInicio, horaFin, excluirId = null } = {}) => {
     const items = (porFecha.get(fechaStr) || []).filter(
       (i) => !excluirId || String(i.id) !== String(excluirId)
     );
-    const evento = items.find((i) => i.ocupaFecha);
-    return {
-      ocupado: !!evento,
-      evento: evento || null,
-      cotizaciones: items.filter((i) => !i.ocupaFecha),
-    };
+    const eventos = items.filter((i) => i.esEvento);
+    const cotizaciones = items.filter((i) => !i.esEvento);
+
+    let conflicto = null;
+    if (horaInicio && horaFin) {
+      const ini = timeToMinutes(horaInicio);
+      const fin = timeToMinutes(horaFin);
+      conflicto = eventos.find((e) =>
+        overlap(ini, fin, timeToMinutes(e.horaInicio), timeToMinutes(e.horaFin))
+      ) || null;
+    }
+
+    return { eventos, cotizaciones, conflicto, ocupado: !!conflicto };
   }, [porFecha]);
 
   return { cargarMes, precargarDesde, porFecha, estadoFecha };

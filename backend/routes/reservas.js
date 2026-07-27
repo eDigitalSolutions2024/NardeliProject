@@ -299,19 +299,30 @@ function filtroEventoActivoEnFecha(fechaStr, excluirId = null) {
   };
 }
 
-async function checarEventoEnFecha({ fecha, excluirId = null }) {
+// Un evento SOLO bloquea otra reserva (evento o cotización) si su horario
+// se traslapa con el de un evento ya existente ese día; si el horario es
+// distinto, pueden convivir varios eventos en la misma fecha.
+// Las cotizaciones nunca bloquean (son solo de referencia).
+async function checarEventoEnFecha({ fecha, horaInicio, horaFin, excluirId = null }) {
   const fechaStr = ymd(fecha);
   if (!fechaStr) return { disponible: false, motivo: 'Fecha inválida' };
 
-  const evento = await Reserva.findOne(filtroEventoActivoEnFecha(fechaStr, excluirId)).lean();
+  const ini = timeToMinutes(horaInicio);
+  const fin = timeToMinutes(horaFin);
 
-  if (!evento) return { disponible: true };
+  const eventosDelDia = await Reserva.find(filtroEventoActivoEnFecha(fechaStr, excluirId)).lean();
 
-  const detalle = evento.tipoEvento ? ` (${evento.tipoEvento} - ${evento.cliente || 'cliente'})` : '';
+  const choque = eventosDelDia.find(e =>
+    overlap(ini, fin, timeToMinutes(e.horaInicio), timeToMinutes(e.horaFin))
+  );
+
+  if (!choque) return { disponible: true };
+
+  const detalle = choque.tipoEvento ? ` (${choque.tipoEvento} - ${choque.cliente || 'cliente'})` : '';
   return {
     disponible: false,
-    motivo: `La fecha ${fechaStr} ya está ocupada por un evento${detalle}. Selecciona otra fecha.`,
-    evento
+    motivo: `Ese horario del ${fechaStr} ya está ocupado por un evento${detalle}. Selecciona otro horario o fecha.`,
+    evento: choque
   };
 }
 
@@ -330,7 +341,11 @@ router.post('/', async (req, res) => {
     // - Pero si ya existe un evento en esa fecha, no se permite
     //   ni otra cotización ni otro evento
     if (tipoReserva === 'cotizacion' || tipoReserva === 'evento') {
-      const disp = await checarEventoEnFecha({ fecha: req.body.fecha });
+      const disp = await checarEventoEnFecha({
+        fecha: req.body.fecha,
+        horaInicio: req.body.horaInicio,
+        horaFin: req.body.horaFin
+      });
       if (!disp.disponible) {
         return res.status(400).json({ msg: disp.motivo });
       }
@@ -475,8 +490,9 @@ router.get('/disponibilidad', async (req, res) => {
         horaInicio: r.horaInicio || '',
         horaFin: r.horaFin || '',
         estado: r.estado || 'confirmada',
-        // Solo un evento ocupa por completo el día; las cotizaciones no bloquean.
-        ocupaFecha: tipoReserva === 'evento'
+        // Un evento solo bloquea si su horario se traslapa (lo calcula el front);
+        // las cotizaciones son siempre de referencia y nunca bloquean.
+        esEvento: tipoReserva === 'evento'
       };
     });
 
@@ -918,6 +934,8 @@ router.put('/:id', async (req, res) => {
     if (nextTipo === 'cotizacion' || nextTipo === 'evento') {
       const disp = await checarEventoEnFecha({
         fecha: req.body.fecha,
+        horaInicio: req.body.horaInicio || prev.horaInicio,
+        horaFin: req.body.horaFin || prev.horaFin,
         excluirId: id
       });
 
@@ -1712,7 +1730,12 @@ router.put('/:id/aceptar-cotizacion', async (req, res) => {
       });
     }
 
-    const disp = await checarEventoEnFecha({ fecha: r.fecha, excluirId: r._id });
+    const disp = await checarEventoEnFecha({
+      fecha: r.fecha,
+      horaInicio: r.horaInicio,
+      horaFin: r.horaFin,
+      excluirId: r._id
+    });
     if (!disp.disponible) {
       return res.status(400).json({ msg: disp.motivo });
     }

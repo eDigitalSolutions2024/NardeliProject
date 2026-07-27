@@ -1,62 +1,165 @@
 .mcd-container {
   width: 100%;
   max-width: 320px;
+  background: #fff;
+  border: 1px solid #e6e6ea;
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 4px 14px rgba(20, 20, 30, 0.06);
+}
+
+.mcd-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #2f2a33;
+  margin-bottom: 10px;
+}
+
+.mcd-header-icon {
+  font-size: 1rem;
 }
 
 .mcd-container .react-calendar {
   width: 100%;
-  border: 1px solid #e0d0e6;
-  border-radius: 10px;
+  border: none;
   font-family: inherit;
+  line-height: 1.2;
+}
+
+/* Barra de navegación: fondo neutro para que el mes se lea siempre,
+   con acento morado solo en hover/foco (un único toque de color). */
+.mcd-container .react-calendar__navigation {
+  display: flex;
+  margin-bottom: 6px;
+  background: #f6f4f7;
+  border-radius: 8px;
+}
+
+.mcd-container .react-calendar__navigation button {
+  color: #3a2e40;
+  font-weight: 700;
+  min-width: 32px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 4px;
+}
+
+.mcd-container .react-calendar__navigation button:enabled:hover,
+.mcd-container .react-calendar__navigation button:enabled:focus {
+  background-color: #e4e6ea;
+  color: #201c24;
+}
+
+.mcd-container .react-calendar__navigation button:disabled {
+  opacity: 0.4;
+}
+
+.mcd-container .react-calendar__navigation__label {
+  font-size: 0.85rem;
+}
+
+.mcd-container .react-calendar__month-view__weekdays {
+  font-size: 0.68rem;
+  color: #8b8794;
+  text-transform: uppercase;
+}
+
+.mcd-container .react-calendar__month-view__weekdays abbr {
+  text-decoration: none;
 }
 
 .mcd-container .react-calendar__tile {
   position: relative;
+  border-radius: 8px;
+  padding: 8px 4px;
+  color: #3a2e40;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.mcd-container .react-calendar__tile:enabled:hover,
+.mcd-container .react-calendar__tile:enabled:focus {
+  background-color: #e9eaec;
+}
+
+.mcd-container .react-calendar__tile--now {
+  box-shadow: inset 0 0 0 1.5px #9aa0a6;
+}
+
+.mcd-container .react-calendar__tile--active {
+  background: #2c3e50 !important;
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(44, 62, 80, 0.35);
 }
 
 .mcd-tile-overlay {
   position: absolute;
   inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 3px;
 }
 
-.mcd-tile-disponible {
-  background: #eafaf1 !important;
+.mcd-tile-dots {
+  display: flex;
+  gap: 2px;
 }
 
-.mcd-tile-cotizacion {
-  background: #fff8e1 !important;
-  color: #7a5b00 !important;
+.mcd-mini-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.mcd-mini-dot-evento { background: #b9720a; }
+.mcd-mini-dot-cotizacion { background: #2e86c1; }
+
+.mcd-container .mcd-tile-disponible {
+  background: #eafaf1;
+}
+
+.mcd-container .mcd-tile-cotizacion {
+  background: #eaf4fb;
+  color: #1b5e82;
+}
+
+.mcd-container .mcd-tile-evento {
+  background: #fdf1dc;
+  color: #7a5000;
   font-weight: 600;
-}
-
-.mcd-tile-ocupado {
-  background: #fdeaea !important;
-  color: #a12626 !important;
-  font-weight: 700;
 }
 
 .mcd-leyenda {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 8px;
-  font-size: 12px;
-  color: #555;
+  gap: 8px;
+  margin-top: 12px;
 }
 
-.mcd-leyenda span {
+.mcd-leyenda-chip {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  font-size: 0.72rem;
+  color: #55505c;
+  background: #f7f6f8;
+  border: 1px solid #e6e6ea;
+  border-radius: 999px;
+  padding: 3px 9px;
 }
 
 .mcd-dot {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   display: inline-block;
 }
 
 .mcd-dot-disponible { background: #2ecc71; }
-.mcd-dot-cotizacion { background: #f0a500; }
-.mcd-dot-ocupado { background: #e74c3c; }
+.mcd-dot-evento { background: #d98c00; }
+.mcd-dot-cotizacion { background: #2e86c1; }

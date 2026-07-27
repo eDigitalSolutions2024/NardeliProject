@@ -3,8 +3,9 @@
   margin: 3rem auto;
   padding: 2rem;
   background-color: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  border-top: 4px solid #7b247f;
+  box-shadow: 0 10px 30px rgba(92, 26, 110, 0.12);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -12,6 +13,7 @@
   text-align: center;
   color: #5c1a6e;
   margin-bottom: 1.5rem;
+  letter-spacing: 0.3px;
 }
 
 .reserva-form-container form {
@@ -25,16 +27,19 @@
 .reserva-form-container textarea {
   padding: 0.8rem;
   font-size: 1rem;
-  border: 1px solid #cccccc;
+  border: 1px solid #e2d5e6;
   border-radius: 8px;
-  transition: border-color 0.3s ease;
+  background: #fbf8fc;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .reserva-form-container input:focus,
 .reserva-form-container select:focus,
 .reserva-form-container textarea:focus {
   border-color: #8e44ad;
+  box-shadow: 0 0 0 3px rgba(142, 68, 173, 0.15);
   outline: none;
+  background: #fff;
 }
 
 .reserva-form-container textarea {
@@ -45,16 +50,21 @@
 .reserva-form-container button {
   background-color: #7b247f;
   color: white;
-  padding: 0.8rem;
+  padding: 0.85rem;
   font-size: 1rem;
+  font-weight: 600;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.2s ease, transform 0.1s ease;
 }
 
 .reserva-form-container button:hover {
   background-color: #5c1a6e;
+}
+
+.reserva-form-container button:active {
+  transform: translateY(1px);
 }
 
 .reserva-form-container p {
@@ -94,8 +104,8 @@
 .fecha-estado-badge {
   font-size: 0.85rem;
   font-weight: 700;
-  padding: 6px 10px;
-  border-radius: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
   width: fit-content;
 }
 
@@ -109,25 +119,52 @@
   color: #a12626;
 }
 
+.fecha-estado-badge.neutral {
+  background: #fff8e6;
+  color: #8a5a00;
+}
+
 .fecha-estado-badge small {
   font-weight: 400;
+}
+
+.eventos-dia-lista,
+.cotizaciones-dia-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .evento-existente-card {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  background: #fff8f8;
-  border: 1px solid #f3caca;
+  background: #fffaf0;
+  border: 1px solid #f0dcae;
+  border-left: 4px solid #d98c00;
   border-radius: 8px;
   padding: 10px 12px;
   font-size: 0.85rem;
+  color: #6d4c00;
+  box-shadow: 0 2px 6px rgba(217, 140, 0, 0.08);
+}
+
+.evento-existente-card.conflicto {
+  background: #fff5f5;
+  border-color: #f3caca;
+  border-left-color: #c0392b;
   color: #6d2323;
+  box-shadow: 0 2px 8px rgba(192, 57, 43, 0.15);
+}
+
+.conflicto-tag {
+  font-weight: 700;
+  color: #a12626;
 }
 
 .evento-existente-btn {
   align-self: flex-start;
-  margin-top: 6px;
+  margin-top: 4px;
   background-color: #7b247f;
   color: #fff;
   border: none;
@@ -139,6 +176,28 @@
 
 .evento-existente-btn:hover {
   background-color: #5c1a6e;
+}
+
+.cotizaciones-dia-titulo {
+  color: #1b5e82;
+  font-weight: 600;
+}
+
+.cotizacion-existente-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  background: #f2f9fd;
+  border: 1px dashed #a9d1e8;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  color: #1b5e82;
+}
+
+.cotizacion-hora {
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 @media (max-width: 640px) {
