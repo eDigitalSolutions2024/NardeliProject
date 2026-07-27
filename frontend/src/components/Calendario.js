@@ -194,7 +194,8 @@ const convertirACotizacion = async (id) => {
         cerrarModal();
         await obtenerEventos();
       } else {
-        alert('Error al actualizar');
+        const err = await response.json().catch(() => ({}));
+        alert(err.msg || 'Error al actualizar');
       }
     } catch (error) {
       console.error('Error al actualizar:', error);

@@ -1,0 +1,62 @@
+.mcd-container {
+  width: 100%;
+  max-width: 320px;
+}
+
+.mcd-container .react-calendar {
+  width: 100%;
+  border: 1px solid #e0d0e6;
+  border-radius: 10px;
+  font-family: inherit;
+}
+
+.mcd-container .react-calendar__tile {
+  position: relative;
+}
+
+.mcd-tile-overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.mcd-tile-disponible {
+  background: #eafaf1 !important;
+}
+
+.mcd-tile-cotizacion {
+  background: #fff8e1 !important;
+  color: #7a5b00 !important;
+  font-weight: 600;
+}
+
+.mcd-tile-ocupado {
+  background: #fdeaea !important;
+  color: #a12626 !important;
+  font-weight: 700;
+}
+
+.mcd-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #555;
+}
+
+.mcd-leyenda span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mcd-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.mcd-dot-disponible { background: #2ecc71; }
+.mcd-dot-cotizacion { background: #f0a500; }
+.mcd-dot-ocupado { background: #e74c3c; }

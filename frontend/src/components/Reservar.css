@@ -1,5 +1,5 @@
 .reserva-form-container {
-  max-width: 600px;
+  max-width: 720px;
   margin: 3rem auto;
   padding: 2rem;
   background-color: #ffffff;
@@ -62,4 +62,97 @@
   font-weight: bold;
   margin-top: 1rem;
   color: #2c3e50;
+}
+
+/* ===== Fecha + mini calendario de disponibilidad ===== */
+.fecha-disponibilidad-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  align-items: flex-start;
+}
+
+.fecha-campo {
+  flex: 1 1 220px;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.fecha-campo-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #5c1a6e;
+}
+
+.fecha-calendario {
+  flex: 1 1 260px;
+  min-width: 260px;
+}
+
+.fecha-estado-badge {
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 8px;
+  width: fit-content;
+}
+
+.fecha-estado-badge.disponible {
+  background: #eafaf1;
+  color: #1e8449;
+}
+
+.fecha-estado-badge.ocupado {
+  background: #fdeaea;
+  color: #a12626;
+}
+
+.fecha-estado-badge small {
+  font-weight: 400;
+}
+
+.evento-existente-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #fff8f8;
+  border: 1px solid #f3caca;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  color: #6d2323;
+}
+
+.evento-existente-btn {
+  align-self: flex-start;
+  margin-top: 6px;
+  background-color: #7b247f;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.evento-existente-btn:hover {
+  background-color: #5c1a6e;
+}
+
+@media (max-width: 640px) {
+  .reserva-form-container {
+    max-width: 100%;
+    margin: 1rem;
+    padding: 1.25rem;
+  }
+
+  .fecha-disponibilidad-wrapper {
+    flex-direction: column;
+  }
+
+  .fecha-calendario {
+    width: 100%;
+  }
 }

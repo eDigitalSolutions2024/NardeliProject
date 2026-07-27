@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import API_BASE_URL from '../api';
+import useDisponibilidadReservas from '../hooks/useDisponibilidadReservas';
+import MiniCalendarioDisponibilidad from './MiniCalendarioDisponibilidad';
 import './Reservar.css';
 
 const BORRADOR_KEY = 'nardeli_reserva_borrador';
@@ -44,6 +47,19 @@ const ReservarEvento = () => {
   const [enviando, setEnviando] = useState(false);
   const navigate = useNavigate();
 
+  const { porFecha, estadoFecha, precargarDesde } = useDisponibilidadReservas();
+
+  // Precarga el mes de la fecha elegida (por si el usuario la escribe a mano
+  // y cae fuera del rango que el mini calendario ya trae precargado).
+  useEffect(() => {
+    if (!formData.fecha) return;
+    const d = new Date(`${formData.fecha}T12:00:00`);
+    if (isNaN(d)) return;
+    precargarDesde(d.getFullYear(), d.getMonth(), 0);
+  }, [formData.fecha, precargarDesde]);
+
+  const estadoFechaActual = formData.fecha ? estadoFecha(formData.fecha) : null;
+
   useEffect(() => {
     if (tieneContenido(formData)) {
       localStorage.setItem(BORRADOR_KEY, JSON.stringify(formData));
@@ -75,6 +91,11 @@ const ReservarEvento = () => {
     if (mensaje) setMensaje('');
   };
 
+  const handleFechaCalendario = (fechaStr) => {
+    setFormData(prev => ({ ...prev, fecha: fechaStr }));
+    if (mensaje) setMensaje('');
+  };
+
   // Lee el token del localStorage y extrae el role del payload (sin verificar firma)
 function getSessionRole() {
   try {
@@ -96,10 +117,35 @@ function getDashboardModeFromRole(role) {
   return (r === 'admin' || r === 'asistente') ? 'admin' : 'user';
 }
 
+  const abrirEventoExistente = (evento) => {
+    if (!evento?.id) return;
+    const mode = getDashboardModeFromRole(getSessionRole());
+    const params = new URLSearchParams({
+      reservaId: String(evento.id),
+      mode,
+      tipo: evento.tipoReserva || 'evento'
+    }).toString();
+    window.open(`/cliente/dashboard?${params}`, '_blank', 'noopener,noreferrer');
+  };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMensaje('');
+
+    // Validación previa (front): si ya existe un evento activo esa fecha,
+    // no se manda el formulario. El backend vuelve a validar de todos modos.
+    const chequeo = estadoFecha(formData.fecha);
+    if (chequeo?.ocupado) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Fecha ya está ocupada',
+        text: 'Ya existe un evento registrado en esa fecha. Selecciona otra fecha.',
+        confirmButtonColor: '#7b247f'
+      });
+      return;
+    }
+
     setEnviando(true);
 
     const action = e.nativeEvent?.submitter?.dataset?.action || 'dashboard';
@@ -136,12 +182,18 @@ function getDashboardModeFromRole(role) {
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        if (response.status === 409) {
-          setMensaje(err.msg || 'El horario se empalma con otra reserva.');
+        if (prewin) prewin.close();
+
+        if (response.status === 400 || response.status === 409) {
+          await Swal.fire({
+            icon: 'error',
+            title: 'Fecha ya está ocupada',
+            text: err.msg || 'Ya existe un evento registrado en esa fecha. Selecciona otra fecha.',
+            confirmButtonColor: '#7b247f'
+          });
         } else {
           setMensaje(err.msg || 'No se pudo crear la reserva.');
         }
-        if (prewin) prewin.close();
         return;
       }
 
@@ -276,7 +328,49 @@ function getDashboardModeFromRole(role) {
         <input name="tipoEvento" type="text" placeholder="Tipo de evento" value={formData.tipoEvento} onChange={handleChange} required />
         <input name="telefono" type="tel" placeholder="Número de teléfono" value={formData.telefono} onChange={handleChange} required />
         <input name="cantidadPersonas" type="number" min="1" placeholder="Cantidad de personas" value={formData.cantidadPersonas} onChange={handleChange} required />
-        <input name="fecha" type="date" value={formData.fecha} onChange={handleChange} required />
+        <div className="fecha-disponibilidad-wrapper">
+          <div className="fecha-campo">
+            <label className="fecha-campo-label">Fecha del evento</label>
+            <input name="fecha" type="date" value={formData.fecha} onChange={handleChange} required />
+
+            {formData.fecha && estadoFechaActual && (
+              <div className={`fecha-estado-badge ${estadoFechaActual.ocupado ? 'ocupado' : 'disponible'}`}>
+                {estadoFechaActual.ocupado ? '🔴 Fecha ocupada' : '🟢 Fecha disponible'}
+                {!estadoFechaActual.ocupado && estadoFechaActual.cotizaciones.length > 0 && (
+                  <small> · {estadoFechaActual.cotizaciones.length} cotización(es) en esta fecha</small>
+                )}
+              </div>
+            )}
+
+            {estadoFechaActual?.ocupado && (
+              <div className="evento-existente-card">
+                <strong>{estadoFechaActual.evento.tipoEvento || 'Evento'}</strong>
+                <span>Cliente: {estadoFechaActual.evento.cliente || 'N/D'}</span>
+                <span>Invitados: {estadoFechaActual.evento.cantidadPersonas ?? 'N/D'}</span>
+                <span>
+                  Horario: {estadoFechaActual.evento.horaInicio || '?'} – {estadoFechaActual.evento.horaFin || '?'}
+                </span>
+                <button
+                  type="button"
+                  className="evento-existente-btn"
+                  onClick={() => abrirEventoExistente(estadoFechaActual.evento)}
+                >
+                  Ver evento existente
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="fecha-calendario">
+            <MiniCalendarioDisponibilidad
+              fecha={formData.fecha}
+              onSeleccionarFecha={handleFechaCalendario}
+              porFecha={porFecha}
+              estadoFecha={estadoFecha}
+              precargarDesde={precargarDesde}
+            />
+          </div>
+        </div>
         <input name="horaInicio" type="time" value={formData.horaInicio} onChange={handleChange} required />
         <input name="horaFin" type="time" value={formData.horaFin} onChange={handleChange} required />
         <textarea name="descripcion" placeholder="Observaciones" value={formData.descripcion} onChange={handleChange} />
