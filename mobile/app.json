@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Nardeli",
+    "slug": "nardeli-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "mx.nardeli.mobile"
+    },
+    "android": {
+      "package": "mx.nardeli.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Nardeli usa la cámara para escanear los códigos QR de las invitaciones."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Nardeli usa tus fotos para adjuntar evidencia en los checklists."
+        }
+      ]
+    ]
+  }
+}
