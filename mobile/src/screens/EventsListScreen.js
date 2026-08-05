@@ -1,41 +1,157 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
-  FlatList,
-  TouchableOpacity,
+  TextInput,
+  SectionList,
+  ScrollView,
+  Pressable,
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  Animated,
+  Easing,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import client from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import { colors, estadoColors, radius, shadow, spacing, type } from '../theme';
 
-function formatFecha(fecha) {
-  try {
-    return new Date(fecha).toLocaleDateString('es-MX', {
-      weekday: 'short',
-      day: '2-digit',
-      month: 'short',
-    });
-  } catch {
-    return fecha;
-  }
+const MESES_ABR = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+
+function dateParts(fecha) {
+  const ymd = String(fecha).slice(0, 10);
+  const [y, m, d] = ymd.split('-').map(Number);
+  return { ymd, y, m, d, day: d, month: MESES_ABR[(m || 1) - 1] };
 }
 
-const ESTADO_COLORS = {
-  confirmada: '#2e7d32',
-  finalizado: '#616161',
-  pendiente: '#f9a825',
-};
+function diffDaysFromYmd(y, m, d) {
+  const target = new Date(y, m - 1, d);
+  target.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((target - today) / 86400000);
+}
+
+function seccionFor(diff) {
+  if (diff < 0) return 'Recientes';
+  if (diff === 0) return 'Hoy';
+  if (diff === 1) return 'Mañana';
+  if (diff <= 6) return 'Esta semana';
+  return 'Próximos';
+}
+
+function countdownLabel(diff) {
+  if (diff === 0) return 'Hoy';
+  if (diff === 1) return 'Mañana';
+  if (diff === -1) return 'Ayer';
+  if (diff < 0) return `Hace ${Math.abs(diff)} días`;
+  return `En ${diff} días`;
+}
+
+function iconForTipo(tipo = '') {
+  const t = tipo.toLowerCase();
+  if (t.includes('boda')) return 'heart';
+  if (t.includes('xv') || t.includes('quince')) return 'sparkles';
+  if (t.includes('cumple')) return 'gift';
+  if (t.includes('corporat') || t.includes('empresa')) return 'briefcase';
+  if (t.includes('bautizo')) return 'water';
+  if (t.includes('grad')) return 'school';
+  if (t.includes('babyshower') || t.includes('baby shower')) return 'balloon';
+  return 'calendar';
+}
+
+const FILTROS = [
+  { key: 'todos', label: 'Todos', icon: 'apps-outline', tint: colors.primary },
+  { key: 'confirmados', label: 'Confirmados', icon: 'checkmark-circle-outline', tint: colors.success },
+  { key: 'porCerrar', label: 'Por cerrar', icon: 'alert-circle-outline', tint: colors.warning },
+  { key: 'finalizados', label: 'Finalizados', icon: 'flag-outline', tint: colors.neutral },
+];
+
+function matchesFilter(item, key) {
+  if (key === 'confirmados') return item.estado === 'confirmada' && !item.requiereConfirmarFin;
+  if (key === 'porCerrar') return !!item.requiereConfirmarFin;
+  if (key === 'finalizados') return item.estado === 'finalizado';
+  return true;
+}
+
+function AnimatedCard({ delay, children }) {
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(anim, {
+      toValue: 1,
+      duration: 360,
+      delay,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [anim, delay]);
+
+  const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [14, 0] });
+  return <Animated.View style={{ opacity: anim, transform: [{ translateY }] }}>{children}</Animated.View>;
+}
+
+function EventCard({ item, index, onPress }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const { day, month, y, m, d } = dateParts(item.fecha);
+  const diff = diffDaysFromYmd(y, m, d);
+  const estadoColor = estadoColors[item.estado] || colors.neutral;
+
+  const pressIn = () =>
+    Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 40, bounciness: 0 }).start();
+  const pressOut = () =>
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 40, bounciness: 6 }).start();
+
+  return (
+    <AnimatedCard delay={Math.min(index * 45, 300)}>
+      <Pressable onPress={onPress} onPressIn={pressIn} onPressOut={pressOut}>
+        <Animated.View style={[styles.card, { transform: [{ scale }] }]}>
+          <View style={[styles.cardAccent, { backgroundColor: estadoColor }]} />
+
+          <View style={styles.dateBlock}>
+            <Text style={styles.dateDay}>{day}</Text>
+            <Text style={styles.dateMonth}>{month}</Text>
+          </View>
+
+          <View style={styles.cardBody}>
+            <View style={styles.cardTopRow}>
+              <View style={styles.tipoIconWrap}>
+                <Ionicons name={iconForTipo(item.tipoEvento)} size={13} color={colors.primary} />
+              </View>
+              <Text style={styles.cardCountdown}>{countdownLabel(diff)}</Text>
+              <View style={[styles.badge, { backgroundColor: estadoColor }]}>
+                <Text style={styles.badgeText}>{item.estado}</Text>
+              </View>
+            </View>
+
+            <Text style={styles.cardTitle} numberOfLines={1}>{item.cliente}</Text>
+            <Text style={styles.cardSubtitle}>
+              {item.tipoEvento} · {item.horaInicio}–{item.horaFin}
+            </Text>
+
+            {item.requiereConfirmarFin && (
+              <View style={styles.warningRow}>
+                <Ionicons name="alert-circle" size={13} color={colors.warning} />
+                <Text style={styles.warning}>Requiere confirmar cierre</Text>
+              </View>
+            )}
+          </View>
+
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} style={styles.chevron} />
+        </Animated.View>
+      </Pressable>
+    </AnimatedCard>
+  );
+}
 
 export default function EventsListScreen({ navigation }) {
-  const { user, logout } = useAuth();
   const [reservas, setReservas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
+  const [filtro, setFiltro] = useState('todos');
 
   const load = useCallback(async () => {
     setError('');
@@ -60,107 +176,225 @@ export default function EventsListScreen({ navigation }) {
     setRefreshing(false);
   };
 
+  const counts = useMemo(
+    () => ({
+      todos: reservas.length,
+      confirmados: reservas.filter((r) => matchesFilter(r, 'confirmados')).length,
+      porCerrar: reservas.filter((r) => matchesFilter(r, 'porCerrar')).length,
+      finalizados: reservas.filter((r) => matchesFilter(r, 'finalizados')).length,
+    }),
+    [reservas]
+  );
+
+  const sections = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const filtradas = reservas.filter((r) => {
+      if (!matchesFilter(r, filtro)) return false;
+      if (!q) return true;
+      return r.cliente?.toLowerCase().includes(q) || r.tipoEvento?.toLowerCase().includes(q);
+    });
+
+    const orden = ['Recientes', 'Hoy', 'Mañana', 'Esta semana', 'Próximos'];
+    const grupos = new Map();
+    for (const r of filtradas) {
+      const { y, m, d } = dateParts(r.fecha);
+      const sec = seccionFor(diffDaysFromYmd(y, m, d));
+      if (!grupos.has(sec)) grupos.set(sec, []);
+      grupos.get(sec).push(r);
+    }
+
+    return orden
+      .filter((s) => grupos.has(s))
+      .map((s) => ({ title: s, data: grupos.get(s) }));
+  }, [reservas, query, filtro]);
+
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#8a2b52" />
-      </View>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>Eventos</Text>
-          {!!user?.fullname && <Text style={styles.headerUser}>{user.fullname}</Text>}
-        </View>
-        <TouchableOpacity onPress={logout}>
-          <Text style={styles.logout}>Salir</Text>
-        </TouchableOpacity>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <View style={styles.searchBox}>
+        <Ionicons name="search" size={17} color={colors.textMuted} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar por cliente o tipo de evento"
+          placeholderTextColor="#b9a7b0"
+          value={query}
+          onChangeText={setQuery}
+          autoCapitalize="none"
+        />
+        {!!query && (
+          <Pressable onPress={() => setQuery('')} hitSlop={8}>
+            <Ionicons name="close-circle" size={17} color={colors.textMuted} />
+          </Pressable>
+        )}
       </View>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chipsRow}
+      >
+        {FILTROS.map((f) => {
+          const active = f.key === filtro;
+          return (
+            <Pressable
+              key={f.key}
+              onPress={() => setFiltro(f.key)}
+              style={[styles.chip, active && { backgroundColor: f.tint, borderColor: f.tint }]}
+            >
+              <Ionicons name={f.icon} size={11} color={active ? '#fff' : f.tint} />
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                {f.label} · {counts[f.key]}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
 
       {!!error && <Text style={styles.error}>{error}</Text>}
 
-      <FlatList
-        data={reservas}
+      <SectionList
+        sections={sections}
         keyExtractor={(item) => item._id}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={reservas.length === 0 && styles.emptyContainer}
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>No hay eventos próximos</Text>
+        stickySectionHeadersEnabled
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() => navigation.navigate('EventDashboard', { reservaId: item._id })}
-          >
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardDate}>{formatFecha(item.fecha)}</Text>
-              <View
-                style={[
-                  styles.badge,
-                  { backgroundColor: ESTADO_COLORS[item.estado] || '#999' },
-                ]}
-              >
-                <Text style={styles.badgeText}>{item.estado}</Text>
-              </View>
-            </View>
-            <Text style={styles.cardTitle}>{item.cliente}</Text>
-            <Text style={styles.cardSubtitle}>
-              {item.tipoEvento} · {item.horaInicio}–{item.horaFin}
+        contentContainerStyle={[
+          { paddingBottom: spacing.lg },
+          sections.length === 0 && styles.emptyContainer,
+        ]}
+        renderSectionHeader={({ section: { title, data } }) => (
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionHeaderText}>{title}</Text>
+            <Text style={styles.sectionHeaderCount}>{data.length}</Text>
+          </View>
+        )}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons name="calendar-clear-outline" size={40} color={colors.border} />
+            <Text style={styles.emptyText}>
+              {query || filtro !== 'todos' ? 'Sin resultados para este filtro' : 'No hay eventos próximos'}
             </Text>
-            {item.requiereConfirmarFin && (
-              <Text style={styles.warning}>⚠ Requiere confirmar cierre</Text>
-            )}
-          </TouchableOpacity>
+          </View>
+        }
+        renderItem={({ item, index }) => (
+          <View style={styles.cardWrap}>
+            <EventCard
+              item={item}
+              index={index}
+              onPress={() => navigation.navigate('EventDashboard', { reservaId: item._id })}
+            />
+          </View>
         )}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  container: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: {
+  error: { color: colors.danger, textAlign: 'center', padding: 8 },
+  searchBox: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    paddingTop: 8,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    gap: 8,
+    backgroundColor: colors.surface,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    paddingHorizontal: 14,
+    height: 46,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    ...shadow.sm,
   },
-  headerTitle: { fontSize: 22, fontWeight: '700', color: '#8a2b52' },
-  headerUser: { fontSize: 12, color: '#888' },
-  logout: { color: '#c0392b', fontWeight: '600' },
-  error: { color: '#c0392b', textAlign: 'center', padding: 8 },
+  searchInput: { flex: 1, fontSize: 14, color: colors.text },
+  chipsRow: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs + 2, gap: 6 },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    marginRight: 6,
+  },
+  chipText: { fontSize: 10.5, fontWeight: '700', color: colors.textMuted },
+  chipTextActive: { color: '#fff' },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { color: '#999' },
-  card: {
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginTop: 12,
-    padding: 16,
-    borderRadius: 12,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  cardHeader: {
+  emptyState: { alignItems: 'center', gap: 10, paddingTop: 60 },
+  emptyText: { color: colors.textMuted },
+  sectionHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    gap: 8,
+    backgroundColor: colors.bg,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: 6,
   },
-  cardDate: { fontSize: 12, color: '#888', textTransform: 'capitalize' },
-  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  badgeText: { color: '#fff', fontSize: 11, fontWeight: '600', textTransform: 'capitalize' },
-  cardTitle: { fontSize: 18, fontWeight: '600' },
-  cardSubtitle: { fontSize: 13, color: '#666', marginTop: 2 },
-  warning: { color: '#e67e22', marginTop: 6, fontSize: 12, fontWeight: '600' },
+  sectionHeaderText: {
+    ...type.label,
+    color: colors.primary,
+    textTransform: 'uppercase',
+    fontSize: 12.5,
+  },
+  sectionHeaderCount: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textMuted,
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: 6,
+    borderRadius: radius.pill,
+    overflow: 'hidden',
+  },
+  cardWrap: { paddingHorizontal: spacing.md, paddingTop: spacing.sm },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    ...shadow.sm,
+  },
+  cardAccent: { width: 4, alignSelf: 'stretch' },
+  dateBlock: {
+    width: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+  },
+  dateDay: { fontSize: 20, fontWeight: '800', color: colors.text, lineHeight: 22 },
+  dateMonth: { fontSize: 10, fontWeight: '700', color: colors.textMuted, marginTop: 1 },
+  cardBody: { flex: 1, paddingVertical: spacing.sm + 4, paddingRight: 6 },
+  cardTopRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  tipoIconWrap: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardCountdown: { flex: 1, fontSize: 11, fontWeight: '700', color: colors.textMuted },
+  badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill },
+  badgeText: { color: '#fff', fontSize: 10, fontWeight: '700', textTransform: 'capitalize' },
+  cardTitle: { fontSize: 16, fontWeight: '800', color: colors.text },
+  cardSubtitle: { fontSize: 12.5, color: colors.textMuted, marginTop: 2 },
+  warningRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
+  warning: { color: colors.warning, fontSize: 11, fontWeight: '700' },
+  chevron: { marginRight: 12 },
 });

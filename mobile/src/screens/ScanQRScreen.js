@@ -8,7 +8,9 @@ import {
   Alert,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Ionicons } from '@expo/vector-icons';
 import client from '../api/client';
+import { colors, radius, shadow, spacing, type, estadoColors } from '../theme';
 
 export default function ScanQRScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -17,11 +19,15 @@ export default function ScanQRScreen() {
   const [busy, setBusy] = useState(false);
   const scannedRef = useRef(false);
 
-  const handleScanned = async ({ data: qrToken }) => {
+  const handleScanned = async ({ data: scanned }) => {
     if (scannedRef.current) return;
     scannedRef.current = true;
     setLoading(true);
     try {
+      // El QR que se le manda al invitado codifica la URL completa del
+      // portal (https://.../invitacion-qr/<token>), no el token suelto.
+      // Nos quedamos con el último segmento para soportar ambos casos.
+      const qrToken = String(scanned || '').split(/[/?#]/).filter(Boolean).pop();
       const { data } = await client.get(`/scan-invitacion-qr/${qrToken}`);
       setInvitacion({ ...data, qrToken });
     } catch (e) {
@@ -60,8 +66,11 @@ export default function ScanQRScreen() {
   if (!permission.granted) {
     return (
       <View style={styles.center}>
+        <View style={styles.permIconWrap}>
+          <Ionicons name="camera-outline" size={30} color={colors.primary} />
+        </View>
         <Text style={styles.permText}>Necesitamos acceso a tu cámara para escanear QR.</Text>
-        <TouchableOpacity style={styles.button} onPress={requestPermission}>
+        <TouchableOpacity style={styles.button} activeOpacity={0.85} onPress={requestPermission}>
           <Text style={styles.buttonText}>Dar permiso</Text>
         </TouchableOpacity>
       </View>
@@ -77,38 +86,71 @@ export default function ScanQRScreen() {
         onBarcodeScanned={invitacion || loading ? undefined : handleScanned}
       />
 
+      {!invitacion && (
+        <View style={styles.frameWrap} pointerEvents="none">
+          <View style={styles.frame}>
+            <View style={[styles.corner, styles.cornerTL]} />
+            <View style={[styles.corner, styles.cornerTR]} />
+            <View style={[styles.corner, styles.cornerBL]} />
+            <View style={[styles.corner, styles.cornerBR]} />
+          </View>
+        </View>
+      )}
+
       <View style={styles.overlay}>
         {loading && <ActivityIndicator size="large" color="#fff" />}
 
         {!loading && !invitacion && (
-          <Text style={styles.hint}>Apunta la cámara al código QR de la invitación</Text>
+          <View style={styles.hintBox}>
+            <Ionicons name="qr-code-outline" size={16} color="#fff" />
+            <Text style={styles.hint}>Apunta la cámara al código QR de la invitación</Text>
+          </View>
         )}
 
         {invitacion && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>{invitacion.nombreFamilia}</Text>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle}>{invitacion.nombreFamilia}</Text>
+              <View
+                style={[
+                  styles.estadoBadge,
+                  { backgroundColor: estadoColors[invitacion.estado] || colors.neutral },
+                ]}
+              >
+                <Text style={styles.estadoBadgeText}>{invitacion.estado}</Text>
+              </View>
+            </View>
             <Text style={styles.cardInfo}>
               Autorizadas: {invitacion.personasAutorizadas} · Restantes:{' '}
               {invitacion.entradasRestantes}
             </Text>
-            <Text style={styles.cardEstado}>Estado: {invitacion.estado}</Text>
 
             {invitacion.estado === 'cancelada' ? (
-              <Text style={styles.blocked}>Esta invitación está cancelada</Text>
+              <View style={styles.blockedRow}>
+                <Ionicons name="close-circle" size={16} color={colors.danger} />
+                <Text style={styles.blocked}>Esta invitación está cancelada</Text>
+              </View>
             ) : invitacion.entradasRestantes <= 0 ? (
-              <Text style={styles.blocked}>Ya no quedan accesos disponibles</Text>
+              <View style={styles.blockedRow}>
+                <Ionicons name="close-circle" size={16} color={colors.danger} />
+                <Text style={styles.blocked}>Ya no quedan accesos disponibles</Text>
+              </View>
             ) : (
               <TouchableOpacity
                 style={styles.button}
+                activeOpacity={0.85}
                 disabled={busy}
                 onPress={() => registrarAcceso(invitacion.entradasRestantes)}
               >
                 {busy ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.buttonText}>
-                    Registrar {invitacion.entradasRestantes} entrada(s)
-                  </Text>
+                  <>
+                    <Ionicons name="checkmark-circle-outline" size={17} color="#fff" />
+                    <Text style={styles.buttonText}>
+                      Registrar {invitacion.entradasRestantes} entrada(s)
+                    </Text>
+                  </>
                 )}
               </TouchableOpacity>
             )}
@@ -123,41 +165,84 @@ export default function ScanQRScreen() {
   );
 }
 
+const CORNER = 32;
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  permText: { textAlign: 'center', marginBottom: 16 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: colors.bg },
+  permIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  permText: { textAlign: 'center', marginBottom: 16, color: colors.textMuted },
+  frameWrap: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  frame: { width: 240, height: 240 },
+  corner: {
+    position: 'absolute',
+    width: CORNER,
+    height: CORNER,
+    borderColor: colors.accent,
+  },
+  cornerTL: { top: 0, left: 0, borderTopWidth: 4, borderLeftWidth: 4, borderTopLeftRadius: 12 },
+  cornerTR: { top: 0, right: 0, borderTopWidth: 4, borderRightWidth: 4, borderTopRightRadius: 12 },
+  cornerBL: { bottom: 0, left: 0, borderBottomWidth: 4, borderLeftWidth: 4, borderBottomLeftRadius: 12 },
+  cornerBR: { bottom: 0, right: 0, borderBottomWidth: 4, borderRightWidth: 4, borderBottomRightRadius: 12 },
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    padding: 24,
+    padding: spacing.lg,
+  },
+  hintBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: radius.pill,
   },
   hint: {
     color: '#fff',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 10,
-    borderRadius: 8,
     textAlign: 'center',
+    fontSize: 13,
+    fontWeight: '600',
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 20,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
     width: '100%',
+    ...shadow.lg,
   },
-  cardTitle: { fontSize: 20, fontWeight: '700' },
-  cardInfo: { color: '#444', marginTop: 6 },
-  cardEstado: { color: '#666', marginTop: 2, textTransform: 'capitalize' },
-  blocked: { color: '#c0392b', fontWeight: '600', marginTop: 14 },
+  cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+  cardTitle: { ...type.h3, fontSize: 20, flexShrink: 1 },
+  cardInfo: { color: colors.textMuted, marginTop: 6 },
+  estadoBadge: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: radius.pill },
+  estadoBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700', textTransform: 'capitalize' },
+  blockedRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14 },
+  blocked: { color: colors.danger, fontWeight: '700' },
   button: {
-    backgroundColor: '#8a2b52',
-    borderRadius: 10,
-    paddingVertical: 14,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: 14,
     marginTop: 14,
+    ...shadow.sm,
   },
-  buttonText: { color: '#fff', fontWeight: '600', fontSize: 15 },
+  buttonText: { color: '#fff', fontWeight: '700', fontSize: 15 },
   cancelButton: { alignItems: 'center', marginTop: 12 },
-  cancelButtonText: { color: '#8a2b52', fontWeight: '600' },
+  cancelButtonText: { color: colors.primary, fontWeight: '700' },
 });

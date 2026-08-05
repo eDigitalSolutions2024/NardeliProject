@@ -1,267 +1,198 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import dayjs from 'dayjs';
+import 'dayjs/locale/es';
+import { QRCodeSVG } from 'qrcode.react';
+import { FiUsers, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import API_BASE_URL from '../api';
-import { QRCodeCanvas } from 'qrcode.react';
+import markMaroon from '../assets/nardeli/nardeli-mark-maroon.png';
+import markWhite from '../assets/nardeli/nardeli-mark-white.png';
+import './ScanInvitacionQR.css';
 
+dayjs.locale('es');
 
+const ESTADO_META = {
+  activa: { label: 'Vigente', bg: '#2e7d32' },
+  agotada: { label: 'Agotada', bg: '#c8841f' },
+  cancelada: { label: 'Cancelada', bg: '#c0392b' },
+};
+
+function capitalizar(texto) {
+  const t = String(texto || '').trim();
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : t;
+}
+
+function formatearFecha(fecha) {
+  if (!fecha) return '';
+  // La fecha del evento se guarda como medianoche UTC de un día calendario;
+  // convertirla a hora local podría recorrerla un día. Se toma solo el
+  // "YYYY-MM-DD" y se formatea como fecha local pura (mismo criterio que
+  // Calendario.js con reserva.fechaLocal).
+  const soloFecha = String(fecha).slice(0, 10);
+  return capitalizar(dayjs(soloFecha).format('dddd D [de] MMMM, YYYY'));
+}
+
+function formatearHora(hora) {
+  if (!hora) return '';
+  const parsed = dayjs(`2000-01-01T${hora}`);
+  return parsed.isValid() ? parsed.format('h:mm A') : hora;
+}
+
+// Página pública del pase del invitado (se abre desde el link/QR que se
+// manda por WhatsApp). Es solo informativa: NO permite registrar la entrada
+// desde aquí, porque cualquiera con el link podría auto-registrarse. El
+// registro de acceso lo hace únicamente el staff con el lector de QR de la
+// app (ver mobile/src/screens/ScanQRScreen.js), que exige sesión de staff.
 export default function ScanInvitacionQR() {
   const { qrToken } = useParams();
 
   const [loading, setLoading] = useState(true);
-  const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState(null);
-  const [mensaje, setMensaje] = useState('');
-
-  const cargarInvitacion = async () => {
-    try {
-      setLoading(true);
-      setError('');
-
-      const resp = await fetch(`${API_BASE_URL}/scan-invitacion-qr/${qrToken}`);
-      const json = await resp.json();
-
-      if (!resp.ok) {
-        throw new Error(json.msg || 'No se pudo consultar la invitación');
-      }
-
-      setInfo(json);
-    } catch (err) {
-      setError(err.message || 'Error al consultar invitación');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    if (qrToken) {
-      cargarInvitacion();
-    }
+    if (!qrToken) return;
+
+    let activo = true;
+
+    (async () => {
+      try {
+        setLoading(true);
+        setError('');
+
+        const resp = await fetch(`${API_BASE_URL}/scan-invitacion-qr/${qrToken}`);
+        const json = await resp.json();
+
+        if (!resp.ok) {
+          throw new Error(json.msg || 'No se pudo consultar la invitación');
+        }
+
+        if (activo) setInfo(json);
+      } catch (err) {
+        if (activo) setError(err.message || 'Error al consultar invitación');
+      } finally {
+        if (activo) setLoading(false);
+      }
+    })();
+
+    return () => {
+      activo = false;
+    };
   }, [qrToken]);
 
-  const registrarEntrada = async () => {
-    try {
-      setProcesando(true);
-      setError('');
-      setMensaje('');
+  if (loading) {
+    return (
+      <div className="invite-page">
+        <div className="invite-watermark" />
+        <div className="invite-shell">
+          <div className="invite-loadingCard">
+            <div className="invite-spinner" />
+            <p className="invite-loadingText">Cargando tu invitación…</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-      const resp = await fetch(`${API_BASE_URL}/scan-invitacion-qr/${qrToken}/scan`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
+  if (error && !info) {
+    return (
+      <div className="invite-page">
+        <div className="invite-watermark" />
+        <div className="invite-shell">
+          <div className="invite-errorCard">
+            <FiAlertCircle size={34} className="invite-errorIcon" />
+            <p className="invite-errorText">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-      const json = await resp.json();
-
-      if (!resp.ok) {
-        setInfo((prev) =>
-          prev
-            ? {
-                ...prev,
-                entradasRestantes: json.entradasRestantes ?? prev.entradasRestantes,
-                estado: json.estado || prev.estado,
-              }
-            : prev
-        );
-        throw new Error(json.msg || 'No se pudo registrar la entrada');
-      }
-
-      setMensaje(json.msg || 'Acceso permitido');
-      setInfo((prev) => ({
-        ...(prev || {}),
-        ...json,
-      }));
-    } catch (err) {
-      setError(err.message || 'Error al registrar entrada');
-    } finally {
-      setProcesando(false);
-    }
-  };
-
-  const colorEstado =
-    info?.estado === 'cancelada'
-      ? '#dc2626'
-      : info?.estado === 'agotada'
-      ? '#b45309'
-      : '#16a34a';
+  const estadoMeta = ESTADO_META[info?.estado] || ESTADO_META.activa;
+  const evento = info?.evento;
+  const titulo = evento?.tipoEvento
+    ? `${capitalizar(evento.tipoEvento)}${evento.anfitrion ? ` de ${evento.anfitrion}` : ''}`
+    : 'Estás invitado';
 
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        <div style={styles.brandRow}>
-          <span style={styles.brand}>NARDELI</span>
-          <span style={styles.tag}>Escaneo QR</span>
-        </div>
+    <div className="invite-page">
+      <div className="invite-watermark" />
 
-        <h1 style={styles.title}>Control de acceso</h1>
+      <div className="invite-shell">
+        <div className="invite-card">
+          <span className="invite-status" style={{ background: estadoMeta.bg }}>
+            {estadoMeta.label}
+          </span>
 
-        <div style={styles.qrContainer}>
-  <QRCodeCanvas
-    value={window.location.href}
-    size={200}
-    includeMargin={true}
-  />
-</div>
-        <p style={styles.subtitle}>
-          Escanea el código y registra la entrada del invitado.
-        </p>
+          <div className="invite-brand">
+            <img src={markMaroon} alt="Nardéli" className="invite-mark" />
+            <span className="invite-wordmark">Nardéli</span>
+            <span className="invite-caption">Centro de Eventos</span>
+          </div>
 
-        {loading ? (
-          <p>Cargando información...</p>
-        ) : error && !info ? (
-          <p style={{ color: '#dc2626' }}>{error}</p>
-        ) : (
-          <>
-            <div style={styles.infoBox}>
-              <div style={styles.infoRow}>
-                <span>Familia / grupo</span>
-                <strong>{info?.nombreFamilia || '—'}</strong>
+          <div className="invite-ornament">
+            <span className="invite-diamond" />
+          </div>
+
+          <p className="invite-eyebrow">Estás invitado a</p>
+          <h1 className="invite-title">{titulo}</h1>
+
+          {evento?.fecha && <p className="invite-date">{formatearFecha(evento.fecha)}</p>}
+          {evento?.horaInicio && (
+            <p className="invite-time">
+              {formatearHora(evento.horaInicio)}
+              {evento.horaFin ? ` – ${formatearHora(evento.horaFin)}` : ''}
+            </p>
+          )}
+
+          <div className="invite-guestPanel">
+            <p className="invite-guestLabel">Pase de acceso para</p>
+            <p className="invite-guestName">{info?.nombreFamilia || '—'}</p>
+
+            <div className="invite-statRow">
+              <div className="invite-stat">
+                <FiUsers size={18} className="invite-statIcon" />
+                <span className="invite-statValue">{info?.personasAutorizadas ?? '—'}</span>
+                <span className="invite-statLabel">Autorizados</span>
               </div>
-
-              <div style={styles.infoRow}>
-                <span>Personas autorizadas</span>
-                <strong>{info?.personasAutorizadas ?? '—'}</strong>
+              <div className="invite-stat">
+                <FiCheckCircle size={18} className="invite-statIcon" />
+                <span className="invite-statValue">{info?.entradasRestantes ?? '—'}</span>
+                <span className="invite-statLabel">Disponibles</span>
               </div>
-
-              <div style={styles.infoRow}>
-                <span>Entradas restantes</span>
-                <strong>{info?.entradasRestantes ?? '—'}</strong>
-              </div>
-
-              <div style={styles.infoRow}>
-                <span>Estado</span>
-                <strong style={{ color: colorEstado }}>
-                  {info?.estado || '—'}
-                </strong>
-              </div>
-
-              {info?.notas ? (
-                <div style={styles.notesBox}>
-                  <strong>Notas:</strong> {info.notas}
-                </div>
-              ) : null}
             </div>
 
-            {mensaje ? (
-              <div style={{ ...styles.msgBox, background: '#ecfdf5', color: '#166534' }}>
-                {mensaje}
-              </div>
-            ) : null}
+            {info?.notas ? <div className="invite-notes">{info.notas}</div> : null}
+          </div>
 
-            {error ? (
-              <div style={{ ...styles.msgBox, background: '#fef2f2', color: '#991b1b' }}>
-                {error}
-              </div>
-            ) : null}
+          <div className="invite-qrSection">
+            <div className="invite-qrFrame">
+              <span className="invite-seal">
+                <img src={markWhite} alt="" />
+              </span>
+              <span className="corner c-tl" />
+              <span className="corner c-tr" />
+              <span className="corner c-bl" />
+              <span className="corner c-br" />
+              <QRCodeSVG
+                value={typeof window !== 'undefined' ? window.location.href : ''}
+                size={184}
+                level="H"
+                marginSize={2}
+                bgColor="#ffffff"
+                fgColor="#1c0e21"
+              />
+            </div>
+            <p className="invite-qrHint">
+              Presenta este código al personal en la <strong>entrada del evento</strong>
+            </p>
+          </div>
 
-            <button
-              type="button"
-              style={{
-                ...styles.primaryBtn,
-                opacity:
-                  procesando || info?.estado === 'cancelada' || info?.entradasRestantes <= 0
-                    ? 0.6
-                    : 1,
-                cursor:
-                  procesando || info?.estado === 'cancelada' || info?.entradasRestantes <= 0
-                    ? 'not-allowed'
-                    : 'pointer',
-              }}
-              onClick={registrarEntrada}
-              disabled={
-                procesando || info?.estado === 'cancelada' || info?.entradasRestantes <= 0
-              }
-            >
-              {procesando ? 'Registrando...' : 'Registrar entrada'}
-            </button>
-          </>
-        )}
+          {error ? <div className="invite-notes" style={{ marginTop: 14 }}>{error}</div> : null}
+
+          <p className="invite-footer">Sistema Nardeli</p>
+        </div>
       </div>
     </div>
   );
 }
-
-const styles = {
-  page: {
-    minHeight: '100vh',
-    background: '#f6f1f8',
-    padding: '40px 20px',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  card: {
-    width: '100%',
-    maxWidth: 620,
-    background: '#fff',
-    borderRadius: 24,
-    padding: 32,
-    boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-  },
-  brandRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  brand: {
-    fontWeight: 800,
-    letterSpacing: 3,
-    color: '#be185d',
-  },
-  tag: {
-    background: '#2d143d',
-    color: '#fff',
-    padding: '10px 16px',
-    borderRadius: 999,
-    fontWeight: 700,
-    fontSize: 14,
-  },
-  title: {
-    margin: '0 0 10px 0',
-    fontSize: 30,
-    color: '#2d143d',
-  },
-  subtitle: {
-    color: '#6b7280',
-    marginBottom: 24,
-  },
-  infoBox: {
-    border: '1px solid #eee',
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 18,
-    background: '#fafafa',
-  },
-  infoRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: 12,
-    padding: '12px 0',
-    borderBottom: '1px solid #eee',
-  },
-  notesBox: {
-    marginTop: 14,
-    color: '#4b5563',
-  },
-  msgBox: {
-    padding: '14px 16px',
-    borderRadius: 14,
-    marginBottom: 14,
-    fontWeight: 600,
-  },
-  primaryBtn: {
-    width: '100%',
-    border: 'none',
-    borderRadius: 14,
-    padding: '16px 22px',
-    background: '#0f172a',
-    color: '#fff',
-    fontWeight: 700,
-    fontSize: 16,
-  },
-  qrContainer: {
-  display: 'flex',
-  justifyContent: 'center',
-  marginBottom: 20,
-},
-};

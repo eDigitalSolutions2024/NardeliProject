@@ -8,7 +8,10 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "mx.nardeli.mobile"
+      "bundleIdentifier": "mx.nardeli.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "mx.nardeli.mobile",
@@ -17,7 +20,11 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -35,6 +42,12 @@
           "photosPermission": "Nardeli usa tus fotos para adjuntar evidencia en los checklists."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "54f2c137-c8fa-43d8-b734-b8cbbe3e63c8"
+      }
+    },
+    "owner": "evelielolivas"
   }
 }
