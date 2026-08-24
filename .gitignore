@@ -37,3 +37,8 @@ backend/scripts/seed_reservas_links*
 # Ignorar imágenes subidas pero mantener la carpeta
 backend/uploads/*
 !backend/uploads/.gitkeep
+
+# Excepción: backend/uploads/docs SÍ debe versionarse (ej. el manual de integración
+# para partners que se sirve desde ahí) — si no, un deploy por git lo deja en 404.
+!backend/uploads/docs/
+!backend/uploads/docs/**

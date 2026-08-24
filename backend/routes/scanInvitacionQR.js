@@ -1,30 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
-const JWT_SECRET = require('../utils/jwtSecret');
 
 const InvitacionQR = require('../models/InvitacionQR');
 const Reserva = require('../models/Reservas');
 
-// El link/QR de la invitación se le manda al invitado (por WhatsApp o al
-// abrir el enlace directo), así que cualquiera que lo tenga podría llamar
-// este endpoint. Solo el staff logueado (quien opera el lector de QR en la
-// entrada) puede registrar el acceso.
-function requireStaff(req, res, next) {
-  const h = req.headers.authorization || '';
-  const t = h.startsWith('Bearer ') ? h.slice(7) : null;
-  if (!t) return res.status(401).json({ ok: false, msg: 'No autorizado' });
-  try {
-    const payload = jwt.verify(t, JWT_SECRET);
-    if (payload.role !== 'admin' && payload.role !== 'asistente') {
-      return res.status(403).json({ ok: false, msg: 'Requiere permisos de staff' });
-    }
-    req.user = payload;
-    next();
-  } catch {
-    return res.status(401).json({ ok: false, msg: 'Token inválido' });
-  }
-}
+// Hotfix temporal (evento en vivo, 2026-08-15): los lectores Zebra ya
+// desplegados en el salón nunca mandaron el header Authorization (su login
+// era local/falso, sin token real — ver nardeli-invitaciones/src/screens/
+// LoginScreen.js), así que exigir sesión de staff aquí los dejaba sin poder
+// registrar entradas. Se quita el requireStaff SOLO de esta ruta para
+// destrabar el evento. Pendiente: revertir esto en cuanto los Zebra se
+// puedan reconfigurar/actualizar con un login real.
 
 // =====================================
 // Consultar estado de una invitación QR
@@ -69,7 +55,7 @@ router.get('/:qrToken', async (req, res) => {
 // =====================================
 // Registrar escaneo de entrada
 // =====================================
-router.post('/:qrToken/scan', requireStaff, async (req, res) => {
+router.post('/:qrToken/scan', async (req, res) => {
   try {
     const { qrToken } = req.params;
     const { cantidad } = req.body;
@@ -123,6 +109,12 @@ router.post('/:qrToken/scan', requireStaff, async (req, res) => {
       invitacion.estado = 'agotada';
       invitacion.entradasRestantes = 0;
     }
+
+    invitacion.accesos.push({
+      cantidad: cantidadEntradas,
+      restantesDespues: invitacion.entradasRestantes,
+      fecha: new Date(),
+    });
 
     await invitacion.save();
 

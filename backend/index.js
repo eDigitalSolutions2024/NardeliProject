@@ -78,8 +78,14 @@ app.use('/api/reportes', require('./routes/reportes'));
 //Invitaciones QR
 app.use('/api/invitaciones-portal', invitacionesPortalRoutes);
 
+//Acceso QR delegado a empresas partner (crear/editar/eliminar QR de un evento)
+app.use('/api/invitaciones-empresa', require('./routes/invitacionesEmpresa'));
+
 //Ingresar código de invitación
 app.use('/api/invitaciones-qr', invitacionesQRRoutes);
+
+//Vista de admin: todas las invitaciones de una reserva (cliente + empresas partner)
+app.use('/api/invitaciones-qr-admin', require('./routes/invitacionesQRAdmin'));
 
 //scaneo de invitación QR
 app.use('/api/scan-invitacion-qr', scanInvitacionQRRoutes);
@@ -101,6 +107,52 @@ app.get('/privacy', (req, res) => {
   `);
 });
 
+// ✅ 6) Jobs y endpoints admin — DEBEN registrarse antes del catch-all 404 de abajo,
+// si no, Express nunca los alcanza (cualquier app.use()/app.post() registrado después
+// del catch-all queda muerto para siempre).
+const { startCleanupJob, cleanupOldEventPhotos } = require('./jobs/cleanupPhotos');
+const { startSyncJob, syncPartnerInvitationsFull } = require('./jobs/syncPartnerInvitations');
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = require('./utils/jwtSecret');
+
+// Endpoint manual para forzar limpieza (útil para pruebas)
+app.post('/api/admin/cleanup-photos', async (_req, res) => {
+  try {
+    await cleanupOldEventPhotos();
+    res.json({ ok: true, msg: 'Limpieza ejecutada' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Fuerza un resync completo con la Partner API (ej. unas horas antes de un evento, para
+// asegurar que el lector tenga el estado más reciente antes de que empiece la ventana de
+// baja/nula conectividad en el venue). Requiere staff — dispara escrituras en InvitacionQR.
+app.post('/api/admin/sync-partner-invitations', async (req, res) => {
+  const h = req.headers.authorization || '';
+  const t = h.startsWith('Bearer ') ? h.slice(7) : null;
+  if (!t) return res.status(401).json({ ok: false, msg: 'No autorizado' });
+  try {
+    const payload = jwt.verify(t, JWT_SECRET);
+    if (payload.role !== 'admin' && payload.role !== 'asistente') {
+      return res.status(403).json({ ok: false, msg: 'Requiere permisos de staff' });
+    }
+  } catch {
+    return res.status(401).json({ ok: false, msg: 'Token inválido' });
+  }
+
+  try {
+    const result = await syncPartnerInvitationsFull();
+    if (!result.ok) {
+      return res.status(502).json({ ok: false, msg: 'No se pudo sincronizar con Partner API' });
+    }
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    console.error('[sync-partner] Error en resync manual:', e.message);
+    res.status(500).json({ ok: false, msg: 'Error al sincronizar' });
+  }
+});
+
 // 404 JSON
 app.use((req, res) => {
   res.status(404).json({ msg: 'No encontrado' });
@@ -113,25 +165,12 @@ app.use((err, _req, res, _next) => {
   res.status(err.status || 500).json({ msg: err.message || 'Error del servidor' });
 });
 
-
-// ✅ 6) Conectar DB y arrancar
-const { startCleanupJob, cleanupOldEventPhotos } = require('./jobs/cleanupPhotos');
-
-// Endpoint manual para forzar limpieza (útil para pruebas)
-app.post('/api/admin/cleanup-photos', async (_req, res) => {
-  try {
-    await cleanupOldEventPhotos();
-    res.json({ ok: true, msg: 'Limpieza ejecutada' });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
 connectDB()
   .then(() => {
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`Servidor corriendo en http://0.0.0.0:${PORT}`);
       startCleanupJob();
+      startSyncJob();
     });
   })
   .catch((e) => {

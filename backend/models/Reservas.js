@@ -161,15 +161,26 @@ reservaSchema.virtual('subTotal').get(function () {
 
 reservaSchema.virtual('descuentoCalculado').get(function () {
   const d = this.precios?.descuento;
-  const st = Number(this.subTotal || 0);
   if (!d || !Number.isFinite(d.valor) || d.valor <= 0) return 0;
+
+  // El descuento solo aplica sobre los productos marcados con
+  // aplicarDescuento (ver PUT /reservas/:id/utensilios), no sobre el
+  // subtotal completo — si no, un 20% en un solo producto se cobraba
+  // como 20% de TODO el pedido.
+  const items = this.utensilios || [];
+  const stDescuento = items.reduce((acc, it) => {
+    if (!it?.aplicarDescuento) return acc;
+    const p = Number(it?.precio || 0);
+    const q = Number(it?.cantidad || 0);
+    return acc + p * q;
+  }, 0);
 
   if (d.tipo === 'porcentaje') {
     const pct = Math.max(0, Math.min(100, Number(d.valor)));
-    return Math.min(st, st * (pct / 100));
+    return Math.min(stDescuento, stDescuento * (pct / 100));
   }
   const monto = Math.max(0, Number(d.valor));
-  return Math.min(st, monto);
+  return Math.min(stDescuento, monto);
 });
 
 reservaSchema.virtual('totalVirtual').get(function () {

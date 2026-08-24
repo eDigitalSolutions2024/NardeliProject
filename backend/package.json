@@ -17,6 +17,7 @@
     "dayjs-plugin-utc": "^0.1.2",
     "dotenv": "^16.6.1",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.6.2",
     "jsonwebtoken": "^9.0.2",
     "jwt-decode": "^4.0.0",
     "mongodb": "^7.0.0",
