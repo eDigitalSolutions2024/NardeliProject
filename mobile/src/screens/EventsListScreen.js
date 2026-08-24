@@ -176,23 +176,29 @@ export default function EventsListScreen({ navigation }) {
     setRefreshing(false);
   };
 
+  const matchesQuery = useCallback(
+    (r) => {
+      const q = query.trim().toLowerCase();
+      if (!q) return true;
+      return r.cliente?.toLowerCase().includes(q) || r.tipoEvento?.toLowerCase().includes(q);
+    },
+    [query]
+  );
+
+  // Los contadores de los chips deben respetar también la búsqueda activa —
+  // si no, muestran el total general aunque la lista ya esté filtrada por texto.
   const counts = useMemo(
     () => ({
-      todos: reservas.length,
-      confirmados: reservas.filter((r) => matchesFilter(r, 'confirmados')).length,
-      porCerrar: reservas.filter((r) => matchesFilter(r, 'porCerrar')).length,
-      finalizados: reservas.filter((r) => matchesFilter(r, 'finalizados')).length,
+      todos: reservas.filter(matchesQuery).length,
+      confirmados: reservas.filter((r) => matchesFilter(r, 'confirmados') && matchesQuery(r)).length,
+      porCerrar: reservas.filter((r) => matchesFilter(r, 'porCerrar') && matchesQuery(r)).length,
+      finalizados: reservas.filter((r) => matchesFilter(r, 'finalizados') && matchesQuery(r)).length,
     }),
-    [reservas]
+    [reservas, matchesQuery]
   );
 
   const sections = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const filtradas = reservas.filter((r) => {
-      if (!matchesFilter(r, filtro)) return false;
-      if (!q) return true;
-      return r.cliente?.toLowerCase().includes(q) || r.tipoEvento?.toLowerCase().includes(q);
-    });
+    const filtradas = reservas.filter((r) => matchesFilter(r, filtro) && matchesQuery(r));
 
     const orden = ['Recientes', 'Hoy', 'Mañana', 'Esta semana', 'Próximos'];
     const grupos = new Map();
@@ -206,7 +212,7 @@ export default function EventsListScreen({ navigation }) {
     return orden
       .filter((s) => grupos.has(s))
       .map((s) => ({ title: s, data: grupos.get(s) }));
-  }, [reservas, query, filtro]);
+  }, [reservas, filtro, matchesQuery]);
 
   if (loading) {
     return (
@@ -250,7 +256,7 @@ export default function EventsListScreen({ navigation }) {
               onPress={() => setFiltro(f.key)}
               style={[styles.chip, active && { backgroundColor: f.tint, borderColor: f.tint }]}
             >
-              <Ionicons name={f.icon} size={11} color={active ? '#fff' : f.tint} />
+              <Ionicons name={f.icon} size={16} color={active ? '#fff' : f.tint} />
               <Text style={[styles.chipText, active && styles.chipTextActive]}>
                 {f.label} · {counts[f.key]}
               </Text>
@@ -319,20 +325,22 @@ const styles = StyleSheet.create({
     ...shadow.sm,
   },
   searchInput: { flex: 1, fontSize: 14, color: colors.text },
-  chipsRow: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs + 2, gap: 6 },
+  chipsRow: { paddingHorizontal: spacing.md, paddingVertical: spacing.md, gap: 8, alignItems: 'center' },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
+    gap: 7,
+    minHeight: 44,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderRadius: radius.pill,
-    marginRight: 6,
+    marginRight: 8,
   },
-  chipText: { fontSize: 10.5, fontWeight: '700', color: colors.textMuted },
+  chipText: { fontSize: 14, fontWeight: '700', color: colors.textMuted },
   chipTextActive: { color: '#fff' },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyState: { alignItems: 'center', gap: 10, paddingTop: 60 },

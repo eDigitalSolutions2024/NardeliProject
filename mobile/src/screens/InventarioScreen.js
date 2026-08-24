@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import client from '../api/client';
 import { API_ORIGIN } from '../api/config';
 import Stepper from '../components/Stepper';
+import ZoomableImageModal from '../components/ZoomableImageModal';
 import { colors, radius, shadow, spacing } from '../theme';
 
 function money(n) {
@@ -32,7 +33,7 @@ function stockColor(stock) {
   return colors.success;
 }
 
-function ProductoRow({ item, onGuardar }) {
+function ProductoRow({ item, onGuardar, onPressPhoto }) {
   const [editando, setEditando] = useState(false);
   const [cantidad, setCantidad] = useState(item.cantidad);
   const [precio, setPrecio] = useState(String(item.precio ?? 0));
@@ -60,7 +61,9 @@ function ProductoRow({ item, onGuardar }) {
     <View style={styles.card}>
       <View style={styles.row}>
         {item.imagen ? (
-          <Image source={{ uri: `${API_ORIGIN}${item.imagen}` }} style={styles.thumb} />
+          <TouchableOpacity onPress={() => onPressPhoto(`${API_ORIGIN}${item.imagen}`)}>
+            <Image source={{ uri: `${API_ORIGIN}${item.imagen}` }} style={styles.thumb} />
+          </TouchableOpacity>
         ) : (
           <View style={styles.thumbPlaceholder}>
             <Ionicons name="cube-outline" size={20} color={colors.textMuted} />
@@ -117,6 +120,7 @@ export default function InventarioScreen() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [zoomImage, setZoomImage] = useState(null);
 
   const load = useCallback(async () => {
     setError('');
@@ -189,7 +193,14 @@ export default function InventarioScreen() {
             </Text>
           </View>
         }
-        renderItem={({ item }) => <ProductoRow item={item} onGuardar={guardarProducto} />}
+        renderItem={({ item }) => (
+          <ProductoRow item={item} onGuardar={guardarProducto} onPressPhoto={setZoomImage} />
+        )}
+      />
+      <ZoomableImageModal
+        visible={!!zoomImage}
+        uri={zoomImage}
+        onClose={() => setZoomImage(null)}
       />
     </View>
   );
@@ -224,10 +235,10 @@ const styles = StyleSheet.create({
     ...shadow.sm,
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  thumb: { width: 44, height: 44, borderRadius: radius.sm },
+  thumb: { width: 64, height: 64, borderRadius: radius.sm },
   thumbPlaceholder: {
-    width: 44,
-    height: 44,
+    width: 64,
+    height: 64,
     borderRadius: radius.sm,
     backgroundColor: colors.bg,
     alignItems: 'center',

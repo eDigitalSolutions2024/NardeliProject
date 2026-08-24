@@ -6,17 +6,19 @@ import {
   StyleSheet,
   ActivityIndicator,
   Image,
+  TouchableOpacity,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import client from '../api/client';
 import { API_ORIGIN } from '../api/config';
 import { colors, radius, shadow, spacing, type } from '../theme';
+import ZoomableImageModal from '../components/ZoomableImageModal';
 
 // Solo lectura: la app móvil únicamente muestra el estado de los checklists
 // (marcarlos, agregar observaciones o evidencia se sigue haciendo desde el
 // sistema en línea).
-function ChecklistItem({ item }) {
+function ChecklistItem({ item, onPressPhoto }) {
   return (
     <View style={styles.item}>
       <View style={styles.itemRow}>
@@ -40,12 +42,21 @@ function ChecklistItem({ item }) {
 
       {item.requiresPhoto && (item.evidence || []).length > 0 && (
         <View style={styles.evidenceRow}>
-          {item.evidence.map((ev) => (
-            <Image
+          {item.evidence.map((ev, index) => (
+            <TouchableOpacity
               key={ev._id}
-              source={{ uri: `${API_ORIGIN}${ev.url}` }}
-              style={styles.evidenceThumb}
-            />
+              onPress={() =>
+                onPressPhoto(
+                  item.evidence.map((e) => `${API_ORIGIN}${e.url}`),
+                  index
+                )
+              }
+            >
+              <Image
+                source={{ uri: `${API_ORIGIN}${ev.url}` }}
+                style={styles.evidenceThumb}
+              />
+            </TouchableOpacity>
           ))}
         </View>
       )}
@@ -58,6 +69,7 @@ export default function ChecklistDetailScreen({ route }) {
   const [checklist, setChecklist] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [gallery, setGallery] = useState(null); // { images, index }
 
   const load = useCallback(async () => {
     setError('');
@@ -94,24 +106,37 @@ export default function ChecklistDetailScreen({ route }) {
   }
 
   return (
-    <FlatList
-      style={styles.container}
-      contentContainerStyle={{ padding: spacing.md }}
-      data={checklist.items.slice().sort((a, b) => a.order - b.order)}
-      keyExtractor={(item) => item._id}
-      ListHeaderComponent={
-        <View style={styles.header}>
-          <Text style={styles.headerIcon}>{checklist.icon}</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle}>{checklist.categoryName}</Text>
-            <Text style={styles.headerProgress}>
-              {checklist.completedCount}/{checklist.totalCount} completado
-            </Text>
+    <>
+      <FlatList
+        style={styles.container}
+        contentContainerStyle={{ padding: spacing.md }}
+        data={checklist.items.slice().sort((a, b) => a.order - b.order)}
+        keyExtractor={(item) => item._id}
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <Text style={styles.headerIcon}>{checklist.icon}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.headerTitle}>{checklist.categoryName}</Text>
+              <Text style={styles.headerProgress}>
+                {checklist.completedCount}/{checklist.totalCount} completado
+              </Text>
+            </View>
           </View>
-        </View>
-      }
-      renderItem={({ item }) => <ChecklistItem item={item} />}
-    />
+        }
+        renderItem={({ item }) => (
+          <ChecklistItem
+            item={item}
+            onPressPhoto={(images, index) => setGallery({ images, index })}
+          />
+        )}
+      />
+      <ZoomableImageModal
+        visible={!!gallery}
+        images={gallery?.images}
+        initialIndex={gallery?.index || 0}
+        onClose={() => setGallery(null)}
+      />
+    </>
   );
 }
 
@@ -165,5 +190,5 @@ const styles = StyleSheet.create({
   },
   observationText: { flex: 1, fontSize: 13, color: colors.textMuted },
   evidenceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
-  evidenceThumb: { width: 56, height: 56, borderRadius: radius.sm },
+  evidenceThumb: { width: 84, height: 84, borderRadius: radius.sm },
 });
