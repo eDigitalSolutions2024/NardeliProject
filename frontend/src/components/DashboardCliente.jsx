@@ -3,6 +3,8 @@ import './DashboardCliente.css';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import API_BASE_URL, { API_ORIGIN, authHeaders } from '../api';
 import ModalAccesoInvitaciones from './ModalAccesoInvitaciones';
+import ModalAccesoEmpresaQR from './ModalAccesoEmpresaQR';
+import ModalListaInvitaciones from './ModalListaInvitaciones';
 import FormulariosNardeli from './FormulariosNardeli';
 import ChecklistsReserva from './ChecklistsReserva';
 import MiniCalendarioDisponibilidad from './MiniCalendarioDisponibilidad';
@@ -55,12 +57,28 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
   const [showModalInvitaciones, setShowModalInvitaciones] = useState(false);
   const [reservaSeleccionadaId, setReservaSeleccionadaId] = useState(null);
 
+  const [showModalEmpresaQR, setShowModalEmpresaQR] = useState(false);
+  const [reservaEmpresaQRId, setReservaEmpresaQRId] = useState(null);
+
+  const [showModalListaInvitaciones, setShowModalListaInvitaciones] = useState(false);
+  const [reservaListaInvitacionesId, setReservaListaInvitacionesId] = useState(null);
+
 
   const role = localStorage.getItem('role');
-  
+
   const abrirModalInvitaciones = (reservaId) => {
     setReservaSeleccionadaId(reservaId);
     setShowModalInvitaciones(true);
+  };
+
+  const abrirModalListaInvitaciones = (reservaId) => {
+    setReservaListaInvitacionesId(reservaId);
+    setShowModalListaInvitaciones(true);
+  };
+
+  const abrirModalEmpresaQR = (reservaId) => {
+    setReservaEmpresaQRId(reservaId);
+    setShowModalEmpresaQR(true);
   };
 
 
@@ -1490,7 +1508,27 @@ onMouseLeave={(e) => {
               Invitaciones QR
             </button>
 
+            {isStaff && (
+              <button
+                className="pdf"
+                type="button"
+                style={{ background: '#8b5cf6', color: '#fff', marginTop: 8, marginLeft: 8 }}
+                onClick={() => abrirModalEmpresaQR(reservaId)}
+              >
+                Acceso QR para empresa
+              </button>
+            )}
 
+            {isStaff && (
+              <button
+                className="pdf"
+                type="button"
+                style={{ background: '#2b6777', color: '#fff', marginTop: 8, marginLeft: 8 }}
+                onClick={() => abrirModalListaInvitaciones(reservaId)}
+              >
+                Ver invitaciones
+              </button>
+            )}
 
           {isStaff && (
             <div style={{ marginTop: 8, display: 'block', flexDirection: 'column', gap: 6, }}>
@@ -2105,6 +2143,19 @@ onMouseLeave={(e) => {
         reservaId={reservaSeleccionadaId}
       />
 
+      {/* MODAL: Acceso QR delegado a empresa partner */}
+      <ModalAccesoEmpresaQR
+        open={showModalEmpresaQR}
+        onClose={() => setShowModalEmpresaQR(false)}
+        reservaId={reservaEmpresaQRId}
+      />
+
+      {/* MODAL: Lista de admin de todas las invitaciones (cliente + empresas partner) */}
+      <ModalListaInvitaciones
+        open={showModalListaInvitaciones}
+        onClose={() => setShowModalListaInvitaciones(false)}
+        reservaId={reservaListaInvitacionesId}
+      />
 
     </div>
   );
