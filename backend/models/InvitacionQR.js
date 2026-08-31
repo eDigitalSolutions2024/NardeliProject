@@ -23,7 +23,7 @@ const invitacionQRSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 1,
-      
+
     },
     entradasRestantes: {
       type: Number,
@@ -50,6 +50,20 @@ const invitacionQRSchema = new mongoose.Schema(
   type: Number,
   default: 0,
 },
+    // Log de cada escaneo real (antes solo se guardaba el último en
+    // ultimaCantidadRegistrada, así que un QR escaneado varias veces perdía
+    // el historial de los escaneos anteriores). Cada registro POST /scan
+    // agrega una entrada aquí en vez de sobreescribir.
+    accesos: {
+      type: [
+        {
+          cantidad: { type: Number, required: true },
+          restantesDespues: { type: Number, required: true },
+          fecha: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
+    },
     creadoPor: {
       type: String,
       default: 'cliente',

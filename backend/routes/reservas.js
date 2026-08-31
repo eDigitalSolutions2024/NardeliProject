@@ -104,18 +104,29 @@ function calcSubtotalFromUtensilios(utensilios = []) {
     return acc + (Number.isFinite(p) && Number.isFinite(c) ? p * c : 0);
   }, 0);
 }
-function applyDiscount(subtotal, desc = { tipo: 'monto', valor: 0 }) {
+// subtotalDescuento = base sobre la que realmente se aplica el %/monto (solo
+// productos con aplicarDescuento=true). Si no se pasa, cae en el subtotal
+// completo para no romper otros usos.
+function applyDiscount(subtotal, desc = { tipo: 'monto', valor: 0 }, subtotalDescuento = subtotal) {
   let monto = 0;
   const tipo  = desc?.tipo === 'porcentaje' ? 'porcentaje' : 'monto';
   const valor = Number(desc?.valor || 0);
   if (tipo === 'porcentaje') {
     const pct = Math.max(0, Math.min(100, valor));
-    monto = subtotal * (pct / 100);
+    monto = subtotalDescuento * (pct / 100);
   } else {
     monto = Math.max(0, valor);
   }
-  monto = Math.min(monto, subtotal);
+  monto = Math.min(monto, subtotalDescuento);
   return { subtotal, descuento: { tipo, valor, monto }, total: Math.max(0, subtotal - monto) };
+}
+function calcSubtotalDescuentoFromUtensilios(utensilios = []) {
+  return (utensilios || []).reduce((acc, u) => {
+    if (!u?.aplicarDescuento) return acc;
+    const p = Number(u?.precio ?? 0);
+    const c = Number(u?.cantidad ?? 0);
+    return acc + (Number.isFinite(p) && Number.isFinite(c) ? p * c : 0);
+  }, 0);
 }
 
 // ===== Helpers de fecha/horario =====
@@ -1438,9 +1449,11 @@ fechaAgregado
     );
 
     const subtotal = calcSubtotalFromUtensilios(updated.utensilios || []);
+    const subtotalDescuento = calcSubtotalDescuentoFromUtensilios(updated.utensilios || []);
     const precios = applyDiscount(
       subtotal,
-      updated.precios?.descuento || { tipo: 'monto', valor: 0 }
+      updated.precios?.descuento || { tipo: 'monto', valor: 0 },
+      subtotalDescuento
     );
 
     updated.precios = precios;
@@ -1634,14 +1647,14 @@ function calcularSubTotal(utensilios = []) {
     return acc + (p * q);
   }, 0);
 }
-function calcularDescuento(subTotal, descuento) {
+function calcularDescuento(subtotalDescuento, descuento) {
   if (!descuento || !Number.isFinite(Number(descuento.valor)) || Number(descuento.valor) <= 0) return 0;
   if (descuento.tipo === 'porcentaje') {
     const pct = Math.max(0, Math.min(100, Number(descuento.valor)));
-    return Math.min(subTotal, subTotal * (pct / 100));
+    return Math.min(subtotalDescuento, subtotalDescuento * (pct / 100));
     }
   const monto = Math.max(0, Number(descuento.valor));
-  return Math.min(subTotal, monto);
+  return Math.min(subtotalDescuento, monto);
 }
 router.put('/:id/descuento', requireStaff, async (req, res) => {
   try {
@@ -1698,7 +1711,7 @@ router.put('/:id/descuento', requireStaff, async (req, res) => {
     }
 
     const subTotal = calcularSubTotal(r.utensilios);
-    const descuento = calcularDescuento(subTotal, r.precios.descuento);
+    const descuento = calcularDescuento(calcSubtotalDescuentoFromUtensilios(r.utensilios), r.precios.descuento);
     const total = Math.max(0, subTotal - descuento);
 
     return res.json({
@@ -1722,7 +1735,7 @@ router.get('/:id/totales', async (req, res) => {
     const r = await Reserva.findById(id);
     if (!r) return res.status(404).json({ msg: 'Reserva no encontrada' });
     const subTotal = calcularSubTotal(r.utensilios);
-    const descuento = calcularDescuento(subTotal, r.precios?.descuento);
+    const descuento = calcularDescuento(calcSubtotalDescuentoFromUtensilios(r.utensilios), r.precios?.descuento);
     const total = Math.max(0, subTotal - descuento);
     return res.json({ subTotal, descuento, total, precios: r.precios || { moneda: 'MXN', descuento: { tipo: 'monto', valor: 0, motivo: '' } } });
   } catch (e) {
