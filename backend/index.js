@@ -52,7 +52,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '5mb' })); // firma de encuestas en base64 excede el límite default de 100kb
 app.use(cookieParser());
 
 // ✅ 5) Rutas
@@ -92,6 +92,7 @@ app.use('/api/scan-invitacion-qr', scanInvitacionQRRoutes);
 
 app.use('/api/app', require('./routes/appDashboard'));
 app.use('/api/app', require('./routes/appChecklists'));
+app.use('/api/app', require('./routes/appEncuestas'));
 app.use('/api/settings', require('./routes/settings'));
 
 // Si tienes inventario por separado:
