@@ -24,6 +24,8 @@ const encuestaSatisfaccionSchema = new mongoose.Schema({
   canalReferencia: { type: String, required: true },
   loMejor: { type: String, default: '', trim: true },
   queMejorar: { type: String, default: '', trim: true },
+  opinionComida: { type: String, default: '', trim: true },
+  opinionCandybar: { type: String, default: '', trim: true },
   testimonioAutorizado: { type: Boolean, default: false },
 
   firmante: { type: String, required: true },

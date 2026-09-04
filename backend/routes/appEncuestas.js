@@ -8,7 +8,9 @@ const EncuestaSatisfaccion = require('../models/EncuestaSatisfaccion');
 
 const CATEGORIAS_DEFAULT = [
   { categoria: 'salon', etiqueta: 'Salón' },
-  { categoria: 'comida_barra', etiqueta: 'Comida y barra' },
+  { categoria: 'comida', etiqueta: 'Servicio de comida' },
+  { categoria: 'barra', etiqueta: 'Barra y bebidas' },
+  { categoria: 'candybar', etiqueta: 'Candy bar' },
   { categoria: 'atencion_personal', etiqueta: 'Atención del personal' },
   { categoria: 'puntualidad', etiqueta: 'Puntualidad' },
   { categoria: 'limpieza', etiqueta: 'Limpieza de las instalaciones' },
@@ -65,7 +67,8 @@ router.post('/encuestas', async (req, res) => {
   try {
     const {
       reservaId, calificacionGeneral, calificaciones = [], recomendaria, volveriaContratar,
-      canalReferencia, loMejor = '', queMejorar = '', testimonioAutorizado = false, firmante, firma,
+      canalReferencia, loMejor = '', queMejorar = '', opinionComida = '', opinionCandybar = '',
+      testimonioAutorizado = false, firmante, firma,
     } = req.body;
 
     if (!reservaId) return res.status(400).json({ error: 'reservaId requerido' });
@@ -113,6 +116,8 @@ router.post('/encuestas', async (req, res) => {
       canalReferencia,
       loMejor,
       queMejorar,
+      opinionComida,
+      opinionCandybar,
       testimonioAutorizado: !!testimonioAutorizado,
       firmante: firmante || reserva.cliente,
       firmaUrl,

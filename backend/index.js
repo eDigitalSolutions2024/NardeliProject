@@ -52,7 +52,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-app.use(express.json({ limit: '5mb' })); // firma de encuestas en base64 excede el límite default de 100kb
+app.use(express.json({ limit: '20mb' })); // firma de encuestas y fotos de evidencia de Toro Checklist en base64 exceden el límite default de 100kb
 app.use(cookieParser());
 
 // ✅ 5) Rutas
@@ -94,6 +94,10 @@ app.use('/api/app', require('./routes/appDashboard'));
 app.use('/api/app', require('./routes/appChecklists'));
 app.use('/api/app', require('./routes/appEncuestas'));
 app.use('/api/settings', require('./routes/settings'));
+
+// Toro Checklist — sistema independiente (Restaurante El Toro Bronco Real),
+// misma instancia/proceso pero con su propia base de datos (ver toro/db.js).
+app.use('/api/toro', require('./toro'));
 
 // Si tienes inventario por separado:
 // app.use('/api/inventario', require('./routes/inventario'));
