@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './DashboardCliente.css';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import API_BASE_URL, { API_ORIGIN, authHeaders } from '../api';
@@ -103,6 +103,14 @@ const DashboardCliente = ({ reservaId: reservaIdProp }) => {
 
   // Productos a los que se aplicará el descuento global (por item, opcional)
 const [discountItems, setDiscountItems] = useState({}); // { [itemId]: true }
+  // Última selección de descuento confirmada con el backend (recién cargada
+  // o recién guardada). Sirve para detectar cuándo el usuario está a punto
+  // de DESMARCAR un producto que ya tenía el descuento aplicado.
+  const discountBaselineRef = useRef({});
+  const seQuitaAlgunDescuento = (nuevo) => {
+    const anterior = discountBaselineRef.current || {};
+    return Object.keys(anterior).some((k) => anterior[k] === true && !nuevo[k]);
+  };
 
   // MODAL "Ver accesorios"
   const [showAccModal, setShowAccModal] = useState(false);
@@ -444,6 +452,7 @@ savedArr.forEach(s => {
 });
 
 setDiscountItems(descuentosIniciales);
+    discountBaselineRef.current = descuentosIniciales;
 
     setSeleccion(next);
   };
@@ -607,8 +616,21 @@ const saldoRestante = useMemo(() => {
   const guardarSeleccion = async () => {
     if (!reservaId) {
       alert('No se encontró el ID de la reserva.');
-      return;
+      return false;
     }
+
+    // Si esta selección desmarca un producto que ya tenía el descuento
+    // aplicado, se pide contraseña de administrador como filtro extra.
+    let adminPassword;
+    if (seQuitaAlgunDescuento(discountItems)) {
+      adminPassword = window.prompt('Vas a quitar el descuento de un producto. Ingresa la contraseña de un administrador para confirmar:');
+      if (adminPassword === null) return false; // canceló
+      if (!adminPassword.trim()) {
+        alert('Debes ingresar una contraseña.');
+        return false;
+      }
+    }
+
     const token = localStorage.getItem('token') || '';
     const itemsPayload = Object.values(seleccion).map(({ item, qty }) => {
       const id = String(item.id);
@@ -633,20 +655,28 @@ const saldoRestante = useMemo(() => {
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : undefined,
         },
-        body: JSON.stringify({ items: itemsPayload,  discountItems, updatedAt: new Date().toISOString() }),
+        body: JSON.stringify({
+          items: itemsPayload,
+          discountItems,
+          updatedAt: new Date().toISOString(),
+          ...(adminPassword ? { adminPassword } : {})
+        }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.msg || `HTTP ${res.status}`);
       }
+      discountBaselineRef.current = discountItems;
       try {
         const r = await fetch(`${API_BASE_URL}/reservas/${reservaId}/utensilios`);
         if (r.ok) setUtensiliosBD(await r.json());
       } catch {}
       alert('¡Selección guardada!');
+      return true;
     } catch (e) {
       console.error(e);
-      alert('No se pudo guardar la selección');
+      alert(e.message || 'No se pudo guardar la selección');
+      return false;
     } finally {
       setSaving(false);
     }
@@ -741,7 +771,8 @@ const saldoRestante = useMemo(() => {
   // ====== Finalizar: guarda productos + aplica accesorios
   const finalizarReserva = async () => {
   try {
-    await guardarSeleccion();
+    const ok = await guardarSeleccion();
+    if (!ok) return;
     await aplicarAccesorios();
     alert('Reserva finalizada y cambios guardados');
   } catch (e) {
@@ -752,7 +783,8 @@ const saldoRestante = useMemo(() => {
 
 const actualizarReserva = async () => {
   try {
-    await guardarSeleccion();
+    const ok = await guardarSeleccion();
+    if (!ok) return;
     await aplicarAccesorios();
     alert('Saldos Actualizados');
   } catch (e) {
@@ -1351,21 +1383,40 @@ function openEstadoCuentaPdf() {
                           return;
                         }
 
+                      const nuevoValor = Number(descValor) || 0;
+
+                      // Desmarcar un producto que ya tenía el descuento
+                      // aplicado requiere la contraseña de un admin.
+                      let adminPassword;
+                      if (seQuitaAlgunDescuento(discountItems)) {
+                        adminPassword = window.prompt('Vas a quitar el descuento de un producto. Ingresa la contraseña de un administrador para confirmar:');
+                        if (adminPassword === null) return; // canceló
+                        if (!adminPassword.trim()) {
+                          alert('Debes ingresar una contraseña.');
+                          return;
+                        }
+                      }
+
                       const res = await fetch(`${API_BASE_URL}/reservas/${reservaId}/precios`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json', ...authHeaders() },
                         body: JSON.stringify({
                         descuento: {
                           tipo: descTipo,
-                          valor: Number(descValor) || 0
+                          valor: nuevoValor
                         },
-                        discountItems
+                        discountItems,
+                        ...(adminPassword ? { adminPassword } : {})
                       })
                       });
-                      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                      if (!res.ok) {
+                        const err = await res.json().catch(() => ({}));
+                        throw new Error(err.msg || `HTTP ${res.status}`);
+                      }
+                      discountBaselineRef.current = discountItems;
                       alert('Descuento guardado');
                     } catch (e) {
-                      console.error(e); alert('No se pudo guardar el descuento');
+                      console.error(e); alert(e.message || 'No se pudo guardar el descuento');
                     }
                   })();
                 }}>

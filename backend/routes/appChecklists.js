@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = require('../utils/jwtSecret');
 const ChecklistTemplate = require('../models/ChecklistTemplate');
 const EventChecklist = require('../models/EventChecklist');
+const { streamChecklistPdf } = require('../services/checklistPdf');
 
 // Solo staff logueado puede resetear las plantillas oficiales (borra todas
 // las existentes). Nada en la app llama esta ruta automáticamente.
@@ -306,6 +307,16 @@ router.get('/checklists/:id', async (req, res) => {
     if (!cl) return res.status(404).json({ error: 'Checklist no encontrado' });
     res.json(cl);
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/app/checklists/:id/pdf — descargar checklist en PDF
+router.get('/checklists/:id/pdf', async (req, res) => {
+  try {
+    await streamChecklistPdf(res, req.params.id);
+  } catch (e) {
+    console.error(e);
+    res.status(404).send('No se pudo generar el PDF');
+  }
 });
 
 // PUT /api/app/checklists/:id — renombrar checklist del evento

@@ -5,6 +5,7 @@ const fs = require('fs');
 
 const Reserva = require('../models/Reservas');
 const EncuestaSatisfaccion = require('../models/EncuestaSatisfaccion');
+const { streamEncuestaPdf } = require('../services/encuestaPdf');
 
 const CATEGORIAS_DEFAULT = [
   { categoria: 'salon', etiqueta: 'Salón' },
@@ -60,6 +61,16 @@ router.get('/encuestas/reserva/:reservaId', async (req, res) => {
       canales: CANALES_DEFAULT,
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/app/encuestas/reserva/:reservaId/pdf — descargar encuesta en PDF
+router.get('/encuestas/reserva/:reservaId/pdf', async (req, res) => {
+  try {
+    await streamEncuestaPdf(res, req.params.reservaId);
+  } catch (e) {
+    console.error(e);
+    res.status(404).send('No se pudo generar el PDF');
+  }
 });
 
 // POST /api/app/encuestas — crear encuesta de satisfacción (una por reserva)

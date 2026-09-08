@@ -82,6 +82,29 @@ function requireStaff(req, res, next) {
   }
 }
 
+// ¿El nuevo mapa discountItems desmarca algún producto que hoy tiene
+// aplicarDescuento:true? Eso es "quitar" el descuento de ese producto, sin
+// importar el valor numérico del descuento.
+function quitaAlgunDescuento(utensiliosActuales, discountItems) {
+  if (!discountItems || typeof discountItems !== 'object') return false;
+  return (utensiliosActuales || []).some((u) => {
+    if (!u.aplicarDescuento) return false;
+    const key = String(u.itemId || u._id);
+    return !discountItems[key];
+  });
+}
+
+// Valida una contraseña contra CUALQUIER cuenta con rol admin (sin importar
+// quién tenga la sesión iniciada).
+async function validarPasswordAdmin(password) {
+  if (!password) return false;
+  const admins = await Usuario.find({ role: 'admin' }).select('password');
+  for (const a of admins) {
+    if (a.password && await bcrypt.compare(password, a.password)) return true;
+  }
+  return false;
+}
+
 function extraerUsuarioToken(req) {
   try {
     const h = req.headers.authorization || '';
@@ -1166,7 +1189,10 @@ router.get('/:id', async (req, res) => {
 router.put('/:id/utensilios', async (req, res) => {
   try {
     const { id } = req.params;
-    const { items = [], discountItems = {} } = req.body;
+    const { items = [], discountItems } = req.body;
+    // Si no viene discountItems (llamada legada), no se debe borrar la
+    // bandera aplicarDescuento ya guardada de cada producto.
+    const hasDiscountItems = discountItems && typeof discountItems === 'object';
 
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({ msg: 'ID inválido' });
@@ -1179,6 +1205,17 @@ router.put('/:id/utensilios', async (req, res) => {
     const reservaActual = await Reserva.findById(id).lean();
     if (!reservaActual) {
       return res.status(404).json({ msg: 'Reserva no encontrada' });
+    }
+
+    // Desmarcar un producto que ya tenía el descuento aplicado (por ejemplo
+    // al editar el carrito y guardar desde "Finalizar Reserva" o "Actualizar
+    // Saldo") requiere confirmar con la contraseña de una cuenta admin,
+    // igual que en PATCH /:id/precios.
+    if (quitaAlgunDescuento(reservaActual.utensilios, discountItems)) {
+      const adminPassword = req.body?.adminPassword;
+      if (!(await validarPasswordAdmin(adminPassword))) {
+        return res.status(401).json({ msg: 'Se requiere la contraseña de un administrador para quitar el descuento' });
+      }
     }
 
     // ===== HISTORIAL: solo si ya es evento =====
@@ -1430,11 +1467,13 @@ descripcion:
 finalDesc,
 
 aplicarDescuento:
-!!discountItems[
+hasDiscountItems
+?!!discountItems[
 String(
 s.itemId
 )
-],
+]
+:!!(prev && prev.aplicarDescuento),
 
 fechaAgregado
 
@@ -1877,8 +1916,30 @@ router.patch('/:id/precios', requireStaff, async (req, res) => {
     const r = await Reserva.findById(id);
     if (!r) return res.status(404).json({ msg: 'Reserva no encontrada' });
 
+    // Desmarcar un producto que ya tenía el descuento aplicado requiere
+    // confirmar con la contraseña de una cuenta admin, sin importar qué
+    // usuario tenga la sesión iniciada. Se valida aquí en el backend para
+    // que no se pueda saltar llamando la API directamente.
+    const discountItems = req.body?.discountItems;
+    if (quitaAlgunDescuento(r.utensilios, discountItems)) {
+      const adminPassword = req.body?.adminPassword;
+      if (!(await validarPasswordAdmin(adminPassword))) {
+        return res.status(401).json({ msg: 'Se requiere la contraseña de un administrador para quitar el descuento' });
+      }
+    }
+
     r.precios = r.precios || { moneda: 'MXN' };
     r.precios.descuento = { tipo, valor, motivo: String(nuevoDesc.motivo || '') };
+
+    // Igual que PUT /:id/utensilios: persiste qué productos llevan el
+    // descuento. Si no viene discountItems (llamada legada), se respetan
+    // las banderas aplicarDescuento que ya estén guardadas.
+    if (discountItems && typeof discountItems === 'object') {
+      (r.utensilios || []).forEach((u) => {
+        const key = String(u.itemId || u._id);
+        u.aplicarDescuento = !!discountItems[key];
+      });
+    }
 
     const subTotal = (r.utensilios || []).reduce((a, u) => {
   return a + Number(u.precio || 0) * Number(u.cantidad || 0);
