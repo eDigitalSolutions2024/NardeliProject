@@ -6,6 +6,7 @@ const fs = require('fs');
 const Reserva = require('../models/Reservas');
 const EncuestaSatisfaccion = require('../models/EncuestaSatisfaccion');
 const { streamEncuestaPdf } = require('../services/encuestaPdf');
+const { LOMEJOR_TAGS, QUEMEJORAR_TAGS, COMIDA_TAGS, CANDYBAR_TAGS } = require('../constants/surveyTags');
 
 const CATEGORIAS_DEFAULT = [
   { categoria: 'salon', etiqueta: 'Salón' },
@@ -25,6 +26,12 @@ const CANALES_DEFAULT = [
   { canal: 'evento_previo', etiqueta: 'Ya había venido a otro evento' },
   { canal: 'otro', etiqueta: 'Otro' },
 ];
+
+function normalizeTags(value, validTags) {
+  if (!Array.isArray(value)) return [];
+  const valid = new Set(validTags.map(t => t.tag));
+  return [...new Set(value.filter(t => valid.has(t)))];
+}
 
 const uploadDir = path.join(__dirname, '..', 'uploads', 'encuestas');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
@@ -78,7 +85,7 @@ router.post('/encuestas', async (req, res) => {
   try {
     const {
       reservaId, calificacionGeneral, calificaciones = [], recomendaria, volveriaContratar,
-      canalReferencia, loMejor = '', queMejorar = '', opinionComida = '', opinionCandybar = '',
+      canalReferencia, comidaTags = [], candybarTags = [], loMejor = [], queMejorar = [],
       testimonioAutorizado = false, firmante, firma,
     } = req.body;
 
@@ -125,10 +132,10 @@ router.post('/encuestas', async (req, res) => {
       recomendaria,
       volveriaContratar,
       canalReferencia,
-      loMejor,
-      queMejorar,
-      opinionComida,
-      opinionCandybar,
+      comidaTags: normalizeTags(comidaTags, COMIDA_TAGS),
+      candybarTags: normalizeTags(candybarTags, CANDYBAR_TAGS),
+      loMejor: normalizeTags(loMejor, LOMEJOR_TAGS),
+      queMejorar: normalizeTags(queMejorar, QUEMEJORAR_TAGS),
       testimonioAutorizado: !!testimonioAutorizado,
       firmante: firmante || reserva.cliente,
       firmaUrl,
