@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
 const Usuario = require('../models/Usuario');
@@ -94,15 +95,16 @@ function quitaAlgunDescuento(utensiliosActuales, discountItems) {
   });
 }
 
-// Valida una contraseña contra CUALQUIER cuenta con rol admin (sin importar
-// quién tenga la sesión iniciada).
-async function validarPasswordAdmin(password) {
-  if (!password) return false;
-  const admins = await Usuario.find({ role: 'admin' }).select('password');
-  for (const a of admins) {
-    if (a.password && await bcrypt.compare(password, a.password)) return true;
-  }
-  return false;
+// Valida la contraseña fija requerida para quitar un descuento ya aplicado
+// (independiente de la cuenta con sesión iniciada). Se guarda en .env, no en
+// el código, para no dejarla expuesta en el repositorio.
+function validarPasswordAdmin(password) {
+  const esperada = process.env.DISCOUNT_REMOVAL_PASSWORD || '';
+  if (!password || !esperada) return false;
+  const a = Buffer.from(String(password));
+  const b = Buffer.from(esperada);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 
 function extraerUsuarioToken(req) {
