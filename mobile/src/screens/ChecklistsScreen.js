@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import client from '../api/client';
+import client from '../offline/offlineClient';
 import { colors, radius, shadow, spacing } from '../theme';
 
 export default function ChecklistsScreen({ route, navigation }) {

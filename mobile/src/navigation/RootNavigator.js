@@ -21,6 +21,8 @@ import ClientesScreen from '../screens/ClientesScreen';
 import ClienteDetalleScreen from '../screens/ClienteDetalleScreen';
 import ReportesScreen from '../screens/ReportesScreen';
 import InventarioScreen from '../screens/InventarioScreen';
+import SyncStatusScreen from '../screens/SyncStatusScreen';
+import ConflictsScreen from '../screens/ConflictsScreen';
 
 const markWhite = require('../../assets/nardeli-mark-white.png');
 
@@ -137,6 +139,16 @@ export default function RootNavigator() {
               name="Invitaciones"
               component={InvitacionesScreen}
               options={{ title: 'Invitaciones' }}
+            />
+            <Stack.Screen
+              name="SyncStatus"
+              component={SyncStatusScreen}
+              options={{ title: 'Sincronización' }}
+            />
+            <Stack.Screen
+              name="Conflicts"
+              component={ConflictsScreen}
+              options={{ title: 'Conflictos' }}
             />
           </>
         )}

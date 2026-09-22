@@ -393,8 +393,18 @@ r.amount||
 0
 );
 
+// "Saldo actual" del resumen debe coincidir con lo que muestra la columna
+// "Saldo" del último recibo en la tabla de abajo (r.snapshot?.saldo) — si
+// no, el mismo documento muestra dos saldos distintos. Solo se recae al
+// cálculo en vivo si aún no hay recibos, o el último no tiene snapshot
+// (recibo muy antiguo).
+const ultimoRecibo=
+receipts[receipts.length-1];
+
 const saldo=
-Math.max(
+ultimoRecibo?.snapshot?.saldo!=null
+?Number(ultimoRecibo.snapshot.saldo)
+:Math.max(
 0,
 totalActual-
 pagado

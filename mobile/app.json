@@ -41,7 +41,8 @@
         {
           "photosPermission": "Nardeli usa tus fotos para adjuntar evidencia en los checklists."
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "extra": {
       "eas": {

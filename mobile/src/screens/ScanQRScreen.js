@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
-import client from '../api/client';
+import client from '../offline/offlineClient';
 import { colors, radius, shadow, spacing, type, estadoColors } from '../theme';
 
 export default function ScanQRScreen() {

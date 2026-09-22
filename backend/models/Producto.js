@@ -9,5 +9,5 @@ const productoSchema = new mongoose.Schema({
   descripcion:{ type: String, default: '' },
   imagen:    { type: String, default: '' },
   creadoEn:  { type: Date, default: Date.now }
-});
+}, { timestamps: true });
 module.exports = mongoose.model('Producto', productoSchema);

@@ -224,7 +224,7 @@ router.post('/checklist-templates/seed', requireStaff, async (req, res) => {
 router.get('/checklists/evento/:eventId', async (req, res) => {
   try {
     let checklists = await EventChecklist.find({ eventExternalId: req.params.eventId })
-      .select('category categoryName icon status completedCount totalCount template')
+      .select('category categoryName icon status completedCount totalCount template updatedAt')
       .sort({ createdAt: 1 });
 
     if (checklists.length === 0) {
@@ -245,7 +245,7 @@ router.get('/checklists/evento/:eventId', async (req, res) => {
         });
       }
       checklists = await EventChecklist.find({ eventExternalId: req.params.eventId })
-        .select('category categoryName icon status completedCount totalCount template')
+        .select('category categoryName icon status completedCount totalCount template updatedAt')
         .sort({ createdAt: 1 });
     }
 

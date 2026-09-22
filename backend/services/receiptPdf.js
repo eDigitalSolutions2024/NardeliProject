@@ -190,15 +190,30 @@ async function streamReceiptPdf(res, receiptId) {
   const amountOriginal = Number(receipt.amountOriginal || 0);
   const exchangeRate = Number(receipt.exchangeRate || 0);
 
-  // Totales (usando virtuales de Reserva si existen)
-  const subtotal = Number(reserva?.subTotal || 0);
-  const discount = Number(reserva?.descuentoCalculado || 0);
-  const total = Math.max(0, subtotal - discount);
+  // Totales: usar la fotografía congelada al momento en que se emitió ESTE
+  // recibo (receipt.snapshot), no el estado actual de la reserva — si no,
+  // un recibo viejo cambia solo cada vez que se edita la reserva después.
+  // Solo se recae al cálculo en vivo si es un recibo muy antiguo que se
+  // haya creado antes de que existiera el campo snapshot.
+  const snap = receipt.snapshot;
+  const subtotal = snap ? Number(snap.subtotal || 0) : Number(reserva?.subTotal || 0);
+  const discount = snap ? Number(snap.descuento || 0) : Number(reserva?.descuentoCalculado || 0);
+  const total = snap ? Number(snap.total || 0) : Math.max(0, subtotal - discount);
 
-  // Pagos: acumulado incluyendo este recibo
-  const paid = reserva?._id ? await sumPaid(reserva._id) : amount;
-  const paidBeforeThis = Math.max(0, paid - amount); // útil para contextualizar este recibo
-  const remaining = Math.max(0, total - paid);
+  // Pagado / saldo: el snapshot ya trae el saldo congelado justo después de
+  // este recibo, así que "pagado acumulado" se deriva de ahí en vez de
+  // sumar TODOS los recibos de la reserva hasta hoy (lo cual arrastraría
+  // pagos hechos después de este recibo).
+  let paid, paidBeforeThis, remaining;
+  if (snap) {
+    remaining = Math.max(0, Number(snap.saldo || 0));
+    paid = Math.max(0, total - remaining);
+    paidBeforeThis = Math.max(0, paid - amount);
+  } else {
+    paid = reserva?._id ? await sumPaid(reserva._id) : amount;
+    paidBeforeThis = Math.max(0, paid - amount); // útil para contextualizar este recibo
+    remaining = Math.max(0, total - paid);
+  }
 
   // Documento
   const doc = new PDFDocument({

@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import client from '../api/client';
+import client from '../offline/offlineClient';
 import { colors, radius, shadow, spacing, type } from '../theme';
 
 const WEEKDAYS = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];

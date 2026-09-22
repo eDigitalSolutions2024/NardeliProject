@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import client from '../api/client';
+import client from '../offline/offlineClient';
 import { colors, estadoColors, radius, shadow, spacing, type } from '../theme';
 
 function formatFecha(fecha) {

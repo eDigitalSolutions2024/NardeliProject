@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import client from '../api/client';
+import client from '../offline/offlineClient';
 import { API_ORIGIN } from '../api/config';
 import Stepper from '../components/Stepper';
 import ZoomableImageModal from '../components/ZoomableImageModal';
