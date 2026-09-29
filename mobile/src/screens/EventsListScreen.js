@@ -265,7 +265,21 @@ export default function EventsListScreen({ navigation }) {
         })}
       </ScrollView>
 
-      {!!error && <Text style={styles.error}>{error}</Text>}
+      {!!error && (
+        <View style={styles.errorBox}>
+          <Text style={styles.error}>{error}</Text>
+          <Pressable style={styles.retryBtn} onPress={onRefresh} disabled={refreshing}>
+            {refreshing ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="refresh" size={14} color="#fff" />
+                <Text style={styles.retryBtnText}>Reintentar</Text>
+              </>
+            )}
+          </Pressable>
+        </View>
+      )}
 
       <SectionList
         sections={sections}
@@ -310,6 +324,17 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   error: { color: colors.danger, textAlign: 'center', padding: 8 },
+  errorBox: { alignItems: 'center', paddingBottom: spacing.sm, gap: 8 },
+  retryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.danger,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: radius.pill,
+  },
+  retryBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',

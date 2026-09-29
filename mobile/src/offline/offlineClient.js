@@ -32,6 +32,24 @@ function isNetworkError(error) {
   return !error?.response;
 }
 
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Un solo reintento ante un error de RED (no de negocio) antes de rendirse.
+// Suaviza baches momentáneos de señal (timeout puntual) para que la
+// pantalla no muestre "no se pudo cargar" por algo que se resuelve solo
+// medio segundo después.
+async function getWithRetry(url, config) {
+  try {
+    return await client.get(url, config);
+  } catch (error) {
+    if (!isNetworkError(error)) throw error;
+    await delay(800);
+    return client.get(url, config);
+  }
+}
+
 async function get(url, config) {
   if (isExcluded(url)) {
     return client.get(url, config);
@@ -42,7 +60,7 @@ async function get(url, config) {
 
   if (isOnline()) {
     try {
-      const res = await client.get(url, config);
+      const res = await getWithRetry(url, config);
       await putCache({
         method: 'GET',
         url,
