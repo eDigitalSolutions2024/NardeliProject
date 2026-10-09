@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import './TablaProductos.css';
+import './FormProducto.css'; // reutiliza .fp-switch para los checkboxes del modal
 import API_BASE_URL, { API_ORIGIN } from '../api';
 
 const fntMXN = new Intl.NumberFormat('es-MX', {
@@ -125,71 +126,85 @@ export default function TablaAccesorios({ refresh = 0 }) {
   };
 
   return (
-    <div className="tabla-productos-container">
-      <h2>Lista de accesorios</h2>
+    <div className="tp-card">
+      <div className="tp-header">
+        <h2>Lista de accesorios</h2>
+        {!cargando && <span className="tp-count">{accesorios.length} {accesorios.length === 1 ? 'accesorio' : 'accesorios'}</span>}
+      </div>
 
-      {cargando ? <p>Cargando...</p> : (
-        <table className="tabla-productos">
-          <thead>
-            <tr>
-              <th>Imagen</th>
-              <th>Nombre</th>
-              <th>Descricpion</th>
-              <th>Categoría</th>
-              <th>Cantidad</th>
-              <th>Precio</th> {/* Precio de reposición */}
-              <th style={{ width: 110 }}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {accesorios.map((acc) => (
-              <tr key={acc._id}>
-                <td>
-                  {acc.imagen ? (
-                    <img
-                      src={`${API_ORIGIN}${acc.imagen}`}
-                      alt={acc.nombre}
-                      width="60"
-                      height="60"
-                      style={{ objectFit: 'cover', borderRadius: 6 }}
-                    />
-                  ) : 'Sin imagen'}
-                </td>
-                <td>{acc.nombre}</td>
-                <td>{acc.descripcion}</td>
-                <td>{acc.categoria || 'Accesorio'}</td>
-                <td>{acc.stock ?? 0}</td>
-                <td>{formatMXN(acc.precioReposicion || 0)}</td>
-                <td>
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => abrirEdicion(acc)}
-                  >
-                    Editar
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {accesorios.length === 0 && (
+      {cargando ? (
+        <div className="tp-loading">Cargando accesorios…</div>
+      ) : (
+        <div className="tp-table-scroll">
+          <table className="tp-table">
+            <thead>
               <tr>
-                <td colSpan="7" style={{ textAlign: 'center' }}>Sin accesorios</td>
+                <th></th>
+                <th>Nombre</th>
+                <th>Descripción</th>
+                <th>Categoría</th>
+                <th>Cantidad</th>
+                <th>Precio</th>
+                <th className="tp-col-actions">Acciones</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {accesorios.map((acc) => (
+                <tr key={acc._id}>
+                  <td>
+                    {acc.imagen ? (
+                      <img
+                        src={`${API_ORIGIN}${acc.imagen}`}
+                        alt={acc.nombre}
+                        className="tp-thumb"
+                      />
+                    ) : (
+                      <div className="tp-thumb tp-thumb-empty" aria-hidden="true">🎀</div>
+                    )}
+                  </td>
+                  <td className="tp-nombre">{acc.nombre}</td>
+                  <td className="tp-desc">{acc.descripcion}</td>
+                  <td><span className="tp-badge">{acc.categoria || 'Accesorio'}</span></td>
+                  <td>{acc.stock ?? 0}</td>
+                  <td className="tp-precio">{formatMXN(acc.precioReposicion || 0)}</td>
+                  <td>
+                    <div className="tp-actions">
+                      <button
+                        className="tp-btn tp-btn-edit"
+                        onClick={() => abrirEdicion(acc)}
+                      >
+                        ✎ Editar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {accesorios.length === 0 && (
+                <tr>
+                  <td colSpan="7">
+                    <div className="tp-empty">
+                      <span className="tp-empty-icon" aria-hidden="true">📭</span>
+                      <p>Todavía no hay accesorios registrados</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
 
-      {/* Modal simple (mismos estilos) */}
+      {/* Modal de edición */}
       {showEdit && (
-        <div className="modal-overlay">
-          <div className="modal-card">
-            <div className="modal-header">
+        <div className="tp-modal-overlay" onClick={cerrarEdicion}>
+          <div className="tp-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="tp-modal-header">
               <h3>Editar accesorio</h3>
-              <button className="close-x" onClick={cerrarEdicion}>×</button>
+              <button className="tp-close-x" onClick={cerrarEdicion} aria-label="Cerrar">×</button>
             </div>
 
-            <form onSubmit={guardarCambios} className="modal-body">
-              <div className="form-row">
+            <form onSubmit={guardarCambios} className="tp-modal-body">
+              <div className="tp-form-row">
                 <label>Nombre</label>
                 <input
                   type="text"
@@ -200,29 +215,31 @@ export default function TablaAccesorios({ refresh = 0 }) {
                 />
               </div>
 
-              <div className="form-row">
-                <label>Categoría</label>
-                <input
-                  type="text"
-                  name="categoria"
-                  value={form.categoria}
-                  onChange={onChange}
-                />
+              <div className="tp-form-row-grid">
+                <div className="tp-form-row">
+                  <label>Categoría</label>
+                  <input
+                    type="text"
+                    name="categoria"
+                    value={form.categoria}
+                    onChange={onChange}
+                  />
+                </div>
+
+                <div className="tp-form-row">
+                  <label>Cantidad</label>
+                  <input
+                    type="number"
+                    name="stock"
+                    value={form.stock}
+                    onChange={onChange}
+                    min="0"
+                    required
+                  />
+                </div>
               </div>
 
-              <div className="form-row">
-                <label>Cantidad</label>
-                <input
-                  type="number"
-                  name="stock"
-                  value={form.stock}
-                  onChange={onChange}
-                  min="0"
-                  required
-                />
-              </div>
-
-              <div className="form-row">
+              <div className="tp-form-row">
                 <label>Precio de reposición</label>
                 <input
                   type="number"
@@ -234,54 +251,56 @@ export default function TablaAccesorios({ refresh = 0 }) {
                 />
               </div>
 
-              <div className="form-row">
-                <label>Descripcion</label>
-                <input
-                  type="text"
+              <div className="tp-form-row">
+                <label>Descripción</label>
+                <textarea
                   name="descripcion"
                   value={form.descripcion}
                   onChange={onChange}
+                  rows={4}
                 />
               </div>
 
-              <div className="form-row">
+              <div className="tp-form-row">
                 <label>Imagen (opcional)</label>
                 <input type="file" accept="image/*" onChange={onChangeImagen} />
                 {preview ? (
-                  <div className="preview">
+                  <div className="tp-preview">
                     <img src={preview} alt="preview" />
                   </div>
                 ) : (
-                  <small>Si no eliges una nueva imagen, se mantiene la actual.</small>
+                  <small className="tp-hint">Si no eliges una nueva imagen, se mantiene la actual.</small>
                 )}
               </div>
 
-              <div className="form-row" style={{ display: 'flex', gap: 16 }}>
-                <label style={{ display:'flex', alignItems:'center', gap:8 }}>
-                  <input
-                    type="checkbox"
-                    name="activo"
-                    checked={form.activo}
-                    onChange={onChange}
-                  />
-                  Activo
-                </label>
-                <label style={{ display:'flex', alignItems:'center', gap:8 }}>
-                  <input
-                    type="checkbox"
-                    name="esPrestamo"
-                    checked={form.esPrestamo}
-                    onChange={onChange}
-                  />
-                  Es préstamo (se cobra $0)
-                </label>
+              <div className="tp-form-row">
+                <div className="fp-switches">
+                  <label className="fp-switch">
+                    <input
+                      type="checkbox"
+                      name="activo"
+                      checked={form.activo}
+                      onChange={onChange}
+                    />
+                    <span>Activo</span>
+                  </label>
+                  <label className="fp-switch">
+                    <input
+                      type="checkbox"
+                      name="esPrestamo"
+                      checked={form.esPrestamo}
+                      onChange={onChange}
+                    />
+                    <span>Es préstamo (se cobra $0)</span>
+                  </label>
+                </div>
               </div>
 
-              <div className="modal-actions">
-                <button type="button" className="btn btn-light" onClick={cerrarEdicion}>
+              <div className="tp-modal-actions">
+                <button type="button" className="tp-btn tp-btn-light" onClick={cerrarEdicion}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn btn-primary">
+                <button type="submit" className="tp-btn tp-btn-save">
                   Guardar cambios
                 </button>
               </div>

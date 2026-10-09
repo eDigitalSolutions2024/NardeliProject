@@ -14,6 +14,7 @@ import client from '../offline/offlineClient';
 import { API_ORIGIN } from '../api/config';
 import { colors, radius, shadow, spacing, type } from '../theme';
 import ZoomableImageModal from '../components/ZoomableImageModal';
+import { formatUploadedAt } from '../utils/formatDate';
 
 // Solo lectura: la app móvil únicamente muestra el estado de los checklists
 // (marcarlos, agregar observaciones o evidencia se sigue haciendo desde el
@@ -45,9 +46,13 @@ function ChecklistItem({ item, onPressPhoto }) {
           {item.evidence.map((ev, index) => (
             <TouchableOpacity
               key={ev._id}
+              style={styles.evidenceItem}
               onPress={() =>
                 onPressPhoto(
-                  item.evidence.map((e) => `${API_ORIGIN}${e.url}`),
+                  item.evidence.map((e) => ({
+                    uri: `${API_ORIGIN}${e.url}`,
+                    caption: formatUploadedAt(e.uploadedAt),
+                  })),
                   index
                 )
               }
@@ -56,6 +61,9 @@ function ChecklistItem({ item, onPressPhoto }) {
                 source={{ uri: `${API_ORIGIN}${ev.url}` }}
                 style={styles.evidenceThumb}
               />
+              {!!ev.uploadedAt && (
+                <Text style={styles.evidenceTime}>{formatUploadedAt(ev.uploadedAt)}</Text>
+              )}
             </TouchableOpacity>
           ))}
         </View>
@@ -190,5 +198,7 @@ const styles = StyleSheet.create({
   },
   observationText: { flex: 1, fontSize: 13, color: colors.textMuted },
   evidenceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  evidenceItem: { width: 84 },
   evidenceThumb: { width: 84, height: 84, borderRadius: radius.sm },
+  evidenceTime: { fontSize: 10, color: colors.textMuted, marginTop: 3, textAlign: 'center' },
 });

@@ -657,19 +657,40 @@ const actividadFiltrada = actividad.filter(a => {
       case 'inventario':
         return (
     <div className='dashboard-content'>
-      <h1>Inventario</h1>
+      <h1 style={{ marginBottom: 4 }}>Inventario</h1>
+      <p style={{ margin: '0 0 1.25rem', color: '#777' }}>Administra los productos y accesorios disponibles para tus eventos.</p>
 
       {/* Selector de formulario */}
-      <div style={{ display:'flex', gap:8, margin:'8px 0 16px' }}>
+      <div style={{ display:'flex', gap:8, margin:'0 0 20px', background:'#fff', padding:6, borderRadius:14, width:'fit-content', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' }}>
         <button
-          className={`cd-btn ${inventarioTab === 'producto' ? '' : 'cd-btn-clear'}`}
           onClick={() => setInventarioTab('producto')}
+          style={{
+            border: 0,
+            borderRadius: 10,
+            padding: '9px 18px',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            transition: 'background .15s, color .15s',
+            background: inventarioTab === 'producto' ? 'linear-gradient(135deg, #491656, #6b2c5e)' : 'transparent',
+            color: inventarioTab === 'producto' ? '#fff' : '#555',
+          }}
         >
           Productos
         </button>
         <button
-          className={`cd-btn ${inventarioTab === 'accesorio' ? '' : 'cd-btn-clear'}`}
           onClick={() => setInventarioTab('accesorio')}
+          style={{
+            border: 0,
+            borderRadius: 10,
+            padding: '9px 18px',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            transition: 'background .15s, color .15s',
+            background: inventarioTab === 'accesorio' ? 'linear-gradient(135deg, #491656, #6b2c5e)' : 'transparent',
+            color: inventarioTab === 'accesorio' ? '#fff' : '#555',
+          }}
         >
           Accesorios
         </button>

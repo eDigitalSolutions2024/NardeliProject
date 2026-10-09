@@ -22,7 +22,7 @@ export default function TablaProductos({ refresh = 0 } ) {
     categoria: '',
     cantidad: 0,
     precio: 0,
-    imagen: '', 
+    imagen: '',
     descripcion: '',// ruta actual (string)
   });
   const [imagenFile, setImagenFile] = useState(null);
@@ -40,7 +40,7 @@ export default function TablaProductos({ refresh = 0 } ) {
       setCargando(false);
     }
   };
-  
+
   useEffect(() => { cargar(); }, []);                   // al montar
   useEffect(() => { cargar(); }, [refresh]);            // <-- NUEVO: cuando cambia refresh
 
@@ -63,6 +63,17 @@ export default function TablaProductos({ refresh = 0 } ) {
     setShowEdit(false);
     setImagenFile(null);
     setPreview('');
+  };
+
+  const eliminarProducto = async (producto) => {
+    if (!window.confirm(`¿Eliminar "${producto.nombre}"? Esta acción no se puede deshacer.`)) return;
+    try {
+      await axios.delete(`${API_BASE_URL}/productos/${producto._id}`, { headers: authHeaders() });
+      setProductos((prev) => prev.filter((p) => p._id !== producto._id));
+    } catch (e) {
+      console.error('Error al eliminar producto:', e);
+      alert(e?.response?.data?.msg || 'No se pudo eliminar el producto.');
+    }
   };
 
   const onChange = (e) => {
@@ -112,69 +123,91 @@ export default function TablaProductos({ refresh = 0 } ) {
   };
 
   return (
-    <div className="tabla-productos-container">
-      <h2>Lista de productos</h2>
+    <div className="tp-card">
+      <div className="tp-header">
+        <h2>Lista de productos</h2>
+        {!cargando && <span className="tp-count">{productos.length} {productos.length === 1 ? 'producto' : 'productos'}</span>}
+      </div>
 
-      {cargando ? <p>Cargando...</p> : (
-        <table className="tabla-productos">
-          <thead>
-            <tr>
-              <th>Imagen</th>
-              <th>Nombre</th>
-              <th>Descricpion</th>
-              <th>Categoría</th>
-              <th>Cantidad</th>
-              <th>Precio</th>
-              <th style={{width: 110}}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {productos.map((producto) => (
-              <tr key={producto._id}>
-                <td>
-                  {producto.imagen ? (
-                    <img
-                       src={`${API_ORIGIN}${producto.imagen}`}   // <-- evita hardcodear localhost
-                      alt={producto.nombre}
-                      width="60"
-                      height="60"
-                      style={{ objectFit: 'cover', borderRadius: 6 }}
-                    />
-                  ) : 'Sin imagen'}
-                </td>
-                <td>{producto.nombre}</td>
-                <td>{producto.descripcion}</td>
-                <td>{producto.categoria}</td>
-                <td>{producto.cantidad}</td>
-                <td>{formatMXN(producto.precio || 0)}</td>
-                <td>
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => abrirEdicion(producto)}
-                  >
-                    Editar
-                  </button>
-                </td>
+      {cargando ? (
+        <div className="tp-loading">Cargando productos…</div>
+      ) : (
+        <div className="tp-table-scroll">
+          <table className="tp-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Nombre</th>
+                <th>Descripción</th>
+                <th>Categoría</th>
+                <th>Cantidad</th>
+                <th>Precio</th>
+                <th className="tp-col-actions">Acciones</th>
               </tr>
-            ))}
-            {productos.length === 0 && (
-              <tr><td colSpan="6" style={{ textAlign: 'center' }}>Sin productos</td></tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {productos.map((producto) => (
+                <tr key={producto._id}>
+                  <td>
+                    {producto.imagen ? (
+                      <img
+                        src={`${API_ORIGIN}${producto.imagen}`}   // <-- evita hardcodear localhost
+                        alt={producto.nombre}
+                        className="tp-thumb"
+                      />
+                    ) : (
+                      <div className="tp-thumb tp-thumb-empty" aria-hidden="true">🖼️</div>
+                    )}
+                  </td>
+                  <td className="tp-nombre">{producto.nombre}</td>
+                  <td className="tp-desc">{producto.descripcion}</td>
+                  <td><span className="tp-badge">{producto.categoria}</span></td>
+                  <td>{producto.cantidad}</td>
+                  <td className="tp-precio">{formatMXN(producto.precio || 0)}</td>
+                  <td>
+                    <div className="tp-actions">
+                      <button
+                        className="tp-btn tp-btn-edit"
+                        onClick={() => abrirEdicion(producto)}
+                      >
+                        ✎ Editar
+                      </button>
+                      <button
+                        className="tp-btn tp-btn-delete"
+                        onClick={() => eliminarProducto(producto)}
+                      >
+                        🗑 Eliminar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {productos.length === 0 && (
+                <tr>
+                  <td colSpan="7">
+                    <div className="tp-empty">
+                      <span className="tp-empty-icon" aria-hidden="true">📭</span>
+                      <p>Todavía no hay productos registrados</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
 
-      {/* Modal simple */}
+      {/* Modal de edición */}
       {showEdit && (
-        <div className="modal-overlay">
-          <div className="modal-card">
-            <div className="modal-header">
+        <div className="tp-modal-overlay" onClick={cerrarEdicion}>
+          <div className="tp-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="tp-modal-header">
               <h3>Editar producto</h3>
-              <button className="close-x" onClick={cerrarEdicion}>×</button>
+              <button className="tp-close-x" onClick={cerrarEdicion} aria-label="Cerrar">×</button>
             </div>
 
-            <form onSubmit={guardarCambios} className="modal-body">
-              <div className="form-row">
+            <form onSubmit={guardarCambios} className="tp-modal-body">
+              <div className="tp-form-row">
                 <label>Nombre</label>
                 <input
                   type="text"
@@ -185,70 +218,71 @@ export default function TablaProductos({ refresh = 0 } ) {
                 />
               </div>
 
-              <div className="form-row">
-                <label>Categoría</label>
-                <input
-                  type="text"
-                  name="categoria"
-                  value={form.categoria}
-                  onChange={onChange}
-                  required
-                />
+              <div className="tp-form-row-grid">
+                <div className="tp-form-row">
+                  <label>Categoría</label>
+                  <input
+                    type="text"
+                    name="categoria"
+                    value={form.categoria}
+                    onChange={onChange}
+                    required
+                  />
+                </div>
+
+                <div className="tp-form-row">
+                  <label>Cantidad</label>
+                  <input
+                    type="number"
+                    name="cantidad"
+                    value={form.cantidad}
+                    onChange={onChange}
+                    min="0"
+                    required
+                  />
+                </div>
               </div>
 
-              <div className="form-row">
-                <label>Cantidad</label>
-                <input
-                  type="number"
-                  name="cantidad"
-                  value={form.cantidad}
-                  onChange={onChange}
-                  min="0"
-                  required
-                />
-              </div>
-
-              <div className="form-row">
+              <div className="tp-form-row">
                 <label>Precio</label>
                 <input
                   type="number"
                   name="precio"
                   value={form.precio}
                   onChange={onChange}
-                  
                   min="0"
                   required
                 />
               </div>
 
-              <div className="form-row">
-                <label>Descripcion</label>
-                <input
-                  type="text"
+              <div className="tp-form-row">
+                <label>Descripción</label>
+                <textarea
                   name="descripcion"
                   value={form.descripcion}
                   onChange={onChange}
+                  rows={4}
                   required
                 />
               </div>
 
-              <div className="form-row">
+              <div className="tp-form-row">
                 <label>Imagen (opcional)</label>
                 <input type="file" accept="image/*" onChange={onChangeImagen} />
                 {preview ? (
-                  <div className="preview">
+                  <div className="tp-preview">
                     <img src={preview} alt="preview" />
                   </div>
                 ) : (
-                  <small>Si no eliges una nueva imagen, se mantiene la actual.</small>
+                  <small className="tp-hint">Si no eliges una nueva imagen, se mantiene la actual.</small>
                 )}
               </div>
 
-              <div className="modal-actions">
-                <button type="button" className="btn btn-light" onClick={cerrarEdicion}>
+              <div className="tp-modal-actions">
+                <button type="button" className="tp-btn tp-btn-light" onClick={cerrarEdicion}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn btn-primary">
+                <button type="submit" className="tp-btn tp-btn-save">
                   Guardar cambios
                 </button>
               </div>

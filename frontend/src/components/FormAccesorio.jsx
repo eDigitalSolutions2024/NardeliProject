@@ -16,6 +16,7 @@ const FormAccesorio = ({ onAccesorioAgregado = () => {} }) => {
   });
 
   const [mensaje, setMensaje] = useState('');
+  const [enviando, setEnviando] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -35,6 +36,7 @@ const FormAccesorio = ({ onAccesorioAgregado = () => {} }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMensaje('');
+    setEnviando(true);
 
     try {
       const dataToSend = new FormData();
@@ -52,7 +54,7 @@ const FormAccesorio = ({ onAccesorioAgregado = () => {} }) => {
         headers: { 'Content-Type': 'multipart/form-data', ...authHeaders() }
       });
 
-      setMensaje('✅ Accesorio agregado correctamente');
+      setMensaje('ok:Accesorio agregado correctamente');
       setFormData({
         nombre: '',
         categoria: '',
@@ -66,93 +68,142 @@ const FormAccesorio = ({ onAccesorioAgregado = () => {} }) => {
       onAccesorioAgregado?.();
     } catch (error) {
       console.error(error);
-      setMensaje('❌ Error al agregar el accesorio');
+      setMensaje('error:No se pudo agregar el accesorio');
+    } finally {
+      setEnviando(false);
     }
   };
 
+  const [tipo, texto] = mensaje.includes(':') ? mensaje.split(':') : ['', mensaje];
+
   return (
-    <div className="form-producto-container">
-      <h2>Registrar nuevo accesorio</h2>
-      {mensaje && <p>{mensaje}</p>}
+    <div className="fp-card">
+      <div className="fp-header">
+        <div className="fp-header-icon" aria-hidden="true">🎀</div>
+        <div>
+          <h2>Registrar nuevo accesorio</h2>
+          <p className="fp-subtitle">Artículos de préstamo/decoración para los eventos</p>
+        </div>
+      </div>
 
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="nombre">Nombre del accesorio:</label>
-        <input
-          name="nombre"
-          placeholder="Nombre"
-          value={formData.nombre}
-          onChange={handleChange}
-          required
-        />
+      {texto && (
+        <div className={`fp-alert ${tipo === 'ok' ? 'fp-alert-ok' : 'fp-alert-error'}`}>
+          {tipo === 'ok' ? '✓' : '⚠'} {texto}
+        </div>
+      )}
 
-        <label htmlFor="categoria">Categoria:</label>
-        <input
-          name="categoria"
-          placeholder="Categoría"
-          value={formData.categoria}
-          onChange={handleChange}
-        />
+      <form onSubmit={handleSubmit} className="fp-form">
+        <div className="fp-grid">
+          <div className="fp-field">
+            <label htmlFor="fa-nombre">Nombre del accesorio</label>
+            <input
+              id="fa-nombre"
+              name="nombre"
+              placeholder="Ej. Candelabro"
+              value={formData.nombre}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
-        <label htmlFor="cantidad">Cantidad:</label>
-        <input
-          name="cantidad"
-          type="number"
-          placeholder="Cantidad"
-          value={formData.cantidad}
-          onChange={handleChange}
-          required
-        />
+          <div className="fp-field">
+            <label htmlFor="fa-categoria">Categoría</label>
+            <input
+              id="fa-categoria"
+              name="categoria"
+              placeholder="Ej. Decoración"
+              value={formData.categoria}
+              onChange={handleChange}
+            />
+          </div>
 
-        <label htmlFor="precioReposicion">Precio de reposición (opcional):</label>
-        <input
-          name="precioReposicion"
-          type="number"
-          step="0.01"
-          placeholder="0"
-          value={formData.precioReposicion}
-          onChange={handleChange}
-        />
+          <div className="fp-field">
+            <label htmlFor="fa-cantidad">Cantidad</label>
+            <input
+              id="fa-cantidad"
+              name="cantidad"
+              type="number"
+              min="0"
+              placeholder="0"
+              value={formData.cantidad}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
-        <label htmlFor="descripcion">Descripción:</label>
-        <textarea
-          name="descripcion"
-          placeholder="Descripción"
-          value={formData.descripcion}
-          onChange={handleChange}
-        />
+          <div className="fp-field">
+            <label htmlFor="fa-precio">Precio de reposición (opcional)</label>
+            <div className="fp-price-input">
+              <span>$</span>
+              <input
+                id="fa-precio"
+                name="precioReposicion"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={formData.precioReposicion}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+        </div>
 
-        <label htmlFor="imagen">Imagen:</label>
-        <input
-          id="imagen"
-          type="file"
-          accept="image/*"
-          onChange={(e) =>
-            setFormData({ ...formData, imagen: e.target.files?.[0] || null })
-          }
-        />
+        <div className="fp-field">
+          <label htmlFor="fa-descripcion">Descripción</label>
+          <textarea
+            id="fa-descripcion"
+            name="descripcion"
+            placeholder="Detalles del accesorio..."
+            value={formData.descripcion}
+            onChange={handleChange}
+            rows={3}
+          />
+        </div>
 
-        <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="fp-field">
+          <label>Imagen</label>
+          <label htmlFor="fa-imagen" className="fp-file-drop">
+            <span className="fp-file-icon" aria-hidden="true">🖼️</span>
+            <span className="fp-file-text">
+              {formData.imagen ? formData.imagen.name : 'Elige una imagen (opcional)'}
+            </span>
+          </label>
+          <input
+            id="fa-imagen"
+            type="file"
+            accept="image/*"
+            className="fp-file-input-hidden"
+            onChange={(e) =>
+              setFormData({ ...formData, imagen: e.target.files?.[0] || null })
+            }
+          />
+        </div>
+
+        <div className="fp-switches">
+          <label className="fp-switch">
             <input
               type="checkbox"
               name="activo"
               checked={formData.activo}
               onChange={handleChange}
             />
-            Activo
+            <span>Activo</span>
           </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <label className="fp-switch">
             <input
               type="checkbox"
               name="esPrestamo"
               checked={formData.esPrestamo}
               onChange={handleChange}
             />
-            Es préstamo (se cobra $0)
+            <span>Es préstamo (se cobra $0)</span>
           </label>
         </div>
 
-        <button type="submit">Agregar accesorio</button>
+        <button type="submit" className="fp-submit" disabled={enviando}>
+          {enviando ? 'Guardando…' : '+ Agregar accesorio'}
+        </button>
       </form>
     </div>
   );

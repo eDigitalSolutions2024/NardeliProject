@@ -136,8 +136,18 @@ function ZoomableImage({ uri, onClose, onZoomChange }) {
   );
 }
 
+// Cada foto puede venir como un string (solo URL) o como { uri, caption }
+// (URL + un letrero opcional, ej. la hora de subida). Se normaliza aquí para
+// que el resto del componente no tenga que distinguir los dos casos.
+const normalizeItem = (item) =>
+  typeof item === 'string' ? { uri: item, caption: null } : item;
+
 export default function ZoomableImageModal({ visible, uri, images, initialIndex = 0, onClose }) {
-  const gallery = images && images.length ? images : uri ? [uri] : [];
+  const gallery = images && images.length
+    ? images.map(normalizeItem)
+    : uri
+    ? [{ uri, caption: null }]
+    : [];
   const [index, setIndex] = useState(initialIndex);
   const [zoomed, setZoomed] = useState(false);
   const listRef = useRef(null);
@@ -163,7 +173,7 @@ export default function ZoomableImageModal({ visible, uri, images, initialIndex 
         <FlatList
           ref={listRef}
           data={gallery}
-          keyExtractor={(item, i) => `${item}-${i}`}
+          keyExtractor={(item, i) => `${item.uri}-${i}`}
           horizontal
           pagingEnabled
           scrollEnabled={!zoomed}
@@ -173,7 +183,7 @@ export default function ZoomableImageModal({ visible, uri, images, initialIndex 
           onMomentumScrollEnd={onMomentumEnd}
           renderItem={({ item }) => (
             <View style={{ width: SCREEN_W }}>
-              <ZoomableImage uri={item} onClose={onClose} onZoomChange={setZoomed} />
+              <ZoomableImage uri={item.uri} onClose={onClose} onZoomChange={setZoomed} />
             </View>
           )}
         />
@@ -181,6 +191,13 @@ export default function ZoomableImageModal({ visible, uri, images, initialIndex 
         <TouchableOpacity style={s.closeBtn} onPress={onClose}>
           <Ionicons name="close" size={22} color="#fff" />
         </TouchableOpacity>
+
+        {!!gallery[index]?.caption && !zoomed && (
+          <View style={s.caption}>
+            <Ionicons name="time-outline" size={13} color="#fff" />
+            <Text style={s.captionText}>{gallery[index].caption}</Text>
+          </View>
+        )}
 
         {gallery.length > 1 && (
           <View style={s.counter}>
@@ -226,6 +243,19 @@ const s = StyleSheet.create({
     paddingVertical: 5,
   },
   counterText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  caption: {
+    position: 'absolute',
+    bottom: 64,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  captionText: { color: '#fff', fontSize: 13, fontWeight: '600' },
   hint: {
     position: 'absolute',
     bottom: 28,
