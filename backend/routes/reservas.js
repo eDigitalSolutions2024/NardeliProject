@@ -346,28 +346,27 @@ async function checarDisponibilidad({ fecha, horaInicio, horaFin, excluirId = nu
   return choca ? { disponible: false, motivo: 'Empalme con otra reserva' } : { disponible: true };
 }
 
-// Regla de negocio: solo puede existir UN evento activo por fecha
-// (sin importar el horario). Las cotizaciones sí pueden convivir entre sí,
-// pero ninguna puede coexistir con un evento ya registrado ese día.
-// NOTA: se incluyen tipoReserva ausente/null en el filtro para cubrir
-// documentos legados creados antes de que existiera este campo
-// (el default del schema es 'evento').
+// Regla de negocio (candado DURO): solo puede existir UN evento confirmado
+// activo por fecha+horario. Las cotizaciones sí pueden convivir entre sí
+// libremente (ver más abajo el candado blando de 24h) — eso es normal, pasa
+// todo el tiempo que varios prospectos pidan cotización para el mismo
+// sábado. Lo único que nunca puede duplicarse es un evento ya confirmado.
 function filtroEventoActivoEnFecha(fechaStr, excluirId = null) {
   return {
     ...sameDayFilter(fechaStr, excluirId),
+    tipoReserva: 'evento',
     estado: { $ne: 'cancelada' },
-    $or: [
-      { tipoReserva: 'evento' },
-      { tipoReserva: { $exists: false } },
-      { tipoReserva: null }
-    ]
   };
 }
 
-// Un evento SOLO bloquea otra reserva (evento o cotización) si su horario
-// se traslapa con el de un evento ya existente ese día; si el horario es
-// distinto, pueden convivir varios eventos en la misma fecha.
-// Las cotizaciones nunca bloquean (son solo de referencia).
+// Un evento confirmado bloquea cualquier otra reserva (cotización o evento)
+// si su horario se traslapa con el de ese evento ya existente ese día; para
+// usar ese horario hay que cancelar/rechazar el evento primero, sin
+// excepción (no hay contraseña que lo salte). Esto es solo la validación
+// "amigable" de código (da un mensaje claro antes de intentar guardar) — la
+// garantía real contra condiciones de carrera es el índice único parcial
+// fecha+horaInicio en el modelo (ver Reservas.js), que es atómico aunque dos
+// peticiones lleguen al mismo tiempo desde computadoras distintas.
 async function checarEventoEnFecha({ fecha, horaInicio, horaFin, excluirId = null }) {
   const fechaStr = ymd(fecha);
   if (!fechaStr) return { disponible: false, motivo: 'Fecha inválida' };
@@ -375,9 +374,9 @@ async function checarEventoEnFecha({ fecha, horaInicio, horaFin, excluirId = nul
   const ini = timeToMinutes(horaInicio);
   const fin = timeToMinutes(horaFin);
 
-  const eventosDelDia = await Reserva.find(filtroEventoActivoEnFecha(fechaStr, excluirId)).lean();
+  const reservasDelDia = await Reserva.find(filtroEventoActivoEnFecha(fechaStr, excluirId)).lean();
 
-  const choque = eventosDelDia.find(e =>
+  const choque = reservasDelDia.find(e =>
     overlap(ini, fin, timeToMinutes(e.horaInicio), timeToMinutes(e.horaFin))
   );
 
@@ -386,10 +385,157 @@ async function checarEventoEnFecha({ fecha, horaInicio, horaFin, excluirId = nul
   const detalle = choque.tipoEvento ? ` (${choque.tipoEvento} - ${choque.cliente || 'cliente'})` : '';
   return {
     disponible: false,
-    motivo: `Ese horario del ${fechaStr} ya está ocupado por un evento${detalle}. Selecciona otro horario o fecha.`,
+    motivo: `Ese horario del ${fechaStr} ya está ocupado por un evento confirmado${detalle}. Cancela o rechaza ese evento antes de usar este horario, o selecciona otro horario/fecha.`,
     evento: choque
   };
 }
+
+// Regla de negocio (candado BLANDO, 24h): cuando se crea una cotización,
+// "aparta" su fecha+horario por 24 horas. Dentro de esa ventana, cualquier
+// otra cotización o evento nuevo para la misma fecha+horario dispara una
+// alerta y exige la contraseña de un administrador para continuar — después
+// de las 24h, o si esa cotización se cancela/rechaza antes, cualquiera puede
+// volver a cotizar esa fecha sin restricción (igual que siempre ha
+// funcionado). Esto es deliberadamente un candado de aplicación, no de base
+// de datos: no es una regla de unicidad real (varias cotizaciones SÍ pueden
+// terminar coexistiendo, justo como hoy en producción), solo una alerta con
+// opción de forzar.
+const HOLD_COTIZACION_MS = 24 * 60 * 60 * 1000;
+
+function filtroCotizacionRecienteEnFecha(fechaStr, excluirId = null) {
+  return {
+    ...sameDayFilter(fechaStr, excluirId),
+    tipoReserva: 'cotizacion',
+    estado: { $ne: 'cancelada' },
+    holdLiberado: { $ne: true },
+    createdAt: { $gte: new Date(Date.now() - HOLD_COTIZACION_MS) },
+  };
+}
+
+async function checarCotizacionRecienteEnFecha({ fecha, horaInicio, horaFin, excluirId = null }) {
+  const fechaStr = ymd(fecha);
+  if (!fechaStr) return { disponible: true };
+
+  const ini = timeToMinutes(horaInicio);
+  const fin = timeToMinutes(horaFin);
+
+  const recientes = await Reserva.find(filtroCotizacionRecienteEnFecha(fechaStr, excluirId)).lean();
+  // OJO: antes se usaba .find() y solo se detectaba (y luego cancelaba) la
+  // PRIMERA cotización en conflicto. Si había 3 cotizaciones compitiendo por
+  // la misma fecha, las otras 2 se quedaban activas sin que nadie las
+  // tocara. Con .filter() se detectan TODAS las que chocan.
+  const choques = recientes.filter(c =>
+    overlap(ini, fin, timeToMinutes(c.horaInicio), timeToMinutes(c.horaFin))
+  );
+
+  if (choques.length === 0) return { disponible: true };
+
+  const primero = choques[0];
+  const detalle = primero.tipoEvento ? ` (${primero.tipoEvento} - ${primero.cliente || 'cliente'})` : '';
+  const masTexto = choques.length > 1 ? ` y ${choques.length - 1} más` : '';
+  const holdExpiraEn = new Date(new Date(primero.createdAt).getTime() + HOLD_COTIZACION_MS);
+  return {
+    disponible: false,
+    motivo: `Ya existe una cotización reciente (hace menos de 24 horas) para ese horario del ${fechaStr}${detalle}${masTexto}. Ingresa la contraseña de un administrador para continuar, o espera a que pase la ventana de 24 horas.`,
+    cotizaciones: choques,
+    holdExpiraEn
+  };
+}
+
+// Corre primero el candado duro (evento confirmado, sin excepción) y luego
+// el candado blando de 24h (cotización reciente, se puede forzar con
+// contraseña). Se usa en POST /, PUT /:id y PUT /:id/aceptar-cotizacion para
+// no repetir la misma secuencia tres veces.
+async function validarDisponibilidadFecha({ fecha, horaInicio, horaFin, excluirId = null, adminPassword }) {
+  const dispEvento = await checarEventoEnFecha({ fecha, horaInicio, horaFin, excluirId });
+  if (!dispEvento.disponible) {
+    return { ok: false, status: 409, body: { msg: dispEvento.motivo } };
+  }
+
+  const dispCot = await checarCotizacionRecienteEnFecha({ fecha, horaInicio, horaFin, excluirId });
+  if (!dispCot.disponible) {
+    if (!(await validarPasswordAdmin(adminPassword))) {
+      // Se manda también la lista (ligera) de cotizaciones en conflicto
+      // para que el front pueda ofrecer "reagendar esta cotización" como
+      // alternativa a meter la contraseña.
+      const cotizacionesConflicto = (dispCot.cotizaciones || []).map(c => ({
+        id: c._id,
+        cliente: c.cliente || '',
+        tipoEvento: c.tipoEvento || '',
+        fecha: ymd(c.fecha),
+        horaInicio: c.horaInicio || '',
+        horaFin: c.horaFin || ''
+      }));
+      return {
+        ok: false,
+        status: 401,
+        body: {
+          msg: dispCot.motivo,
+          requierePassword: true,
+          holdExpiraEn: dispCot.holdExpiraEn,
+          cotizaciones: cotizacionesConflicto
+        }
+      };
+    }
+    // Se forzó el candado con contraseña: se devuelven TODAS las
+    // cotizaciones que quedaron "superadas" para que la ruta que llama las
+    // cancele. Esto pasa sin importar si lo que se termina creando es otra
+    // cotización o un evento — la contraseña de administrador siempre
+    // significa "esta fecha ya se la llevó alguien más".
+    return { ok: true, cotizacionesForzadas: dispCot.cotizaciones };
+  }
+
+  return { ok: true };
+}
+
+// Alguien usó la contraseña de administrador para tomar una fecha que ya
+// tenía una o más cotizaciones recientes apartándola (candado de 24h). Esas
+// cotizaciones NO se cancelan ni se ocultan — siguen vivas, visibles y
+// editables en la lista de pendientes, para que el staff las pueda mover a
+// otra fecha con calma. Lo único que pierden es la prioridad de 24h: dejan
+// de contar para el candado, así que ya no le exigen contraseña a nadie más
+// ni muestran el badge de "prioridad 24h".
+async function liberarHoldDeCotizaciones(cotizaciones, usuarioToken = {}) {
+  for (const cotizacion of (cotizaciones || [])) {
+    if (!cotizacion?._id) continue;
+    await Reserva.findByIdAndUpdate(cotizacion._id, {
+      holdLiberado: true,
+      $push: {
+        historialCambios: {
+          tipo: 'edicion',
+          campo: 'holdLiberado',
+          etiqueta: 'Prioridad de 24h',
+          antes: false,
+          despues: true,
+          usuarioId: usuarioToken.id || null,
+          usuarioNombre: 'Sistema (otro cliente tomó esta fecha con contraseña de administrador)'
+        }
+      }
+    });
+    await HistorialReserva.create({
+      reservaId: cotizacion._id,
+      tipo: 'campo',
+      accion: 'field_update',
+      campo: 'holdLiberado',
+      etiqueta: 'Prioridad de 24h',
+      valorAntes: false,
+      valorDespues: true,
+      usuario: usuarioToken.id || null,
+      usuarioEmail: usuarioToken.email || '',
+      usuarioRole: usuarioToken.role || ''
+    });
+  }
+}
+
+// El mensaje amigable de arriba cubre el caso normal; esto es el respaldo
+// para cuando el índice único de la base de datos detecta un choque que el
+// chequeo de código no alcanzó a ver (dos peticiones casi simultáneas,
+// ambas intentando confirmar un evento en el mismo horario).
+function esErrorDeHorarioDuplicado(e) {
+  return e && e.code === 11000 && !!(e.keyPattern?.fecha && e.keyPattern?.horaInicio);
+}
+const MOTIVO_HORARIO_DUPLICADO =
+  'Ese horario ya se acaba de ocupar por otro evento (alguien más lo confirmó en este instante). Elige otro horario o fecha.';
 
 // ===== CRUD =====
 router.post('/', async (req, res) => {
@@ -401,24 +547,34 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ msg: 'Fecha inválida' });
     }
 
-    // Regla:
-    // - Puede haber muchas cotizaciones en la misma fecha
-    // - Pero si ya existe un evento en esa fecha, no se permite
-    //   ni otra cotización ni otro evento
+    // Candado duro (evento) + candado blando de 24h (cotización reciente).
+    let cotizacionesForzadas = [];
     if (tipoReserva === 'cotizacion' || tipoReserva === 'evento') {
-      const disp = await checarEventoEnFecha({
+      const check = await validarDisponibilidadFecha({
         fecha: req.body.fecha,
         horaInicio: req.body.horaInicio,
-        horaFin: req.body.horaFin
+        horaFin: req.body.horaFin,
+        adminPassword: req.body.adminPassword
       });
-      if (!disp.disponible) {
-        return res.status(400).json({ msg: disp.motivo });
-      }
+      if (!check.ok) return res.status(check.status).json(check.body);
+      cotizacionesForzadas = check.cotizacionesForzadas || [];
     }
 
     const guardada = await new Reserva({ ...req.body, tipoReserva }).save();
+
+    // Se usó la contraseña de administrador para tomar esta fecha: las
+    // cotizaciones con las que chocó pierden su prioridad de 24h (siguen
+    // activas, solo ya no bloquean), sin importar si lo que se acaba de
+    // crear es otra cotización o ya un evento confirmado.
+    if (cotizacionesForzadas.length) {
+      await liberarHoldDeCotizaciones(cotizacionesForzadas, extraerUsuarioToken(req));
+    }
+
     return res.status(201).json({ ok: true, id: guardada._id, reserva: guardada });
   } catch (e) {
+    if (esErrorDeHorarioDuplicado(e)) {
+      return res.status(409).json({ msg: MOTIVO_HORARIO_DUPLICADO });
+    }
     console.error('Error al guardar la reserva:', e);
     return res.status(500).json({ msg: 'Error del servidor' });
   }
@@ -487,7 +643,8 @@ router.get('/', requireStaff, async (req, res) => {
           descripcion: 1,
           pdfUrl: 1,
           createdAt: 1,   // ← campo crudo para que el front lo use
-          creadaLocal: 1  // ← string ya formateado (opcional)
+          creadaLocal: 1, // ← string ya formateado (opcional)
+          holdLiberado: 1 // ← para que el front sepa que ya no tiene prioridad de 24h
         }
       },
       // Ordena (opcional: primero las más recientes por creación)
@@ -539,12 +696,22 @@ router.get('/disponibilidad', async (req, res) => {
         { tipoReserva: null }
       ]
     })
-      .select('cliente tipoEvento tipoReserva fecha horaInicio horaFin cantidadPersonas estado')
+      .select('cliente tipoEvento tipoReserva fecha horaInicio horaFin cantidadPersonas estado createdAt holdLiberado')
       .sort({ fecha: 1, horaInicio: 1 })
       .lean();
 
     const fechas = reservas.map(r => {
       const tipoReserva = r.tipoReserva || 'evento';
+      const esEvento = tipoReserva === 'evento';
+      // Solo las cotizaciones cargan con el candado de 24h (ver
+      // checarCotizacionRecienteEnFecha) — se manda la hora exacta en que
+      // expira para que el front pueda mostrar un contador en vivo. Si ya
+      // se le liberó el hold (otro cliente tomó la fecha con contraseña de
+      // administrador), no manda nada — la cotización sigue viva, solo ya
+      // no tiene prioridad.
+      const holdExpiraEn = (!esEvento && r.createdAt && !r.holdLiberado)
+        ? new Date(new Date(r.createdAt).getTime() + HOLD_COTIZACION_MS)
+        : null;
       return {
         id: r._id,
         fecha: ymd(r.fecha),
@@ -557,7 +724,8 @@ router.get('/disponibilidad', async (req, res) => {
         estado: r.estado || 'confirmada',
         // Un evento solo bloquea si su horario se traslapa (lo calcula el front);
         // las cotizaciones son siempre de referencia y nunca bloquean.
-        esEvento: tipoReserva === 'evento'
+        esEvento,
+        holdExpiraEn
       };
     });
 
@@ -996,17 +1164,17 @@ router.put('/:id', requireStaff, async (req, res) => {
 
     const nextTipo = req.body.tipoReserva || prev.tipoReserva || 'evento';
 
+    let cotizacionesForzadas = [];
     if (nextTipo === 'cotizacion' || nextTipo === 'evento') {
-      const disp = await checarEventoEnFecha({
+      const check = await validarDisponibilidadFecha({
         fecha: req.body.fecha,
         horaInicio: req.body.horaInicio || prev.horaInicio,
         horaFin: req.body.horaFin || prev.horaFin,
-        excluirId: id
+        excluirId: id,
+        adminPassword: req.body.adminPassword
       });
-
-      if (!disp.disponible) {
-        return res.status(400).json({ msg: disp.motivo });
-      }
+      if (!check.ok) return res.status(check.status).json(check.body);
+      cotizacionesForzadas = check.cotizacionesForzadas || [];
     }
 
     // ===== Detectar cambios antes de actualizar =====
@@ -1023,6 +1191,10 @@ router.put('/:id', requireStaff, async (req, res) => {
 
     if (!actualizada) {
       return res.status(404).json({ msg: 'Reserva no encontrada' });
+    }
+
+    if (cotizacionesForzadas.length) {
+      await liberarHoldDeCotizaciones(cotizacionesForzadas, extraerUsuarioToken(req));
     }
 
     // ===== Historial + WhatsApp solo si YA era evento antes del cambio =====
@@ -1081,6 +1253,9 @@ router.put('/:id', requireStaff, async (req, res) => {
 
     return res.json(actualizada);
   } catch (e) {
+    if (esErrorDeHorarioDuplicado(e)) {
+      return res.status(409).json({ msg: MOTIVO_HORARIO_DUPLICADO });
+    }
     console.error('Error al actualizar:', e);
     return res.status(500).json({ msg: 'Error del servidor' });
   }
@@ -1813,15 +1988,14 @@ router.put('/:id/aceptar-cotizacion', requireStaff, async (req, res) => {
       });
     }
 
-    const disp = await checarEventoEnFecha({
+    const check = await validarDisponibilidadFecha({
       fecha: r.fecha,
       horaInicio: r.horaInicio,
       horaFin: r.horaFin,
-      excluirId: r._id
+      excluirId: r._id,
+      adminPassword: req.body?.adminPassword
     });
-    if (!disp.disponible) {
-      return res.status(400).json({ msg: disp.motivo });
-    }
+    if (!check.ok) return res.status(check.status).json(check.body);
 
     r.tipoReserva = 'evento';
     r.cotizacion = {
@@ -1842,8 +2016,18 @@ router.put('/:id/aceptar-cotizacion', requireStaff, async (req, res) => {
       usuarioRole: _uAcep.role || ''
     });
 
+    // Esta cotización se acaba de convertir en evento confirmado; si para
+    // lograrlo se forzó el candado de 24h de OTRA cotización (misma fecha),
+    // esa otra pierde su prioridad de 24h (sigue viva, solo ya no bloquea).
+    if (check.cotizacionesForzadas?.length) {
+      await liberarHoldDeCotizaciones(check.cotizacionesForzadas, _uAcep);
+    }
+
     return res.json({ ok: true, reserva: r });
   } catch (e) {
+    if (esErrorDeHorarioDuplicado(e)) {
+      return res.status(409).json({ msg: MOTIVO_HORARIO_DUPLICADO });
+    }
     console.error('aceptar-cotizacion error:', e);
     return res.status(500).json({ msg: 'Error al convertir cotización' });
   }

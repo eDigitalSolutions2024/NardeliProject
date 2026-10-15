@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import './TablaProductos.css';
 import API_BASE_URL, { API_ORIGIN, authHeaders } from '../api';   // <-- usa API_ORIGIN para imágenes
@@ -13,6 +13,7 @@ const formatMXN = (v) => fntMXN.format(Number(v|| 0));
 export default function TablaProductos({ refresh = 0 } ) {
   const [productos, setProductos] = useState([]);
   const [cargando, setCargando] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
 
   // Estado para edición
   const [showEdit, setShowEdit] = useState(false);
@@ -122,12 +123,50 @@ export default function TablaProductos({ refresh = 0 } ) {
     }
   };
 
+  const productosFiltrados = useMemo(() => {
+    const q = busqueda.trim().toLowerCase();
+    if (!q) return productos;
+    return productos.filter((p) =>
+      [p.nombre, p.categoria, p.descripcion].some((campo) =>
+        String(campo || '').toLowerCase().includes(q)
+      )
+    );
+  }, [productos, busqueda]);
+
   return (
     <div className="tp-card">
       <div className="tp-header">
         <h2>Lista de productos</h2>
-        {!cargando && <span className="tp-count">{productos.length} {productos.length === 1 ? 'producto' : 'productos'}</span>}
+        {!cargando && (
+          <span className="tp-count">
+            {busqueda
+              ? `${productosFiltrados.length} de ${productos.length} productos`
+              : `${productos.length} ${productos.length === 1 ? 'producto' : 'productos'}`}
+          </span>
+        )}
       </div>
+
+      {!cargando && (
+        <div className="tp-search">
+          <span className="tp-search-icon" aria-hidden="true">🔍</span>
+          <input
+            type="text"
+            placeholder="Buscar por nombre, categoría o descripción…"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
+          {busqueda && (
+            <button
+              type="button"
+              className="tp-search-clear"
+              onClick={() => setBusqueda('')}
+              aria-label="Limpiar búsqueda"
+            >
+              ×
+            </button>
+          )}
+        </div>
+      )}
 
       {cargando ? (
         <div className="tp-loading">Cargando productos…</div>
@@ -146,7 +185,7 @@ export default function TablaProductos({ refresh = 0 } ) {
               </tr>
             </thead>
             <tbody>
-              {productos.map((producto) => (
+              {productosFiltrados.map((producto) => (
                 <tr key={producto._id}>
                   <td>
                     {producto.imagen ? (
@@ -182,12 +221,16 @@ export default function TablaProductos({ refresh = 0 } ) {
                   </td>
                 </tr>
               ))}
-              {productos.length === 0 && (
+              {productosFiltrados.length === 0 && (
                 <tr>
                   <td colSpan="7">
                     <div className="tp-empty">
                       <span className="tp-empty-icon" aria-hidden="true">📭</span>
-                      <p>Todavía no hay productos registrados</p>
+                      <p>
+                        {busqueda
+                          ? `Sin resultados para "${busqueda}"`
+                          : 'Todavía no hay productos registrados'}
+                      </p>
                     </div>
                   </td>
                 </tr>

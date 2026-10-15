@@ -102,6 +102,30 @@ const reservaSchema = new mongoose.Schema(
       index: true,
     },
 
+    // Se recalcula solo en los hooks pre-save/pre-findOneAndUpdate a partir
+    // de `tipoReserva` + `estado` (true solo si es un EVENTO confirmado, no
+    // cancelado). Existe únicamente para poder tener un índice único PARCIAL
+    // de fecha+horaInicio — Mongo no permite "$ne" en
+    // partialFilterExpression, así que necesitamos un campo plano de
+    // igualdad. No se edita a mano en ningún lado.
+    //
+    // OJO: las cotizaciones NO ponen este flag en true. Según los datos de
+    // producción, es normal tener varias cotizaciones activas para la misma
+    // fecha (varios prospectos preguntando por el mismo sábado) — eso NO es
+    // un bug. Lo único que de verdad no puede duplicarse es un EVENTO ya
+    // confirmado. El candado de "cotización reciente" (24h) que exige
+    // contraseña de admin para forzar vive solo a nivel de aplicación en
+    // routes/reservas.js, no aquí.
+    ocupaEventoFecha: { type: Boolean, default: false },
+
+    // Se pone en true cuando otro cliente le ganó la fecha con la
+    // contraseña de administrador (ver liberarHoldDeCotizaciones en
+    // routes/reservas.js). La cotización NO se cancela ni se oculta: sigue
+    // viva en la lista de pendientes y el staff la puede editar para
+    // moverla a otra fecha. Solo deja de contar para el candado de 24h, así
+    // que ya no le exige contraseña a nadie más ni muestra el badge.
+    holdLiberado: { type: Boolean, default: false },
+
     // Confirmación de cierre del evento (app de invitaciones)
     finalizacion: {
       confirmadoEn: { type: Date, default: null },
@@ -194,9 +218,58 @@ reservaSchema.index({ fecha: 1, horaInicio: 1 });
 reservaSchema.index({ tipoReserva: 1, fecha: 1 });
 reservaSchema.index({ shortId: 1 }, { unique: true, sparse: true });
 
+// Candado real contra choques de fecha+hora entre EVENTOS: Mongo garantiza
+// esto de forma atómica incluso si dos requests llegan al mismo tiempo
+// desde computadoras distintas (el chequeo en código, por rápido que sea,
+// siempre tiene una ventana entre "leer" y "guardar" — este índice no).
+// Solo aplica cuando ocupaEventoFecha:true, es decir, solo a EVENTOS
+// confirmados (no cancelados) — las cotizaciones nunca activan este
+// candado duro, pueden convivir varias en la misma fecha. Verificado contra
+// producción: 0 eventos duplicados existentes, así que este índice se puede
+// crear sin conflicto.
+// Esto NO detecta traslapes con horaInicio distinto (ej. 18:00-20:00 vs
+// 19:00-21:00) — ese caso lo sigue cubriendo únicamente el chequeo en
+// código de checarEventoEnFecha.
+reservaSchema.index(
+  { fecha: 1, horaInicio: 1 },
+  { unique: true, partialFilterExpression: { ocupaEventoFecha: true } }
+);
+
 reservaSchema.pre('save', function(next) {
-  if (this.shortId) return next();
-  this.shortId = String(this._id).slice(-8).toUpperCase();
+  if (!this.shortId) {
+    this.shortId = String(this._id).slice(-8).toUpperCase();
+  }
+  this.ocupaEventoFecha = this.tipoReserva === 'evento' && this.estado !== 'cancelada';
+  next();
+});
+
+// Varias rutas actualizan con findByIdAndUpdate/findOneAndUpdate en vez de
+// .save() (esas NO disparan el pre('save') de arriba) — este hook hace lo
+// mismo para que `ocupaEventoFecha` nunca quede desincronizado de
+// `tipoReserva`/`estado`, sin importar por cuál ruta se cancele, reactive o
+// convierta una reserva. Si la actualización solo trae uno de los dos
+// campos, se consulta el documento actual para completar el que falta.
+reservaSchema.pre('findOneAndUpdate', async function(next) {
+  const update = this.getUpdate() || {};
+  let nuevoEstado = update.estado ?? update.$set?.estado;
+  let nuevoTipo = update.tipoReserva ?? update.$set?.tipoReserva;
+
+  if (nuevoEstado === undefined && nuevoTipo === undefined) return next();
+
+  if (nuevoEstado === undefined || nuevoTipo === undefined) {
+    const actual = await this.model.findOne(this.getQuery()).select('estado tipoReserva').lean();
+    if (actual) {
+      if (nuevoEstado === undefined) nuevoEstado = actual.estado;
+      if (nuevoTipo === undefined) nuevoTipo = actual.tipoReserva;
+    }
+  }
+
+  const ocupa = nuevoTipo === 'evento' && nuevoEstado !== 'cancelada';
+  if (update.$set) {
+    update.$set.ocupaEventoFecha = ocupa;
+  } else {
+    update.ocupaEventoFecha = ocupa;
+  }
   next();
 });
 

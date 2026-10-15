@@ -185,8 +185,10 @@
 
 .cotizacion-existente-card {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 8px;
+  align-items: center;
+  gap: 4px 8px;
   background: #f2f9fd;
   border: 1px dashed #a9d1e8;
   border-radius: 8px;
@@ -198,6 +200,18 @@
 .cotizacion-hora {
   font-weight: 600;
   white-space: nowrap;
+}
+
+.cotizacion-hold {
+  width: 100%;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+  color: #a66a00;
+}
+
+.cotizacion-hold-libre {
+  color: #1a7a3c;
 }
 
 @media (max-width: 640px) {

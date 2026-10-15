@@ -605,6 +605,7 @@ total = Math.max(0, subTotal - descuentoInfo.monto);
   const bulletsBase = [
     '• Utensilios y equipo deben devolverse en las mismas condiciones.',
     '• Sera necesario un anticipo del 20% para apartar la fecha de su evento.',
+    '• El Precio ya incluye IVA.',
   ];
 
   

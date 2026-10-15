@@ -268,6 +268,31 @@
   background: #e9ecef;
 }
 
+/* Cotización todavía dentro de su candado de 24h (ver HOLD_COTIZACION_MS en
+   el backend) — se resalta para que el staff vea de un vistazo cuál fecha
+   sigue "apartada" sin necesidad de abrir cada una. */
+.activity-item-hold {
+  background: #fff8e8;
+  border: 1px solid #f0c04f;
+}
+
+.activity-item-hold:hover {
+  background: #fdf0d5;
+}
+
+.hold-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fef0cd;
+  color: #a66a00;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
 .activity-icon {
   font-size: 1.5rem;
   margin-right: 1rem;

@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import './TablaProductos.css';
 import './FormProducto.css'; // reutiliza .fp-switch para los checkboxes del modal
-import API_BASE_URL, { API_ORIGIN } from '../api';
+import API_BASE_URL, { API_ORIGIN, authHeaders } from '../api';
 
 const fntMXN = new Intl.NumberFormat('es-MX', {
   style: 'currency',
@@ -15,6 +15,7 @@ const formatMXN = (v) => fntMXN.format(Number(v || 0));
 export default function TablaAccesorios({ refresh = 0 }) {
   const [accesorios, setAccesorios] = useState([]);
   const [cargando, setCargando] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
 
   // Estado para edición
   const [showEdit, setShowEdit] = useState(false);
@@ -71,6 +72,17 @@ export default function TablaAccesorios({ refresh = 0 }) {
     setPreview('');
   };
 
+  const eliminarAccesorio = async (acc) => {
+    if (!window.confirm(`¿Eliminar "${acc.nombre}"? Esta acción no se puede deshacer.`)) return;
+    try {
+      await axios.delete(`${API_BASE_URL}/accesorios/${acc._id}`, { headers: authHeaders() });
+      setAccesorios((prev) => prev.filter((a) => a._id !== acc._id));
+    } catch (e) {
+      console.error('Error al eliminar accesorio:', e);
+      alert(e?.response?.data?.error || 'No se pudo eliminar el accesorio.');
+    }
+  };
+
   const onChange = (e) => {
     const { name, value, type, checked } = e.target;
     if (type === 'checkbox') {
@@ -110,7 +122,7 @@ export default function TablaAccesorios({ refresh = 0 }) {
       const { data: actualizado } = await axios.put(
         `${API_BASE_URL}/accesorios/${form._id}`,
         fd,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
+        { headers: { 'Content-Type': 'multipart/form-data', ...authHeaders() } }
       );
 
       // Actualiza la fila en la tabla sin recargar todo
@@ -125,12 +137,50 @@ export default function TablaAccesorios({ refresh = 0 }) {
     }
   };
 
+  const accesoriosFiltrados = useMemo(() => {
+    const q = busqueda.trim().toLowerCase();
+    if (!q) return accesorios;
+    return accesorios.filter((a) =>
+      [a.nombre, a.categoria, a.descripcion].some((campo) =>
+        String(campo || '').toLowerCase().includes(q)
+      )
+    );
+  }, [accesorios, busqueda]);
+
   return (
     <div className="tp-card">
       <div className="tp-header">
         <h2>Lista de accesorios</h2>
-        {!cargando && <span className="tp-count">{accesorios.length} {accesorios.length === 1 ? 'accesorio' : 'accesorios'}</span>}
+        {!cargando && (
+          <span className="tp-count">
+            {busqueda
+              ? `${accesoriosFiltrados.length} de ${accesorios.length} accesorios`
+              : `${accesorios.length} ${accesorios.length === 1 ? 'accesorio' : 'accesorios'}`}
+          </span>
+        )}
       </div>
+
+      {!cargando && (
+        <div className="tp-search">
+          <span className="tp-search-icon" aria-hidden="true">🔍</span>
+          <input
+            type="text"
+            placeholder="Buscar por nombre, categoría o descripción…"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
+          {busqueda && (
+            <button
+              type="button"
+              className="tp-search-clear"
+              onClick={() => setBusqueda('')}
+              aria-label="Limpiar búsqueda"
+            >
+              ×
+            </button>
+          )}
+        </div>
+      )}
 
       {cargando ? (
         <div className="tp-loading">Cargando accesorios…</div>
@@ -149,7 +199,7 @@ export default function TablaAccesorios({ refresh = 0 }) {
               </tr>
             </thead>
             <tbody>
-              {accesorios.map((acc) => (
+              {accesoriosFiltrados.map((acc) => (
                 <tr key={acc._id}>
                   <td>
                     {acc.imagen ? (
@@ -175,16 +225,26 @@ export default function TablaAccesorios({ refresh = 0 }) {
                       >
                         ✎ Editar
                       </button>
+                      <button
+                        className="tp-btn tp-btn-delete"
+                        onClick={() => eliminarAccesorio(acc)}
+                      >
+                        🗑 Eliminar
+                      </button>
                     </div>
                   </td>
                 </tr>
               ))}
-              {accesorios.length === 0 && (
+              {accesoriosFiltrados.length === 0 && (
                 <tr>
                   <td colSpan="7">
                     <div className="tp-empty">
                       <span className="tp-empty-icon" aria-hidden="true">📭</span>
-                      <p>Todavía no hay accesorios registrados</p>
+                      <p>
+                        {busqueda
+                          ? `Sin resultados para "${busqueda}"`
+                          : 'Todavía no hay accesorios registrados'}
+                      </p>
                     </div>
                   </td>
                 </tr>

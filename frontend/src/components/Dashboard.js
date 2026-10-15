@@ -32,6 +32,22 @@ const Dashboard = ({ onLogout }) => {
 
 
   const [searchActividad, setSearchActividad] = useState('');
+  const [filtroFechaActividad, setFiltroFechaActividad] = useState(''); // "YYYY-MM-DD"
+  const [ordenActividad, setOrdenActividad] = useState('fecha_asc');
+
+  // Mismo candado de 24h que ya usa el backend (ver HOLD_COTIZACION_MS en
+  // routes/reservas.js) — se usa solo para resaltar en esta lista, no para
+  // bloquear nada aquí.
+  const HOLD_COTIZACION_MS = 24 * 60 * 60 * 1000;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, []);
+  const tieneHoldActivo = (a) => {
+    if (!a.createdAt || a.holdLiberado) return false;
+    return (new Date(a.createdAt).getTime() + HOLD_COTIZACION_MS) > now;
+  };
 
 
 
@@ -186,9 +202,10 @@ const Dashboard = ({ onLogout }) => {
         proximosEventos: futurosEventos.length,
       });
 
-      // Cotizaciones pendientes (no aceptadas)
+      // Cotizaciones pendientes (no aceptadas y no canceladas — una
+      // cancelada, aunque no esté "aceptada", ya no cuenta como pendiente)
       const pendientes = cotizaciones
-        .filter(r => !(r.cotizacion && r.cotizacion.aceptada))
+        .filter(r => !(r.cotizacion && r.cotizacion.aceptada) && r.estado !== 'cancelada')
         .sort((a,b) => getFecha(a) - getFecha(b));
 
       const buildPdfUrl = (id) => `${API_BASE_URL}/reservas/${id}/pdf`;
@@ -212,6 +229,8 @@ const Dashboard = ({ onLogout }) => {
             horaFin: r.horaFin || r.horaInicio || '',
             cantidadPersonas: r.cantidadPersonas || 0,
             descripcion: r.descripcion || '',
+            createdAt: r.createdAt || null,
+            holdLiberado: !!r.holdLiberado,
           };
         })
       );
@@ -315,11 +334,30 @@ const Dashboard = ({ onLogout }) => {
       const cleanId = String(id).replace(/['"]/g, '').trim();
       const url = `${API_BASE_URL}/reservas/${encodeURIComponent(cleanId)}/aceptar-cotizacion`;
 
-      const resp = await fetch(url, {
+      const enviar = (adminPassword) => fetch(url, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({})   // <-- importante
+        body: JSON.stringify(adminPassword ? { adminPassword } : {})
       });
+
+      let resp = await enviar();
+
+      // Candado blando de 24h: ya existe otra cotización reciente para esa
+      // fecha. Se pide contraseña de administrador para forzar la conversión.
+      if (resp.status === 401) {
+        const err = await resp.json().catch(() => ({}));
+        if (err.requierePassword) {
+          const adminPassword = window.prompt(
+            err.msg || 'Ya existe una cotización reciente para esa fecha. Ingresa la contraseña de un administrador para continuar:'
+          );
+          if (adminPassword === null) return; // canceló
+          if (!adminPassword.trim()) {
+            alert('Debes ingresar una contraseña.');
+            return;
+          }
+          resp = await enviar(adminPassword);
+        }
+      }
 
       if (!resp.ok) {
         const text = await resp.text();
@@ -346,21 +384,39 @@ const Dashboard = ({ onLogout }) => {
  const normalizeFolio = (s) =>
   String(s || '').trim().replace(/^#/, '').toUpperCase();
 
-const actividadFiltrada = actividad.filter(a => {
-  const q = String(searchActividad || '').trim();
-  if (!q) return true;
+const actividadFiltrada = actividad
+  .filter(a => {
+    const q = String(searchActividad || '').trim();
+    if (q) {
+      const qNorm = normalizeFolio(q);
+      const texto = `${a.titulo || ''} ${a.subtitulo || ''} ${a.cliente || ''}`.toLowerCase();
+      const folio = normalizeFolio(a.folio);
+      // busca por texto normal o por folio
+      const coincide = texto.includes(q.toLowerCase()) || (folio && folio.includes(qNorm));
+      if (!coincide) return false;
+    }
 
-  const qNorm = normalizeFolio(q);
+    if (filtroFechaActividad && a.ymd !== filtroFechaActividad) return false;
 
-  const texto = `${a.titulo || ''} ${a.subtitulo || ''} ${a.cliente || ''}`.toLowerCase();
-  const folio = normalizeFolio(a.folio);
-
-  // busca por texto normal o por folio
-  return (
-    texto.includes(q.toLowerCase()) ||
-    (folio && folio.includes(qNorm))
-  );
-});
+    return true;
+  })
+  .sort((a, b) => {
+    switch (ordenActividad) {
+      case 'fecha_desc':
+        return (b.ymd || '').localeCompare(a.ymd || '');
+      case 'cliente_asc':
+        return (a.cliente || '').localeCompare(b.cliente || '', 'es', { sensitivity: 'base' });
+      case 'cliente_desc':
+        return (b.cliente || '').localeCompare(a.cliente || '', 'es', { sensitivity: 'base' });
+      case 'creacion_desc':
+        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+      case 'creacion_asc':
+        return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+      case 'fecha_asc':
+      default:
+        return (a.ymd || '').localeCompare(b.ymd || '');
+    }
+  });
 
   const renderContent = () => {
     switch (activeSection) {
@@ -452,7 +508,7 @@ const actividadFiltrada = actividad.filter(a => {
   <div className="d-flex align-items-center justify-content-between" style={{ gap: 12, flexWrap: 'wrap' }}>
     <h2 style={{ marginBottom: 0 }}>Cotizacion pendiente</h2>
 
-    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
       {loadingDash && <span className="text-muted small">Actualizando…</span>}
 
       {/* 🔍 Buscador */}
@@ -469,6 +525,57 @@ const actividadFiltrada = actividad.filter(a => {
           fontSize: 14,
         }}
       />
+
+      {/* 📅 Filtro por fecha del evento (calendario nativo) */}
+      <input
+        type="date"
+        value={filtroFechaActividad}
+        onChange={(e) => setFiltroFechaActividad(e.target.value)}
+        title="Filtrar por fecha del evento"
+        style={{
+          padding: '6px 10px',
+          borderRadius: 8,
+          border: '1px solid #ddd',
+          fontSize: 14,
+        }}
+      />
+      {filtroFechaActividad && (
+        <button
+          type="button"
+          onClick={() => setFiltroFechaActividad('')}
+          title="Quitar filtro de fecha"
+          style={{
+            border: '1px solid #ddd',
+            background: '#fff',
+            borderRadius: 8,
+            padding: '6px 10px',
+            fontSize: 13,
+            cursor: 'pointer',
+          }}
+        >
+          × Fecha
+        </button>
+      )}
+
+      {/* ⇅ Orden */}
+      <select
+        value={ordenActividad}
+        onChange={(e) => setOrdenActividad(e.target.value)}
+        title="Ordenar por"
+        style={{
+          padding: '6px 10px',
+          borderRadius: 8,
+          border: '1px solid #ddd',
+          fontSize: 14,
+        }}
+      >
+        <option value="fecha_asc">Fecha del evento ↑</option>
+        <option value="fecha_desc">Fecha del evento ↓</option>
+        <option value="cliente_asc">Cliente A→Z</option>
+        <option value="cliente_desc">Cliente Z→A</option>
+        <option value="creacion_desc">Creadas: más recientes primero</option>
+        <option value="creacion_asc">Creadas: más antiguas primero</option>
+      </select>
     </div>
   </div>
 
@@ -487,8 +594,10 @@ const actividadFiltrada = actividad.filter(a => {
       </div>
     )}
 
-    {actividadFiltrada.map(a => (
-      <div key={a.id} className="activity-item">
+    {actividadFiltrada.map(a => {
+      const holdActivo = tieneHoldActivo(a);
+      return (
+      <div key={a.id} className={`activity-item${holdActivo ? ' activity-item-hold' : ''}`}>
         <span className="activity-icon">{a.icon}</span>
         <div className="activity-details">
           <p>
@@ -496,6 +605,11 @@ const actividadFiltrada = actividad.filter(a => {
             {a.folio && (
               <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.8 }}>
                 #{a.folio}
+              </span>
+            )}
+            {holdActivo && (
+              <span className="hold-badge" title="Esta fecha todavía tiene prioridad de 24h: se necesita contraseña de admin para tomarla">
+                ⏳ prioridad 24h
               </span>
             )}
           </p>
@@ -538,7 +652,8 @@ const actividadFiltrada = actividad.filter(a => {
           </div>
         </div>
       </div>
-    ))}
+      );
+    })}
   </div>
 </div>
 
