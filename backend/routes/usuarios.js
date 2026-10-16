@@ -86,10 +86,20 @@ router.get('/', soloAdmin, async (req, res) => {
   const incluirClientes = req.query.clientes === '1';
   const filtro = incluirClientes ? {} : { role: { $in: ROLES_ASIGNABLES } };
   const items = await Usuario.find(filtro).sort({ createdAt: -1 }).lean();
+  // Administradores siempre arriba; dentro de cada grupo, los más recientes primero.
+  const peso = (u) => (u.role === 'admin' ? 0 : 1);
+  items.sort((a, b) => peso(a) - peso(b));
   res.json({ ok: true, items: items.map(vista) });
 });
 
-// Crear cuenta: la contraseña se genera sola y se devuelve UNA vez para entregarla.
+// Contraseña temporal sugerida para mostrarla en el formulario ANTES de crear la cuenta.
+// No se guarda nada aquí: solo se guarda (cifrada) cuando se crea el usuario.
+router.get('/password-sugerida', soloAdmin, (_req, res) => {
+  res.json({ ok: true, password: generarPasswordTemporal() });
+});
+
+// Crear cuenta: la contraseña viene del formulario (la sugerida y ya vista por el admin);
+// si no llega, se genera una. Se devuelve para poder entregarla.
 router.post('/', soloAdmin, async (req, res) => {
   try {
     const fullname = String(req.body?.fullname || '').trim();
@@ -101,7 +111,15 @@ router.post('/', soloAdmin, async (req, res) => {
     if (!ROLES_ASIGNABLES.includes(role)) return res.status(400).json({ ok: false, msg: 'Rol inválido' });
     if (await Usuario.findOne({ email })) return res.status(409).json({ ok: false, msg: 'Ya existe una cuenta con ese correo' });
 
-    const passwordTemporal = generarPasswordTemporal();
+    let passwordTemporal = req.body?.password;
+    if (passwordTemporal === undefined || passwordTemporal === null || passwordTemporal === '') {
+      passwordTemporal = generarPasswordTemporal();
+    } else {
+      passwordTemporal = String(passwordTemporal);
+      if (passwordTemporal.length < 8 || passwordTemporal.length > 72) {
+        return res.status(400).json({ ok: false, msg: 'La contraseña debe tener entre 8 y 72 caracteres' });
+      }
+    }
     const nuevo = await Usuario.create({
       fullname,
       email,

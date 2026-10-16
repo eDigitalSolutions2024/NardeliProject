@@ -52,6 +52,22 @@ function ModalUsuario({ usuario, esUnoMismo, onClose, onSaved }) {
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
 
+  // Contraseña temporal generada por el sistema, visible ANTES de crear la cuenta.
+  const [password, setPassword] = useState('');
+  const [verPassword, setVerPassword] = useState(true);
+  const [copiado, setCopiado] = useState(false);
+
+  const generar = useCallback(async () => {
+    setCopiado(false);
+    try { setPassword((await api('/usuarios/password-sugerida')).password); }
+    catch (err) { setError(err.message); }
+  }, []);
+  useEffect(() => { if (!edita) generar(); }, [edita, generar]);
+
+  const copiar = async () => {
+    try { await navigator.clipboard.writeText(password); setCopiado(true); } catch { /* sin permiso */ }
+  };
+
   const guardar = async (e) => {
     e.preventDefault();
     setError('');
@@ -59,7 +75,7 @@ function ModalUsuario({ usuario, esUnoMismo, onClose, onSaved }) {
     try {
       const data = edita
         ? await api(`/usuarios/${usuario.id}`, { method: 'PUT', body: JSON.stringify({ fullname, role }) })
-        : await api('/usuarios', { method: 'POST', body: JSON.stringify({ fullname, email, role }) });
+        : await api('/usuarios', { method: 'POST', body: JSON.stringify({ fullname, email, role, password }) });
       onSaved(data);
     } catch (err) {
       setError(err.message);
@@ -89,14 +105,25 @@ function ModalUsuario({ usuario, esUnoMismo, onClose, onSaved }) {
           {esUnoMismo && <small style={{ color: '#6b7280' }}>No puedes cambiar tu propio rol.</small>}
         </div>
         {!edita && (
-          <div className="rl-msg info">
-            La contraseña se genera automáticamente y la verás una sola vez al crear la cuenta. El usuario deberá
-            cambiarla en su primer ingreso.
+          <div className="rl-field">
+            <label>Contraseña temporal (generada por el sistema)</label>
+            <div className="rl-pass-box" style={{ margin: 0 }}>
+              <code>{verPassword ? (password || '…') : '•'.repeat(password.length || 10)}</code>
+            </div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+              <button type="button" className="rl-btn sec sm" onClick={() => setVerPassword((v) => !v)}>{verPassword ? 'Ocultar' : 'Mostrar'}</button>
+              <button type="button" className="rl-btn sec sm" onClick={copiar} disabled={!password}>{copiado ? '✓ Copiada' : 'Copiar'}</button>
+              <button type="button" className="rl-btn sec sm" onClick={generar}>↻ Generar otra</button>
+            </div>
+            <small style={{ color: '#6b7280' }}>
+              Cópiala y entrégala al usuario. Se guarda cifrada: después de crear la cuenta nadie podrá volver a verla,
+              y el usuario deberá cambiarla por una propia en su primer ingreso.
+            </small>
           </div>
         )}
         <div className="rl-modal-actions">
           <button type="button" className="rl-btn sec" onClick={onClose}>Cancelar</button>
-          <button className="rl-btn" disabled={guardando}>{guardando ? 'Guardando…' : (edita ? 'Guardar' : 'Crear usuario')}</button>
+          <button className="rl-btn" disabled={guardando || (!edita && !password)}>{guardando ? 'Guardando…' : (edita ? 'Guardar' : 'Crear usuario')}</button>
         </div>
       </form>
     </div>
