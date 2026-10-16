@@ -533,7 +533,11 @@ const MOTIVO_HORARIO_DUPLICADO =
 // ===== CRUD =====
 router.post('/', async (req, res) => {
   try {
-    const tipoReserva = req.body.tipoReserva || 'evento';
+    // Quien captura (si trae sesión). Un 'cotizador' solo puede crear cotizaciones,
+    // sin importar lo que mande el body.
+    delete req.body.creadoPor;
+    const autor = await usuarioOpcional(req);
+    const tipoReserva = autor?.role === 'cotizador' ? 'cotizacion' : (req.body.tipoReserva || 'evento');
     req.body.fecha = normalizeFechaNoonUTC(req.body.fecha);
 
     if (!req.body.fecha || isNaN(req.body.fecha)) {
@@ -553,11 +557,7 @@ router.post('/', async (req, res) => {
       cotizacionesForzadas = check.cotizacionesForzadas || [];
     }
 
-    // Si quien captura tiene sesión (staff/cotizador) se guarda quién fue, para que
-    // un 'cotizador' pueda ver después solo sus propias cotizaciones. Nunca se
-    // acepta este dato desde el body.
-    delete req.body.creadoPor;
-    const autor = await usuarioOpcional(req);
+    // Se guarda quién la capturó para que un 'cotizador' vea después solo las suyas.
     const creadoPor = autor
       ? { id: autor._id, nombre: autor.fullname || '', email: autor.email || '', rol: autor.role || '' }
       : undefined;

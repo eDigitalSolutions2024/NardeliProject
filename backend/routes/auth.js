@@ -328,4 +328,20 @@ router.post('/cambiar-password', requireSesion({ permitirCambioPassword: true })
   }
 });
 
+/**
+ * GET /auth/me
+ * Datos de la sesión actual leídos de la BASE (rol vigente, no el del token).
+ */
+router.get('/me', requireSesion({ permitirCambioPassword: true }), async (req, res) => {
+  const u = req.usuarioDoc;
+  res.json({
+    ok: true,
+    id: String(u._id),
+    name: u.fullname || '',
+    email: u.email,
+    role: u.role,
+    mustChangePassword: !!u.mustChangePassword,
+  });
+});
+
 module.exports = router;

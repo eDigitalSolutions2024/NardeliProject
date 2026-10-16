@@ -17,6 +17,9 @@ import DashboardCliente from './components/DashboardCliente';
 import IngresarCodigo from './pages/IngresarCodigo';
 import IngresaCodigoInvitacion from './pages/tmpCodigoInvitacion';
 import ScanInvitacionQR from './pages/ScanInvitacionQR';
+import CambiarPassword from './components/CambiarPassword';
+import Cotizador from './components/Cotizador';
+import { updateStoredUser, rutaInicialPorRol } from './session';
 
 function AppWrapper() {
   // ✅ Levanta la sesión desde localStorage si existe
@@ -33,10 +36,19 @@ function AppWrapper() {
   const location = useLocation();
 
   // 🔐 Guard simple para rutas protegidas
-  function RequireAuth({ children }) {
+  // - Sin sesión → /login.
+  // - Con contraseña temporal → solo puede estar en /cambiar-password.
+  // - `roles`: si se indica, los demás roles se mandan a su pantalla de inicio.
+  function RequireAuth({ children, roles }) {
     if (!user) {
       // recuerda a dónde quería ir
       return <Navigate to="/login" replace state={{ from: location }} />;
+    }
+    if (user.mustChangePassword) {
+      return <Navigate to="/cambiar-password" replace />;
+    }
+    if (roles && !roles.includes(user.role)) {
+      return <Navigate to={rutaInicialPorRol(user)} replace />;
     }
     return children;
   }
@@ -49,8 +61,18 @@ function AppWrapper() {
     } catch {}
     setUser(userData);
 
-    const from = location.state?.from?.pathname || '/dashboard';
-    navigate(from, { replace: true });
+    const inicio = rutaInicialPorRol(userData);
+    const from = location.state?.from?.pathname;
+    // Un cotizador o quien debe cambiar contraseña NO regresa a una ruta previa de staff.
+    navigate(inicio === '/dashboard' && from ? from : inicio, { replace: true });
+  };
+
+  // El usuario ya cambió su contraseña temporal: guarda el token nuevo y entra.
+  const handlePasswordChanged = (newToken) => {
+    try { localStorage.setItem('token', newToken || ''); } catch {}
+    const nuevo = updateStoredUser({ mustChangePassword: false });
+    setUser(nuevo);
+    navigate(rutaInicialPorRol(nuevo), { replace: true });
   };
 
   // (Opcional) por si quieres un botón de salir más adelante
@@ -67,10 +89,28 @@ function AppWrapper() {
       <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} />} />
 
       <Route
+        path="/cambiar-password"
+        element={
+          user
+            ? <CambiarPassword user={user} forzado={!!user.mustChangePassword} onChanged={handlePasswordChanged} onLogout={handleLogout} />
+            : <Navigate to="/login" replace />
+        }
+      />
+
+      <Route
         path="/dashboard"
         element={
-          <RequireAuth>
+          <RequireAuth roles={['admin', 'asistente', 'user']}>
             <Dashboard user={user} onLogout={handleLogout} />
+          </RequireAuth>
+        }
+      />
+
+      <Route
+        path="/cotizador"
+        element={
+          <RequireAuth roles={['cotizador']}>
+            <Cotizador user={user} onLogout={handleLogout} />
           </RequireAuth>
         }
       />

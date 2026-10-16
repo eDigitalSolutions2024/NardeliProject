@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import API_BASE_URL from '../api';
+import API_BASE_URL, { authHeaders } from '../api';
 import useDisponibilidadReservas from '../hooks/useDisponibilidadReservas';
 import MiniCalendarioDisponibilidad from './MiniCalendarioDisponibilidad';
 import './Reservar.css';
@@ -58,7 +58,8 @@ function ContadorHold({ expiraEn }) {
   );
 }
 
-const ReservarEvento = () => {
+// soloCotizacion: usado por el rol 'cotizador' — fuerza tipo cotización y oculta el toggle de evento.
+const ReservarEvento = ({ soloCotizacion = false }) => {
   const [formData, setFormData] = useState(() => {
     try {
       const guardado = localStorage.getItem(BORRADOR_KEY);
@@ -148,6 +149,7 @@ function getSessionRole() {
 // Deriva el "mode" para el dashboard en función del rol
 function getDashboardModeFromRole(role) {
   const r = String(role || '').toLowerCase();
+  if (r === 'cotizador') return 'cotizador';
   return (r === 'admin' || r === 'asistente') ? 'admin' : 'user';
 }
 
@@ -188,7 +190,7 @@ function getDashboardModeFromRole(role) {
     setEnviando(true);
 
     const action = e.nativeEvent?.submitter?.dataset?.action || 'dashboard';
-    const esEvento = (formData.tipoReserva || 'evento') === 'evento';
+    const esEvento = !soloCotizacion && (formData.tipoReserva || 'evento') === 'evento';
 
     // Abre pre-ventana SOLO para EVENTO (para el dashboard)
     let prewin = null;
@@ -207,15 +209,16 @@ function getDashboardModeFromRole(role) {
         telefono: formData.telefono.trim(),
         cantidadPersonas: Number(formData.cantidadPersonas || 0),
         descripcion: formData.descripcion?.trim() || '',
-        tipoReserva: formData.tipoReserva,
-        notaCotizacion: formData.tipoReserva === 'cotizacion'
+        tipoReserva: soloCotizacion ? 'cotizacion' : formData.tipoReserva,
+        notaCotizacion: (soloCotizacion || formData.tipoReserva === 'cotizacion')
           ? (formData.notaCotizacion || '').trim()
           : ''
       };
 
       const enviarReserva = (adminPassword, fechaOverride) => fetch(`${API_BASE_URL}/reservas`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // Con sesión iniciada se manda el token para que la cotización quede a nombre de quien la capturó.
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
           ...payload,
           ...(fechaOverride ? { fecha: fechaOverride } : {}),
@@ -537,11 +540,11 @@ function getDashboardModeFromRole(role) {
     }
   };
 
-  const esCotizacion = formData.tipoReserva === 'cotizacion';
+  const esCotizacion = soloCotizacion || formData.tipoReserva === 'cotizacion';
 
   return (
     <div className="reserva-form-container">
-      <h2>Reservar Evento</h2>
+      <h2>{soloCotizacion ? 'Nueva cotización' : 'Reservar Evento'}</h2>
 
       {tieneBorrador && (
         <div style={{
@@ -575,6 +578,7 @@ function getDashboardModeFromRole(role) {
 
       <form onSubmit={handleSubmit}>
         {/* Toggle cotización/evento */}
+        {!soloCotizacion && (
         <label style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
           <input
             type="checkbox"
@@ -586,6 +590,7 @@ function getDashboardModeFromRole(role) {
             {esCotizacion ? '(se guardará como Cotización)' : '(se guardará como Evento)'}
           </small>
         </label>
+        )}
 
         {/* Nota solo para cotización */}
         {esCotizacion && (
