@@ -262,12 +262,15 @@ function generarHistorialAccesorios(prev = [], next = []) {
 }
 
 // ===== Mailer =====
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT || 587),
-  secure: false,
-  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-});
+// Con MAIL_DEV_MODE=1 no se envía nada real (el mensaje queda en memoria), igual que utils/mailer.js
+const transporter = process.env.MAIL_DEV_MODE === '1'
+  ? nodemailer.createTransport({ streamTransport: true, newline: 'unix', buffer: true })
+  : nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: false,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+    });
 function genPassword(len = 10) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@$!%*?&';
   return Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
