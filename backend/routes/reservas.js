@@ -1190,12 +1190,25 @@ router.put('/:id', requireStaff, async (req, res) => {
 
     const nextTipo = req.body.tipoReserva || prev.tipoReserva || 'evento';
 
+    const horaInicioFinal = req.body.horaInicio || prev.horaInicio;
+    const horaFinFinal = req.body.horaFin || prev.horaFin;
+    const fechaCambio = ymd(fechaFinal) !== ymd(prev.fecha)
+      || horaInicioFinal !== prev.horaInicio
+      || horaFinFinal !== prev.horaFin;
+    const tipoCambio = nextTipo !== (prev.tipoReserva || 'evento');
+
     let cotizacionesForzadas = [];
-    if (nextTipo === 'cotizacion' || nextTipo === 'evento') {
+    // El candado de fecha (evento duro + cotización reciente) solo tiene
+    // sentido si de verdad se está cambiando la fecha/horario/tipo — si solo
+    // se edita el nombre, descripción, etc., no hay por qué volver a chocar
+    // contra otra cotización que ya compartía esa misma fecha desde antes de
+    // este edit (si no, cualquier edición trivial de una cotización vieja
+    // quedaba bloqueada por otra cotización reciente sin razón).
+    if ((fechaCambio || tipoCambio) && (nextTipo === 'cotizacion' || nextTipo === 'evento')) {
       const check = await validarDisponibilidadFecha({
         fecha: req.body.fecha,
-        horaInicio: req.body.horaInicio || prev.horaInicio,
-        horaFin: req.body.horaFin || prev.horaFin,
+        horaInicio: horaInicioFinal,
+        horaFin: horaFinFinal,
         excluirId: id,
         adminPassword: req.body.adminPassword
       });

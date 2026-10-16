@@ -339,15 +339,35 @@ const Dashboard = ({ onLogout }) => {
         tipoReserva: 'cotizacion',
       };
 
-      const r = await fetch(`${API_BASE_URL}/reservas/${cotEdit.id}`, {
+      const enviar = (adminPassword) => fetch(`${API_BASE_URL}/reservas/${cotEdit.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(adminPassword ? { ...payload, adminPassword } : payload),
       });
+
+      let r = await enviar();
+
+      // Candado blando de 24h: la fecha/horario a la que se está moviendo
+      // esta cotización choca con otra cotización reciente. Se pide la
+      // contraseña de un administrador para forzar el cambio.
+      if (r.status === 401) {
+        const err = await r.json().catch(() => ({}));
+        if (err.requierePassword) {
+          const adminPassword = window.prompt(
+            err.msg || 'Ya existe una cotización reciente para esa fecha. Ingresa la contraseña de un administrador para continuar:'
+          );
+          if (adminPassword === null) return; // canceló
+          if (!adminPassword.trim()) {
+            alert('Debes ingresar una contraseña.');
+            return;
+          }
+          r = await enviar(adminPassword);
+        }
+      }
 
       if (!r.ok) {
         const err = await r.json().catch(()=>({}));
-        alert(err?.motivo || err?.error || 'No se pudo actualizar la cotización');
+        alert(err?.msg || err?.motivo || err?.error || 'No se pudo actualizar la cotización');
         return;
       }
 
