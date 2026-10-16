@@ -1,3 +1,6 @@
+import { aviso, pedirConfirmacion } from '../utils/avisos';
+import { LuImage, LuGift, LuPencil, LuTrash2, LuInbox, LuX } from 'react-icons/lu';
+import SearchField from './ui/SearchField';
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import './TablaProductos.css';
@@ -73,13 +76,13 @@ export default function TablaAccesorios({ refresh = 0 }) {
   };
 
   const eliminarAccesorio = async (acc) => {
-    if (!window.confirm(`¿Eliminar "${acc.nombre}"? Esta acción no se puede deshacer.`)) return;
+    if (!await pedirConfirmacion(`¿Eliminar "${acc.nombre}"? Esta acción no se puede deshacer.`)) return;
     try {
       await axios.delete(`${API_BASE_URL}/accesorios/${acc._id}`, { headers: authHeaders() });
       setAccesorios((prev) => prev.filter((a) => a._id !== acc._id));
     } catch (e) {
       console.error('Error al eliminar accesorio:', e);
-      alert(e?.response?.data?.error || 'No se pudo eliminar el accesorio.');
+      aviso(e?.response?.data?.error || 'No se pudo eliminar el accesorio.');
     }
   };
 
@@ -133,7 +136,7 @@ export default function TablaAccesorios({ refresh = 0 }) {
       cerrarEdicion();
     } catch (e) {
       console.error('Error al actualizar accesorio:', e);
-      alert('No se pudo actualizar el accesorio.');
+      aviso('No se pudo actualizar el accesorio.');
     }
   };
 
@@ -161,25 +164,12 @@ export default function TablaAccesorios({ refresh = 0 }) {
       </div>
 
       {!cargando && (
-        <div className="tp-search">
-          <span className="tp-search-icon" aria-hidden="true">🔍</span>
-          <input
-            type="text"
-            placeholder="Buscar por nombre, categoría o descripción…"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
-          {busqueda && (
-            <button
-              type="button"
-              className="tp-search-clear"
-              onClick={() => setBusqueda('')}
-              aria-label="Limpiar búsqueda"
-            >
-              ×
-            </button>
-          )}
-        </div>
+        <SearchField
+          className="tp-search-field"
+          value={busqueda}
+          onChange={setBusqueda}
+          placeholder="Buscar por nombre, categoría o descripción…"
+        />
       )}
 
       {cargando ? (
@@ -209,7 +199,7 @@ export default function TablaAccesorios({ refresh = 0 }) {
                         className="tp-thumb"
                       />
                     ) : (
-                      <div className="tp-thumb tp-thumb-empty" aria-hidden="true">🎀</div>
+                      <div className="tp-thumb tp-thumb-empty" aria-hidden="true"><LuGift /></div>
                     )}
                   </td>
                   <td className="tp-nombre">{acc.nombre}</td>
@@ -223,13 +213,13 @@ export default function TablaAccesorios({ refresh = 0 }) {
                         className="tp-btn tp-btn-edit"
                         onClick={() => abrirEdicion(acc)}
                       >
-                        ✎ Editar
+                        <LuPencil /> Editar
                       </button>
                       <button
                         className="tp-btn tp-btn-delete"
                         onClick={() => eliminarAccesorio(acc)}
                       >
-                        🗑 Eliminar
+                        <LuTrash2 /> Eliminar
                       </button>
                     </div>
                   </td>
@@ -239,7 +229,7 @@ export default function TablaAccesorios({ refresh = 0 }) {
                 <tr>
                   <td colSpan="7">
                     <div className="tp-empty">
-                      <span className="tp-empty-icon" aria-hidden="true">📭</span>
+                      <span className="tp-empty-icon" aria-hidden="true"><LuInbox /></span>
                       <p>
                         {busqueda
                           ? `Sin resultados para "${busqueda}"`
@@ -260,13 +250,14 @@ export default function TablaAccesorios({ refresh = 0 }) {
           <div className="tp-modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="tp-modal-header">
               <h3>Editar accesorio</h3>
-              <button className="tp-close-x" onClick={cerrarEdicion} aria-label="Cerrar">×</button>
+              <button className="tp-close-x" onClick={cerrarEdicion} aria-label="Cerrar"><LuX /></button>
             </div>
 
             <form onSubmit={guardarCambios} className="tp-modal-body">
               <div className="tp-form-row">
                 <label>Nombre</label>
                 <input
+                  autoFocus
                   type="text"
                   name="nombre"
                   value={form.nombre}

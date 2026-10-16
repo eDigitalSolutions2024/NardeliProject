@@ -1,6 +1,9 @@
+import { pedirConfirmacion } from '../utils/avisos';
+import { LuTriangleAlert } from 'react-icons/lu';
 import React, { useState } from 'react';
 import API_BASE_URL from '../api';
 import { jsonAuthHeaders } from '../session';
+import PasswordInput from './PasswordInput';
 import './Roles.css';
 
 // Pantalla obligatoria en el primer ingreso: la contraseña temporal que generó
@@ -18,6 +21,14 @@ export default function CambiarPassword({ user, forzado = true, onChanged, onLog
     if (nueva.length < 8) return setError('La nueva contraseña debe tener al menos 8 caracteres.');
     if (!/[A-Za-z]/.test(nueva) || !/\d/.test(nueva)) return setError('Debe incluir letras y números.');
     if (nueva !== confirmar) return setError('La confirmación no coincide.');
+
+    if (forzado) {
+      const ok = await pedirConfirmacion(
+        'Solo podrás cambiar tu contraseña esta vez y el administrador podrá verla. Guárdala bien. ¿Quieres guardarla?',
+        { titulo: 'Guarda bien tu contraseña', confirmar: 'Sí, guardar', peligro: false }
+      );
+      if (!ok) return;
+    }
 
     setGuardando(true);
     try {
@@ -46,21 +57,32 @@ export default function CambiarPassword({ user, forzado = true, onChanged, onLog
             : 'Escribe tu contraseña actual y la nueva.'}
         </p>
 
+        {forzado && (
+          <div className="rl-warn">
+            <strong><LuTriangleAlert /> Importante: solo podrás cambiarla esta vez</strong>
+            <ul>
+              <li>Después de este cambio ya no podrás volver a cambiarla tú; si la necesitas, pídesela al administrador.</li>
+              <li>Guárdala bien: anótala en un lugar seguro.</li>
+              <li>El administrador podrá ver tu contraseña.</li>
+            </ul>
+          </div>
+        )}
+
         {error && <div className="rl-msg err">{error}</div>}
 
         <form onSubmit={submit}>
           <div className="rl-field">
             <label>{forzado ? 'Contraseña temporal' : 'Contraseña actual'}</label>
-            <input type="password" value={actual} onChange={(e) => setActual(e.target.value)} autoComplete="current-password" required autoFocus />
+            <PasswordInput value={actual} onChange={(e) => setActual(e.target.value)} autoComplete="current-password" required autoFocus />
           </div>
           <div className="rl-field">
             <label>Nueva contraseña</label>
-            <input type="password" value={nueva} onChange={(e) => setNueva(e.target.value)} autoComplete="new-password" required />
+            <PasswordInput value={nueva} onChange={(e) => setNueva(e.target.value)} autoComplete="new-password" required />
             <small style={{ color: '#6b7280' }}>Mínimo 8 caracteres, con letras y números.</small>
           </div>
           <div className="rl-field">
             <label>Confirmar nueva contraseña</label>
-            <input type="password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} autoComplete="new-password" required />
+            <PasswordInput value={confirmar} onChange={(e) => setConfirmar(e.target.value)} autoComplete="new-password" required />
           </div>
           <button className="rl-btn" style={{ width: '100%' }} disabled={guardando}>
             {guardando ? 'Guardando…' : 'Guardar contraseña'}

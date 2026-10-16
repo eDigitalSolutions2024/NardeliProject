@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { requirePermission, ROLES_STAFF } = require('../utils/permisos');
 const bitacora = require('../utils/bitacora');
+const boveda = require('../utils/boveda');
 
 // Código secreto para poder crear cuentas de administrador desde el formulario
 // público de registro. Antes cualquiera en internet podía crear una cuenta admin
@@ -72,6 +73,8 @@ const vista = (u) => ({
   activo: u.activo !== false,
   mustChangePassword: !!u.mustChangePassword,
   tienePassword: !!u.password,
+  passwordVisible: !!u.passwordRecuperable,
+  passwordCambiadaPorUsuario: !!u.passwordCambiadaPorUsuario,
   lastLoginAt: u.lastLoginAt || null,
   createdAt: u.createdAt,
 });
@@ -85,7 +88,7 @@ async function quedaOtroAdminActivo(excluirId) {
 router.get('/', soloAdmin, async (req, res) => {
   const incluirClientes = req.query.clientes === '1';
   const filtro = incluirClientes ? {} : { role: { $in: ROLES_ASIGNABLES } };
-  const items = await Usuario.find(filtro).sort({ createdAt: -1 }).lean();
+  const items = await Usuario.find(filtro).select('+passwordRecuperable').sort({ createdAt: -1 }).lean();
   // Administradores siempre arriba; dentro de cada grupo, los más recientes primero.
   const peso = (u) => (u.role === 'admin' ? 0 : 1);
   items.sort((a, b) => peso(a) - peso(b));
@@ -125,6 +128,7 @@ router.post('/', soloAdmin, async (req, res) => {
       email,
       role,
       password: await bcrypt.hash(passwordTemporal, 10),
+      passwordRecuperable: boveda.cifrar(passwordTemporal),
       mustChangePassword: true,
       activo: true,
       emailVerified: true,
@@ -192,6 +196,8 @@ router.post('/:id/reset-password', soloAdmin, async (req, res) => {
     }
     const passwordTemporal = generarPasswordTemporal();
     u.password = await bcrypt.hash(passwordTemporal, 10);
+    u.passwordRecuperable = boveda.cifrar(passwordTemporal);
+    u.passwordCambiadaPorUsuario = false;
     u.mustChangePassword = true;
     await u.save();
     await bitacora.registrar(req.user, 'usuario.reset_password', { email: u.email });
@@ -199,6 +205,49 @@ router.post('/:id/reset-password', soloAdmin, async (req, res) => {
   } catch (e) {
     console.error('usuarios reset error:', e);
     res.status(500).json({ ok: false, msg: 'No se pudo restablecer la contraseña' });
+  }
+});
+
+// Ver la contraseña ACTUAL de un usuario (solo admin; cada consulta queda en la bitácora).
+router.get('/:id/password', soloAdmin, async (req, res) => {
+  try {
+    const u = await Usuario.findById(req.params.id).select('+passwordRecuperable email fullname');
+    if (!u) return res.status(404).json({ ok: false, msg: 'Usuario no encontrado' });
+    const password = boveda.descifrar(u.passwordRecuperable);
+    await bitacora.registrar(req.user, 'usuario.ver_password', { email: u.email, disponible: !!password });
+    if (!password) {
+      return res.json({ ok: true, password: null, msg: 'Esta contraseña se guardó antes de que existiera la consulta. Cámbiala o restablécela para poder verla.' });
+    }
+    res.json({ ok: true, password });
+  } catch (e) {
+    console.error('usuarios ver password error:', e);
+    res.status(500).json({ ok: false, msg: 'No se pudo consultar la contraseña' });
+  }
+});
+
+// Cambiar la contraseña de un usuario a una que escribe el admin (también la suya).
+// obligarCambio (por defecto true): el usuario deberá cambiarla en su siguiente ingreso (su único cambio).
+router.put('/:id/password', soloAdmin, async (req, res) => {
+  try {
+    const u = await Usuario.findById(req.params.id);
+    if (!u) return res.status(404).json({ ok: false, msg: 'Usuario no encontrado' });
+    const nueva = String(req.body?.password ?? '');
+    if (nueva.length < 8 || nueva.length > 72) {
+      return res.status(400).json({ ok: false, msg: 'La contraseña debe tener entre 8 y 72 caracteres' });
+    }
+    const obligarCambio = req.body?.obligarCambio !== false;
+    const esUnoMismo = String(u._id) === String(req.user.sub);
+    u.password = await bcrypt.hash(nueva, 10);
+    u.passwordRecuperable = boveda.cifrar(nueva);
+    u.passwordCambiadaPorUsuario = false;
+    // Si el admin se cambia la suya no se le obliga a cambiarla otra vez.
+    u.mustChangePassword = esUnoMismo ? false : obligarCambio;
+    await u.save();
+    await bitacora.registrar(req.user, 'usuario.cambiar_password', { email: u.email, obligarCambio: u.mustChangePassword });
+    res.json({ ok: true, usuario: vista(u) });
+  } catch (e) {
+    console.error('usuarios cambiar password error:', e);
+    res.status(500).json({ ok: false, msg: 'No se pudo cambiar la contraseña' });
   }
 });
 

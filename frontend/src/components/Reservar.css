@@ -229,3 +229,53 @@
     width: 100%;
   }
 }
+
+
+/* ===== Reservar / Nueva cotización (rediseño) ===== */
+.reserva-form-container { max-width: 780px; border-top: none; border: 1px solid #efe6f3; border-radius: 20px; padding: 2rem 2.2rem 2.2rem; box-shadow: 0 1px 2px rgba(73, 22, 86, 0.04), 0 24px 44px -26px rgba(73, 22, 86, 0.35); position: relative; overflow: hidden; }
+.reserva-form-container::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 5px; background: linear-gradient(90deg, #491656, #7b247f 55%, #f7e0a5); }
+.reserva-form-container h2 { color: #491656; font-size: 1.6rem; font-weight: 800; letter-spacing: -0.3px; margin: 0.4rem 0 1.6rem; }
+
+/* Campos */
+.reserva-form-container input,
+.reserva-form-container textarea { box-sizing: border-box; width: 100%; padding: 0.75rem 0.95rem; font-size: 0.95rem; font-family: inherit; color: #333; border: 1px solid #e2d6e8; border-radius: 12px; background: #fff; }
+.reserva-form-container input[type="checkbox"] { width: auto; }
+.reserva-form-container input::placeholder, .reserva-form-container textarea::placeholder { color: #a392ab; }
+.reserva-form-container input:hover, .reserva-form-container textarea:hover { border-color: #c9aedb; }
+.reserva-form-container input:focus, .reserva-form-container textarea:focus { border-color: #7b247f; box-shadow: 0 0 0 3px rgba(123, 36, 127, 0.14); background: #fff; outline: none; }
+.reserva-form-container textarea { min-height: 110px; }
+
+/* Rejilla de dos columnas y títulos de sección */
+.rv-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.rv-section { margin: 1.5rem 0 0.7rem; padding-bottom: 0.45rem; border-bottom: 1px solid #f1e8f5; color: #8a7a92; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; }
+.rv-field { display: flex; flex-direction: column; gap: 0.35rem; }
+.rv-field > span { color: #5c1a6e; font-size: 0.82rem; font-weight: 700; }
+
+/* Interruptor ¿Es cotización? */
+.rv-toggle { display: flex; align-items: center; gap: 0.7rem; padding: 0.8rem 1rem; margin-bottom: 0.9rem; background: #faf5fc; border: 1px solid #efe6f3; border-radius: 14px; color: #491656; font-weight: 700; cursor: pointer; }
+.rv-toggle small { color: #8a7a92; font-weight: 500; }
+.rv-toggle input[type="checkbox"] { appearance: none; -webkit-appearance: none; position: relative; flex-shrink: 0; width: 42px; height: 24px; padding: 0; border: none; border-radius: 999px; background: #d6c8dc; cursor: pointer; transition: background 0.2s ease; }
+.rv-toggle input[type="checkbox"]::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); transition: transform 0.2s ease; }
+.rv-toggle input[type="checkbox"]:checked { background: linear-gradient(135deg, #7b247f, #491656); }
+.rv-toggle input[type="checkbox"]:checked::after { transform: translateX(18px); }
+
+/* Aviso de borrador */
+.rv-draft { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; padding: 0.7rem 1rem; margin-bottom: 1.1rem; background: #fff8e8; border: 1px solid #f0d79a; border-radius: 12px; color: #7a5200; font-size: 0.85rem; }
+.rv-draft span { display: inline-flex; align-items: center; gap: 0.45rem; }
+.rv-draft-btn { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.35rem 0.7rem !important; border: 1px solid #f0c9c4 !important; border-radius: 9px !important; background: #fff !important; color: #c0392b !important; font-size: 0.8rem !important; font-weight: 700 !important; cursor: pointer; }
+.rv-draft-btn:hover { background: #fdf0ee !important; }
+
+/* Fecha + calendario de disponibilidad */
+.fecha-campo-label { font-size: 0.82rem; font-weight: 700; color: #5c1a6e; }
+.fecha-estado-badge { display: inline-flex; align-items: center; gap: 0.4rem; }
+.fecha-estado-badge svg, .conflicto-tag svg, .cotizaciones-dia-titulo svg { flex-shrink: 0; vertical-align: -0.15em; }
+.evento-existente-card, .cotizacion-existente-card { border-radius: 12px; }
+.reserva-form-container .evento-existente-btn { padding: 6px 14px; border-radius: 9px; font-weight: 600; }
+
+/* Botón de enviar */
+.reserva-form-container button[type="submit"] { margin-top: 1.4rem; width: 100%; padding: 0.95rem; border-radius: 14px; font-size: 1.02rem; font-weight: 700; background: linear-gradient(135deg, #7b247f, #491656); box-shadow: 0 12px 22px -12px #491656; transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease; }
+.reserva-form-container button[type="submit"]:hover:not(:disabled) { filter: brightness(1.1); box-shadow: 0 16px 26px -12px #491656; background: linear-gradient(135deg, #7b247f, #491656); }
+.reserva-form-container button[type="submit"]:disabled { opacity: 0.7; cursor: progress; }
+.reserva-form-container > p { color: #491656; }
+
+@media (max-width: 640px) { .rv-grid { grid-template-columns: 1fr; } .reserva-form-container { padding: 1.4rem 1.2rem 1.5rem; } }

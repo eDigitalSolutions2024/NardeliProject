@@ -1,3 +1,7 @@
+import TimeField from './ui/TimeField';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { LuClipboardList, LuX, LuHourglass, LuKeyRound, LuCalendarDays, LuBan, LuMessageSquare, LuCircleCheck, LuCircleX, LuTriangleAlert } from 'react-icons/lu';
+import DateField from './ui/DateField';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
@@ -5,6 +9,11 @@ import API_BASE_URL, { authHeaders } from '../api';
 import useDisponibilidadReservas from '../hooks/useDisponibilidadReservas';
 import MiniCalendarioDisponibilidad from './MiniCalendarioDisponibilidad';
 import './Reservar.css';
+
+// Íconos para el diálogo de SweetAlert (que se arma con HTML, no con React)
+const ICO_HOURGLASS = renderToStaticMarkup(<LuHourglass />);
+const ICO_KEY = renderToStaticMarkup(<LuKeyRound />);
+const ICO_CALENDAR = renderToStaticMarkup(<LuCalendarDays />);
 
 const BORRADOR_KEY = 'nardeli_reserva_borrador';
 
@@ -45,7 +54,7 @@ function ContadorHold({ expiraEn }) {
   if (!expiraEn || restanteMs === null) return null;
 
   if (restanteMs <= 0) {
-    return <span className="cotizacion-hold cotizacion-hold-libre">🟢 fecha ya libre</span>;
+    return <span className="cotizacion-hold cotizacion-hold-libre"><LuCircleCheck /> fecha ya libre</span>;
   }
 
   const h = Math.floor(restanteMs / 3600000);
@@ -53,7 +62,7 @@ function ContadorHold({ expiraEn }) {
   const s = Math.floor((restanteMs % 60000) / 1000);
   return (
     <span className="cotizacion-hold" title="Después de este tiempo cualquiera puede cotizar esta fecha sin contraseña">
-      ⏳ libre en {h}h {m}m {s}s
+      <LuHourglass /> libre en {h}h {m}m {s}s
     </span>
   );
 }
@@ -289,18 +298,18 @@ function getDashboardModeFromRole(role) {
 
               <p class="nd-swal-msg">${err.msg || 'Ya existe una cotización reciente para esa fecha. Ingresa la contraseña de un administrador para continuar.'}</p>
               ${expiraEnMs ? `
-                <div class="nd-swal-countdown">⏳ La fecha queda libre en: <span id="hold-countdown">calculando…</span></div>
+                <div class="nd-swal-countdown">${ICO_HOURGLASS} La fecha queda libre en: <span id="hold-countdown">calculando…</span></div>
               ` : ''}
 
               <div class="nd-swal-section">
-                <div class="nd-swal-section-label">🔑 Forzar con contraseña de administrador</div>
+                <div class="nd-swal-section-label">${ICO_KEY} Forzar con contraseña de administrador</div>
                 <input id="swal-admin-password" type="password" class="nd-swal-input" placeholder="Contraseña de administrador">
               </div>
 
               <div class="nd-swal-divider">o</div>
 
               <div class="nd-swal-section">
-                <div class="nd-swal-section-label">📅 Cambia la fecha de esta reserva</div>
+                <div class="nd-swal-section-label">${ICO_CALENDAR} Cambia la fecha de esta reserva</div>
                 <div class="nd-date-selected" id="nd-date-trigger-text">Elige una fecha…</div>
                 <div class="nd-date-panel">
                   <div class="nd-date-panel-header">
@@ -511,8 +520,8 @@ function getDashboardModeFromRole(role) {
 
       // Si no se pidió dashboard, deja el mensaje informativo
       setMensaje(esEvento
-        ? '✅ Evento creado correctamente.'
-        : '✅ Cotización guardada correctamente.'
+        ? 'Evento creado correctamente.'
+        : 'Cotización guardada correctamente.'
       );
       /*
       try {
@@ -533,7 +542,7 @@ function getDashboardModeFromRole(role) {
 
     } catch (error) {
       console.error('Error al guardar:', error);
-      setMensaje('❌ Error de conexión');
+      setMensaje('Error de conexión');
       if (prewin) prewin.close();
     } finally {
       setEnviando(false);
@@ -547,31 +556,10 @@ function getDashboardModeFromRole(role) {
       <h2>{soloCotizacion ? 'Nueva cotización' : 'Reservar Evento'}</h2>
 
       {tieneBorrador && (
-        <div style={{
-          background: '#fff8e1',
-          border: '1px solid #f0a500',
-          borderRadius: 8,
-          padding: '8px 14px',
-          marginBottom: 12,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          fontSize: 13,
-        }}>
-          <span>📋 Tienes datos guardados de un formulario anterior.</span>
-          <button
-            type="button"
-            onClick={limpiarBorrador}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#c0392b',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: 13,
-            }}
-          >
-            Limpiar ✕
+        <div className="rv-draft">
+          <span><LuClipboardList /> Tienes datos guardados de un formulario anterior.</span>
+          <button type="button" className="rv-draft-btn" onClick={limpiarBorrador}>
+            Limpiar <LuX />
           </button>
         </div>
       )}
@@ -579,14 +567,14 @@ function getDashboardModeFromRole(role) {
       <form onSubmit={handleSubmit}>
         {/* Toggle cotización/evento */}
         {!soloCotizacion && (
-        <label style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+        <label className="rv-toggle">
           <input
             type="checkbox"
             name="esCotizacion"
             checked={esCotizacion}
             onChange={handleChange}
           />
-          ¿Es cotización? <small style={{opacity:.7}}>
+          ¿Es cotización? <small>
             {esCotizacion ? '(se guardará como Cotización)' : '(se guardará como Evento)'}
           </small>
         </label>
@@ -603,26 +591,37 @@ function getDashboardModeFromRole(role) {
           />
         )}
 
+        <div className="rv-grid">
         <input name="cliente" type="text" placeholder="Nombre del cliente " value={formData.cliente} onChange={handleChange} required />
         <input name="correo" type="email" placeholder="Correo electrónico" value={formData.correo} onChange={handleChange} required />
         <input name="tipoEvento" type="text" placeholder="Tipo de evento" value={formData.tipoEvento} onChange={handleChange} required />
         <input name="telefono" type="tel" placeholder="Número de teléfono" value={formData.telefono} onChange={handleChange} required />
         <input name="cantidadPersonas" type="number" min="1" placeholder="Cantidad de personas" value={formData.cantidadPersonas} onChange={handleChange} required />
+        </div>
+
+        <div className="rv-section">Fecha y horario</div>
         <div className="fecha-disponibilidad-wrapper">
           <div className="fecha-campo">
             <label className="fecha-campo-label">Fecha del evento</label>
-            <input name="fecha" type="date" value={formData.fecha} onChange={handleChange} required />
+            <DateField
+              name="fecha"
+              value={formData.fecha}
+              onChange={(v) => handleChange({ target: { name: 'fecha', value: v, type: 'date' } })}
+              required
+              clearable={false}
+              style={{ width: '100%' }}
+            />
 
             {formData.fecha && estadoFechaActual && (
               <>
                 {horarioCompleto ? (
                   <div className={`fecha-estado-badge ${estadoFechaActual.ocupado ? 'ocupado' : 'disponible'}`}>
-                    {estadoFechaActual.ocupado ? '🔴 Horario ocupado' : '🟢 Fecha y horario disponibles'}
+                    {estadoFechaActual.ocupado ? <><LuCircleX /> Horario ocupado</> : <><LuCircleCheck /> Fecha y horario disponibles</>}
                   </div>
                 ) : (
                   estadoFechaActual.eventos.length > 0 && (
                     <div className="fecha-estado-badge neutral">
-                      🟡 Ya hay {estadoFechaActual.eventos.length} evento(s) ese día — indica el horario para verificar
+                      <LuTriangleAlert /> Ya hay {estadoFechaActual.eventos.length} evento(s) ese día — indica el horario para verificar
                     </div>
                   )
                 )}
@@ -637,7 +636,7 @@ function getDashboardModeFromRole(role) {
                           <span>Cliente: {ev.cliente || 'N/D'}</span>
                           <span>Invitados: {ev.cantidadPersonas ?? 'N/D'}</span>
                           <span>Horario: {ev.horaInicio || '?'} – {ev.horaFin || '?'}</span>
-                          {enConflicto && <span className="conflicto-tag">⛔ Se empalma con tu horario</span>}
+                          {enConflicto && <span className="conflicto-tag"><LuBan /> Se empalma con tu horario</span>}
                           <button
                             type="button"
                             className="evento-existente-btn"
@@ -654,7 +653,7 @@ function getDashboardModeFromRole(role) {
                 {estadoFechaActual.cotizaciones.length > 0 && (
                   <div className="cotizaciones-dia-lista">
                     <small className="cotizaciones-dia-titulo">
-                      💬 Cotizaciones ese día (solo referencia, no bloquean):
+                      <LuMessageSquare /> Cotizaciones ese día (solo referencia, no bloquean):
                     </small>
                     {estadoFechaActual.cotizaciones.map((c) => (
                       <div key={c.id} className="cotizacion-existente-card">
@@ -678,8 +677,10 @@ function getDashboardModeFromRole(role) {
             />
           </div>
         </div>
-        <input name="horaInicio" type="time" value={formData.horaInicio} onChange={handleChange} required />
-        <input name="horaFin" type="time" value={formData.horaFin} onChange={handleChange} required />
+        <div className="rv-grid">
+          <label className="rv-field"><span>Hora de inicio</span><TimeField name="horaInicio" value={formData.horaInicio} onChange={(v) => handleChange({ target: { name: 'horaInicio', value: v, type: 'time' } })} required clearable={false} style={{ width: '100%' }} /></label>
+          <label className="rv-field"><span>Hora de fin</span><TimeField name="horaFin" value={formData.horaFin} onChange={(v) => handleChange({ target: { name: 'horaFin', value: v, type: 'time' } })} required clearable={false} style={{ width: '100%' }} /></label>
+        </div>
         <textarea name="descripcion" placeholder="Observaciones" value={formData.descripcion} onChange={handleChange} />
 
         <button type="submit" data-action="dashboard" disabled={enviando}>

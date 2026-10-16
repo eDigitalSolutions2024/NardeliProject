@@ -1,4 +1,5 @@
 // pages/IngresarCodigo.jsx
+import { aviso } from '../utils/avisos';
 import { useEffect, useState } from 'react';
 import API_BASE_URL from '../api';
 
@@ -32,7 +33,7 @@ export default function IngresarCodigo() {
       : '/cliente/dashboard';
      window.location.href = next;
     } catch (err) {
-      alert(err.message || 'Error verificando código');
+      aviso(err.message || 'Error verificando código');
     } finally {
       setLoading(false);
     }

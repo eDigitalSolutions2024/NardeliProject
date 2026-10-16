@@ -1,0 +1,19 @@
+.fx-sparkles {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.fx-sparkle {
+  position: absolute;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 10px 2px currentColor;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-sparkle { opacity: 0.5; }
+}

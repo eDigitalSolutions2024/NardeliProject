@@ -1,3 +1,7 @@
+import PasswordInput from './PasswordInput';
+import { pedirConfirmacion } from '../utils/avisos';
+import { LuPencil, LuKeyRound, LuBan, LuCheck, LuCopy, LuLock } from 'react-icons/lu';
+import SelectField from './ui/SelectField';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import API_BASE_URL from '../api';
 import { jsonAuthHeaders } from '../session';
@@ -35,7 +39,7 @@ function ModalPassword({ titulo, usuario, password, onClose }) {
         </p>
         <div className="rl-pass-box"><code>{password}</code></div>
         <div className="rl-modal-actions">
-          <button className="rl-btn sec" onClick={copiar}>{copiado ? '✓ Copiada' : 'Copiar'}</button>
+          <button className="rl-btn sec" onClick={copiar}>{copiado ? <><LuCheck /> Copiada</> : 'Copiar'}</button>
           <button className="rl-btn" onClick={onClose}>Listo, ya la anoté</button>
         </div>
       </div>
@@ -51,6 +55,24 @@ function ModalUsuario({ usuario, esUnoMismo, onClose, onSaved }) {
   const [role, setRole] = useState(usuario?.role || 'cotizador');
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
+
+  // Al editar: contraseña actual (consulta registrada en la bitácora) y, opcionalmente, una nueva con confirmación.
+  const [actual, setActual] = useState({ estado: edita ? 'cargando' : 'ok', password: null, msg: '' });
+  const [nueva, setNueva] = useState('');
+  const [confirmar, setConfirmar] = useState('');
+  const [obligar, setObligar] = useState(true);
+  const [copiadoActual, setCopiadoActual] = useState(false);
+  useEffect(() => {
+    if (!edita) return;
+    let vivo = true;
+    api(`/usuarios/${usuario.id}/password`)
+      .then((d) => { if (vivo) setActual({ estado: 'ok', password: d.password, msg: d.msg }); })
+      .catch(() => { if (vivo) setActual({ estado: 'error', password: null, msg: '' }); });
+    return () => { vivo = false; };
+  }, [edita, usuario?.id]);
+  const copiarActual = async () => {
+    try { await navigator.clipboard.writeText(actual.password); setCopiadoActual(true); } catch { /* sin permiso */ }
+  };
 
   // Contraseña temporal generada por el sistema, visible ANTES de crear la cuenta.
   const [password, setPassword] = useState('');
@@ -71,12 +93,23 @@ function ModalUsuario({ usuario, esUnoMismo, onClose, onSaved }) {
   const guardar = async (e) => {
     e.preventDefault();
     setError('');
+    const quiereCambiar = edita && (nueva !== '' || confirmar !== '');
+    if (quiereCambiar) {
+      if (nueva.length < 8) return setError('La nueva contraseña debe tener al menos 8 caracteres.');
+      if (nueva !== confirmar) return setError('La confirmación no coincide con la nueva contraseña.');
+    }
     setGuardando(true);
     try {
       const data = edita
         ? await api(`/usuarios/${usuario.id}`, { method: 'PUT', body: JSON.stringify({ fullname, role }) })
         : await api('/usuarios', { method: 'POST', body: JSON.stringify({ fullname, email, role, password }) });
-      onSaved(data);
+      if (quiereCambiar) {
+        await api(`/usuarios/${usuario.id}/password`, {
+          method: 'PUT',
+          body: JSON.stringify({ password: nueva, obligarCambio: esUnoMismo ? false : obligar }),
+        });
+      }
+      onSaved(data, quiereCambiar ? nueva : null);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -99,9 +132,13 @@ function ModalUsuario({ usuario, esUnoMismo, onClose, onSaved }) {
         </div>
         <div className="rl-field">
           <label>Rol</label>
-          <select value={role} onChange={(e) => setRole(e.target.value)} disabled={esUnoMismo}>
-            {ROLES.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
-          </select>
+          <SelectField
+            value={role}
+            onChange={setRole}
+            disabled={esUnoMismo}
+            options={ROLES.map((r) => ({ value: r.id, label: r.label }))}
+            style={{ width: '100%' }}
+          />
           {esUnoMismo && <small style={{ color: '#6b7280' }}>No puedes cambiar tu propio rol.</small>}
         </div>
         {!edita && (
@@ -112,13 +149,49 @@ function ModalUsuario({ usuario, esUnoMismo, onClose, onSaved }) {
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
               <button type="button" className="rl-btn sec sm" onClick={() => setVerPassword((v) => !v)}>{verPassword ? 'Ocultar' : 'Mostrar'}</button>
-              <button type="button" className="rl-btn sec sm" onClick={copiar} disabled={!password}>{copiado ? '✓ Copiada' : 'Copiar'}</button>
+              <button type="button" className="rl-btn sec sm" onClick={copiar} disabled={!password}>{copiado ? <><LuCheck /> Copiada</> : 'Copiar'}</button>
               <button type="button" className="rl-btn sec sm" onClick={generar}>↻ Generar otra</button>
             </div>
             <small style={{ color: '#6b7280' }}>
-              Cópiala y entrégala al usuario. Se guarda cifrada: después de crear la cuenta nadie podrá volver a verla,
-              y el usuario deberá cambiarla por una propia en su primer ingreso.
+              Cópiala y entrégala al usuario. Se guarda cifrada y podrás volver a verla desde “Editar”.
+              El usuario deberá cambiarla por una propia en su primer ingreso (solo podrá cambiarla esa vez).
             </small>
+          </div>
+        )}
+        {edita && (
+          <div className="rl-pwsec">
+            <div className="rl-pwsec-title"><LuLock /> Contraseña</div>
+
+            <div className="rl-field">
+              <label>Contraseña actual</label>
+              <div className="rl-pw-current">
+                {actual.estado === 'cargando' && <span className="rl-sub">Cargando…</span>}
+                {actual.estado === 'ok' && actual.password && (
+                  <>
+                    <code className="rl-pw-code">{actual.password}</code>
+                    <button type="button" className="rl-icon-btn" title="Copiar" onClick={copiarActual}>{copiadoActual ? <LuCheck /> : <LuCopy />}</button>
+                  </>
+                )}
+                {actual.estado === 'ok' && !actual.password && <span className="rl-sub" title={actual.msg}>No guardada: se mostrará cuando se le asigne una nueva.</span>}
+                {actual.estado === 'error' && <span className="rl-sub">No se pudo consultar.</span>}
+              </div>
+            </div>
+
+            <p className="rl-hint">Si no quieres cambiarla, deja las dos casillas vacías: no se modifica nada.</p>
+            <div className="rl-field">
+              <label>Nueva contraseña</label>
+              <PasswordInput value={nueva} onChange={(e) => setNueva(e.target.value)} autoComplete="new-password" placeholder="Opcional" />
+            </div>
+            <div className="rl-field">
+              <label>Confirmar nueva contraseña</label>
+              <PasswordInput value={confirmar} onChange={(e) => setConfirmar(e.target.value)} autoComplete="new-password" placeholder="Repite la nueva contraseña" />
+            </div>
+            {nueva && !esUnoMismo && (
+              <label className="rl-check">
+                <input type="checkbox" checked={obligar} onChange={(e) => setObligar(e.target.checked)} />
+                <span>Pedirle que la cambie por una propia en su siguiente ingreso (tendrá un único cambio)</span>
+              </label>
+            )}
           </div>
         )}
         <div className="rl-modal-actions">
@@ -129,6 +202,7 @@ function ModalUsuario({ usuario, esUnoMismo, onClose, onSaved }) {
     </div>
   );
 }
+
 
 /* ---------------- Pestaña: Usuarios ---------------- */
 function TabUsuarios({ currentUser }) {
@@ -150,8 +224,13 @@ function TabUsuarios({ currentUser }) {
   }, []);
   useEffect(() => { cargar(); }, [cargar]);
 
-  const alGuardar = (data) => {
+  const alGuardar = (data, nuevaPassword) => {
     setModal(null);
+    if (nuevaPassword) {
+      setAviso('Cambios y contraseña guardados.');
+      cargar();
+      return;
+    }
     if (data.passwordTemporal) {
       setPassword({ titulo: 'Usuario creado', usuario: data.usuario, password: data.passwordTemporal });
     } else {
@@ -162,14 +241,14 @@ function TabUsuarios({ currentUser }) {
 
   const cambiarActivo = async (u) => {
     const accion = u.activo ? 'desactivar' : 'reactivar';
-    if (!window.confirm(`¿Seguro que quieres ${accion} la cuenta de ${u.fullname || u.email}?`)) return;
+    if (!await pedirConfirmacion(`¿Seguro que quieres ${accion} la cuenta de ${u.fullname || u.email}?`)) return;
     setError(''); setAviso('');
     try { await api(`/usuarios/${u.id}`, { method: 'PUT', body: JSON.stringify({ activo: !u.activo }) }); cargar(); }
     catch (e) { setError(e.message); }
   };
 
   const reset = async (u) => {
-    if (!window.confirm(`Se generará una contraseña temporal nueva para ${u.fullname || u.email} y la actual dejará de servir. ¿Continuar?`)) return;
+    if (!await pedirConfirmacion(`Se generará una contraseña temporal nueva para ${u.fullname || u.email} y la actual dejará de servir. ¿Continuar?`)) return;
     setError(''); setAviso('');
     try {
       const data = await api(`/usuarios/${u.id}/reset-password`, { method: 'POST' });
@@ -197,19 +276,27 @@ function TabUsuarios({ currentUser }) {
                 const yo = String(u.id) === miId;
                 return (
                   <tr key={u.id} className={u.activo ? '' : 'off'}>
-                    <td><strong>{u.fullname || '—'}</strong>{yo && <span style={{ color: '#6b7280' }}> (tú)</span>}</td>
+                    <td>
+                      <div className="rl-name">
+                        <span className="rl-avatar" aria-hidden="true">{(u.fullname || u.email || '?').trim().charAt(0).toUpperCase()}</span>
+                        <div><strong>{u.fullname || '—'}</strong>{yo && <span className="rl-you"> (tú)</span>}</div>
+                      </div>
+                    </td>
                     <td>{u.email}</td>
                     <td><span className={`rl-pill ${u.role}`}>{rolLabel(u.role)}</span></td>
                     <td>
                       {!u.activo ? <span className="rl-pill warn">Desactivada</span>
                         : u.mustChangePassword ? <span className="rl-pill pend">Contraseña temporal</span>
                         : <span className="rl-pill ok">Activa</span>}
+                      {u.activo && !u.mustChangePassword && u.passwordCambiadaPorUsuario && <small className="rl-sub">Ya usó su cambio</small>}
                     </td>
                     <td>{fecha(u.lastLoginAt)}</td>
-                    <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
-                      <button className="rl-btn sec sm" onClick={() => setModal({ tipo: 'form', usuario: u })}>Editar</button>{' '}
-                      {!yo && <button className="rl-btn sec sm" onClick={() => reset(u)}>Restablecer contraseña</button>}{' '}
-                      {!yo && <button className={`rl-btn sm ${u.activo ? 'danger' : ''}`} onClick={() => cambiarActivo(u)}>{u.activo ? 'Desactivar' : 'Reactivar'}</button>}
+                    <td style={{ textAlign: 'right' }}>
+                      <div className="rl-actions">
+                      <button className="rl-btn sec sm" onClick={() => setModal({ tipo: 'form', usuario: u })}><LuPencil /> Editar</button>{' '}
+                      {!yo && <button className="rl-btn sec sm" onClick={() => reset(u)}><LuKeyRound /> Restablecer</button>}{' '}
+                      {!yo && <button className={`rl-btn sm ${u.activo ? 'danger' : ''}`} onClick={() => cambiarActivo(u)}>{u.activo ? <><LuBan /> Desactivar</> : <><LuCheck /> Reactivar</>}</button>}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -320,6 +407,8 @@ const ACCIONES = {
   'usuario.crear': 'Creó un usuario',
   'usuario.editar': 'Editó un usuario',
   'usuario.reset_password': 'Restableció una contraseña',
+  'usuario.ver_password': 'Consultó una contraseña',
+  'usuario.cambiar_password': 'Cambió una contraseña',
   'permisos.actualizar': 'Cambió permisos',
 };
 function describir(it) {
@@ -327,6 +416,8 @@ function describir(it) {
   if (it.accion === 'usuario.crear') return `${d.email} (${rolLabel(d.role)})`;
   if (it.accion === 'usuario.editar') return `${d.email}: ${Object.entries(d.cambios || {}).map(([k, v]) => `${k} → ${v}`).join(', ')}`;
   if (it.accion === 'usuario.reset_password') return d.email;
+  if (it.accion === 'usuario.ver_password') return d.email;
+  if (it.accion === 'usuario.cambiar_password') return d.email;
   if (it.accion === 'permisos.actualizar') return (d.cambios || []).map((c) => `${rolLabel(c.rol)}: ${c.permiso} ${c.a ? 'activado' : 'desactivado'}`).join('; ');
   return JSON.stringify(d);
 }
@@ -356,7 +447,14 @@ function TabBitacora() {
 export default function UsuariosRoles({ currentUser }) {
   const [tab, setTab] = useState('usuarios');
   return (
-    <div className="dashboard-content">
+    <div className="dashboard-content nd-wide">
+      <div className="nd-welcome">
+        <div>
+          <h1>Usuarios y roles</h1>
+          <p>Administra las cuentas del sistema y lo que puede hacer cada rol.</p>
+        </div>
+      </div>
+
       <div className="rl-tabs">
         <button className={`rl-tab ${tab === 'usuarios' ? 'active' : ''}`} onClick={() => setTab('usuarios')}>Usuarios</button>
         <button className={`rl-tab ${tab === 'permisos' ? 'active' : ''}`} onClick={() => setTab('permisos')}>Permisos por rol</button>

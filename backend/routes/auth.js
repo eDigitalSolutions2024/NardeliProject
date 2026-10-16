@@ -8,6 +8,7 @@ const { generarCodigo, hashCodigo, verificarCodigo } = require('../utils/magic')
 const mailer = require('../utils/mailer');
 const bcrypt = require('bcryptjs');
 const { requireSesion } = require('../utils/permisos');
+const boveda = require('../utils/boveda');
 
 // === ENV ===
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -308,11 +309,18 @@ router.post('/cambiar-password', requireSesion({ permitirCambioPassword: true })
 
     const user = await Usuario.findById(req.user.sub);
     if (!user || !user.password) return res.status(400).json({ ok: false, msg: 'Esta cuenta no usa contraseña' });
+    // Solo hay UN cambio por contraseña asignada: cuando el admin la asigna (mustChangePassword) y el usuario la cambia.
+    if (!user.mustChangePassword) {
+      return res.status(403).json({ ok: false, code: 'PASSWORD_CHANGE_NOT_ALLOWED', msg: 'Ya usaste tu único cambio de contraseña. Si necesitas otra, pídesela al administrador.' });
+    }
     if (!(await bcrypt.compare(String(actual), user.password))) {
       return res.status(401).json({ ok: false, msg: 'La contraseña actual no es correcta' });
     }
 
     user.password = await bcrypt.hash(String(nueva), 10);
+    user.passwordRecuperable = boveda.cifrar(String(nueva));
+    user.passwordCambiadaPorUsuario = true;
+    user.passwordCambiadaEn = new Date();
     user.mustChangePassword = false;
     await user.save();
 

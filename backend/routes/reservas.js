@@ -72,6 +72,25 @@ const { requirePermission, usuarioOpcional } = require('../utils/permisos');
 const requireStaff = requirePermission('eventos.gestionar');
 const requireListar = requirePermission('eventos.gestionar', 'clientes.ver', 'calendario.ver', 'cotizaciones.ver_todas');
 const requireEliminar = requirePermission('eventos.eliminar');
+// Editar una reserva: staff de eventos, o un cotizador (que solo puede tocar SUS cotizaciones; se valida en el handler).
+const requireEditarReserva = requirePermission('eventos.gestionar', 'cotizaciones.crear');
+
+// Rutas de edición que siguen abiertas para los clientes (por su link): si quien llama es un
+// cotizador con sesión, solo puede modificar las cotizaciones que él creó. Anónimos, admin y
+// asistente no se ven afectados.
+async function soloEditaSusCotizaciones(req, res, next) {
+  try {
+    const u = await usuarioOpcional(req);
+    if (!u || u.role !== 'cotizador') return next();
+    if (!mongoose.isValidObjectId(req.params.id)) return next();
+    const r = await Reserva.findById(req.params.id).select('tipoReserva creadoPor').lean();
+    const esSuya = r && r.tipoReserva === 'cotizacion' && String(r.creadoPor?.id || '') === String(u._id);
+    if (esSuya) return next();
+    return res.status(403).json({ ok: false, msg: 'Solo puedes editar las cotizaciones que tú creaste' });
+  } catch (e) {
+    return next(e);
+  }
+}
 
 // ¿El nuevo mapa discountItems desmarca algún producto que hoy tiene
 // aplicarDescuento:true? Eso es "quitar" el descuento de ese producto, sin
@@ -581,22 +600,26 @@ router.post('/', async (req, res) => {
     return res.status(500).json({ msg: 'Error del servidor' });
   }
 });
-// ===== Mis cotizaciones (cotizador: solo las suyas; con 'ver_todas': todas) =====
+// ===== Cotizaciones (ver: todas si tiene 'ver_todas', si no solo las suyas; editar: las suyas, o cualquiera con 'eventos.gestionar') =====
 router.get('/mis-cotizaciones', requirePermission('cotizaciones.crear', 'cotizaciones.ver_todas'), async (req, res) => {
   try {
     const filtro = { tipoReserva: 'cotizacion' };
-    if (!req.permisos['cotizaciones.ver_todas']) filtro['creadoPor.id'] = req.user.sub;
+    const veTodas = !!req.permisos['cotizaciones.ver_todas'];
+    // Sin 'ver_todas' (o con ?solo=mias) solo ve las suyas.
+    if (!veTodas || req.query.solo === 'mias') filtro['creadoPor.id'] = req.user.sub;
+    const editaCualquiera = !!req.permisos['eventos.gestionar'];
 
     const docs = await Reserva.find(filtro)
       .sort({ createdAt: -1 })
       .limit(300)
-      .select('cliente correo telefono tipoEvento fecha horaInicio horaFin cantidadPersonas estado createdAt creadoPor utensilios')
+      .select('cliente correo telefono tipoEvento fecha horaInicio horaFin cantidadPersonas descripcion estado createdAt creadoPor utensilios')
       .lean();
 
     const items = docs.map((d) => {
       const subtotal = (d.utensilios || []).reduce((a, u) => a + Number(u.precio || 0) * Number(u.cantidad || 0), 0);
       const { utensilios, ...resto } = d;
-      return { ...resto, subtotal, articulos: (utensilios || []).length };
+      const esMia = String(d.creadoPor?.id || '') === String(req.user.sub);
+      return { ...resto, subtotal, articulos: (utensilios || []).length, esMia, puedeEditar: editaCualquiera || esMia };
     });
     res.json({ ok: true, items });
   } catch (e) {
@@ -1169,7 +1192,7 @@ async function enviarWhatsAppTemplateCambioEvento({
   return data;
 }*/
 
-router.put('/:id', requireStaff, async (req, res) => {
+router.put('/:id', requireEditarReserva, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -1180,6 +1203,19 @@ router.put('/:id', requireStaff, async (req, res) => {
     const prev = await Reserva.findById(id);
     if (!prev) {
       return res.status(404).json({ msg: 'Reserva no encontrada' });
+    }
+
+    // Un cotizador (sin permiso de gestionar eventos) solo edita SUS cotizaciones, y solo los
+    // datos de la cotización: no puede convertirla en evento ni tocar precios, estado, etc.
+    if (!req.permisos['eventos.gestionar']) {
+      const esSuya = prev.tipoReserva === 'cotizacion' && String(prev.creadoPor?.id || '') === String(req.user.sub);
+      if (!esSuya) {
+        return res.status(403).json({ ok: false, msg: 'Solo puedes editar las cotizaciones que tú creaste' });
+      }
+      const permitidos = ['cliente', 'correo', 'telefono', 'tipoEvento', 'fecha', 'horaInicio', 'horaFin',
+        'cantidadPersonas', 'descripcion', 'notaCotizacion', 'adminPassword'];
+      req.body = Object.fromEntries(Object.entries(req.body || {}).filter(([k]) => permitidos.includes(k)));
+      req.body.tipoReserva = 'cotizacion';
     }
 
    const fechaFinal = req.body.fecha ? normalizeFechaNoonUTC(req.body.fecha) : prev.fecha;
@@ -1402,7 +1438,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // ===== Utensilios =====
-router.put('/:id/utensilios', async (req, res) => {
+router.put('/:id/utensilios', soloEditaSusCotizaciones, async (req, res) => {
   try {
     const { id } = req.params;
     const { items = [], discountItems } = req.body;
@@ -1759,7 +1795,7 @@ if (reservaActual.tipoReserva === 'evento') {
   }
 });
 
-router.patch('/:id/utensilios/:lineId', async (req, res) => {
+router.patch('/:id/utensilios/:lineId', soloEditaSusCotizaciones, async (req, res) => {
   try {
     const { id, lineId } = req.params;
     if (!mongoose.isValidObjectId(id) || !mongoose.isValidObjectId(lineId)) {
@@ -2237,7 +2273,7 @@ router.get('/:id/resumen-accesorios', async (req, res) => {
 });
 
 // PUT: guardar resumen (array de objetos ya completos)
-router.put('/:id/resumen-accesorios', async (req, res) => {
+router.put('/:id/resumen-accesorios', soloEditaSusCotizaciones, async (req, res) => {
   try {
     const { id } = req.params;
     if (!isId(id)) return res.status(400).json({ ok: false, msg: 'ID de reserva inválido' });
@@ -2258,7 +2294,7 @@ router.put('/:id/resumen-accesorios', async (req, res) => {
 });
 
 // Alias legacy (compat): PUT /:id/resumen-seleccion  → guarda exactamente lo mismo
-router.put('/:id/resumen-seleccion', async (req, res) => {
+router.put('/:id/resumen-seleccion', soloEditaSusCotizaciones, async (req, res) => {
   try {
     const { id } = req.params;
     if (!isId(id)) return res.status(400).json({ ok: false, msg: 'ID de reserva inválido' });
@@ -2283,7 +2319,7 @@ router.put('/:id/resumen-seleccion', async (req, res) => {
  * Recibe { seleccion: [{ accesorioId, cantidad }] } y guarda SOLO el resumen.
  * NO modifica la colección 'utensilios'.
  */
-router.post('/:id/accesorios/apply', async (req, res) => {
+router.post('/:id/accesorios/apply', soloEditaSusCotizaciones, async (req, res) => {
   try {
     const { id } = req.params;
     if (!isId(id)) return res.status(400).json({ ok: false, msg: 'ID de reserva inválido' });

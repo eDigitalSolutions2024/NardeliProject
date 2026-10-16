@@ -213,3 +213,94 @@
   border-bottom: 1px solid #eee;
   padding: 10px 0;
 }
+
+
+/* ===== Panel del Cliente (rediseño) ===== */
+.cliente-dashboard { --brand-1: #7b247f; --brand-2: #491656; --bg: #f6f3f8; --border: #efe6f3; padding: 22px 26px 32px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+.cd-header { position: relative; overflow: hidden; gap: 1rem; padding: 22px 26px; border-radius: 20px; background: linear-gradient(135deg, #7b247f 0%, #491656 100%); box-shadow: 0 20px 40px -24px rgba(73, 22, 86, 0.7); justify-content: flex-start; flex-wrap: wrap; }
+.cd-header::after { content: ''; position: absolute; right: -50px; top: -60px; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(closest-side, rgba(247, 224, 165, 0.28), transparent 70%); pointer-events: none; }
+.cd-header-text { flex: 1; min-width: 200px; position: relative; z-index: 1; }
+.cd-header h2 { font-size: 1.6rem; letter-spacing: -0.3px; }
+.cd-header small { color: rgba(255, 255, 255, 0.8); }
+.cd-header .badge { position: relative; z-index: 1; margin-left: auto; }
+.cd-back { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.55rem 1rem; border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 12px; background: rgba(255, 255, 255, 0.14); color: #fff; font-size: 0.88rem; font-weight: 700; font-family: inherit; cursor: pointer; transition: background 0.18s ease, transform 0.18s ease; }
+.cd-back:hover { background: rgba(255, 255, 255, 0.26); transform: translateX(-2px); }
+
+.cliente-dashboard .nd-seg { margin-bottom: 1rem; }
+
+.cd-toolbar { top: 0; padding: 0.7rem; gap: 0.6rem; border: 1px solid #efe6f3; border-radius: 16px; background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(6px); box-shadow: 0 10px 24px -18px rgba(73, 22, 86, 0.45); margin-bottom: 1rem; }
+.cd-btn { border-radius: 10px; font-family: inherit; font-weight: 600; }
+.cd-btn-clear { background: #fff; color: #6b2c5e; border: 1px solid #e0d0e8; height: 40px; }
+.cd-btn-clear:hover { background: #faf5ff; border-color: #c9aedb; }
+.cd-btn-primary, .save { background: linear-gradient(135deg, #7b247f, #491656); }
+
+.cd-card, .summary { border: 1px solid #efe6f3; border-radius: 18px; box-shadow: 0 1px 2px rgba(73, 22, 86, 0.04), 0 14px 30px -22px rgba(73, 22, 86, 0.3); }
+.summary h3 { color: #491656; font-size: 1.15rem; }
+
+/* Tarjetas de producto */
+.inventory-grid { gap: 14px; }
+.item-card { gap: 12px; padding: 12px; border: 1px solid #efe6f3; border-radius: 16px; background: #fff; transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+.item-card:hover { transform: translateY(-3px); border-color: #dcc4e6; box-shadow: 0 18px 30px -22px rgba(73, 22, 86, 0.55); }
+.item-img { border-radius: 12px; border: 1px solid #f1e8f5; }
+.item-title { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; color: #2f1a36; }
+.item-price { color: #491656; font-weight: 800; }
+.edit-price-btn, .edit-price-inline { padding: 2px 10px !important; border: 1px solid #e0d0e8 !important; border-radius: 999px !important; background: #faf5ff !important; color: #6b2c5e !important; font-size: 11px !important; font-weight: 700; white-space: nowrap; }
+.edit-price-btn:hover, .edit-price-inline:hover { background: #f1def5 !important; }
+.badge.ok { background: #ecfdf5; }
+.qty { border-radius: 10px; border-color: #e2d6e8; }
+.add-btn { border-radius: 10px; background: linear-gradient(135deg, #7b247f, #491656); font-weight: 700; }
+.add-btn:hover:not(:disabled) { filter: brightness(1.12); }
+
+/* Resumen de selección */
+.sel-item { padding: 12px; border: 1px solid #efe6f3; border-radius: 14px; background: #fff; transition: box-shadow 0.18s ease, border-color 0.18s ease; }
+.sel-item:hover { border-color: #dcc4e6; box-shadow: 0 10px 22px -18px rgba(73, 22, 86, 0.5); }
+.del { border-radius: 9px; background: #fff; color: #c0392b; border-color: #f0c9c4; font-weight: 600; }
+.del:hover { background: #fdf0ee; }
+.save { border-radius: 12px; font-weight: 700; }
+
+/* Botones de PDF y saldo (antes verde lima y estilos en línea) */
+.cliente-dashboard button.pdf { background: linear-gradient(135deg, #7b247f, #491656) !important; color: #fff !important; border: none !important; border-radius: 12px !important; padding: 10px 18px !important; font-weight: 700 !important; box-shadow: 0 10px 20px -12px #491656 !important; }
+.cliente-dashboard button.pdf:hover:not(:disabled) { filter: brightness(1.12); }
+.cliente-dashboard button.pdf.pdf-saldo { background: #fff !important; color: #6b2c5e !important; border: 1px solid #e0d0e8 !important; box-shadow: none !important; margin-top: 8px !important; }
+.cliente-dashboard button.pdf.pdf-saldo:hover:not(:disabled) { background: #faf5ff !important; border-color: #c9aedb !important; filter: none; }
+.cliente-dashboard button.pdf:disabled { opacity: 0.55; cursor: not-allowed; }
+
+@media (max-width: 640px) { .cliente-dashboard { padding: 14px; } .cd-header h2 { font-size: 1.3rem; } }
+
+
+/* El bloque de productos y accesorios se apila en la columna izquierda sin dejar espacio blanco enorme */
+.cd-content { align-items: start; }
+.cd-content > * { align-self: start; }
+.cd-main-col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+
+/* Campos de las opciones y campos nuevos de Formatos: se ve dónde se escribe */
+.fm-edit { padding: 2px 6px; border-radius: 6px; outline: none; transition: background 0.15s ease, box-shadow 0.15s ease; }
+.fm-edit:empty::before { content: attr(data-placeholder); color: #a392ab; }
+.fm-edit:focus { background: #fff; box-shadow: 0 0 0 2px #7b247f; }
+.cliente-dashboard input:focus, .cliente-dashboard textarea:focus { outline: none; border-color: #7b247f !important; box-shadow: 0 0 0 3px rgba(123, 36, 127, 0.18); }
+
+
+/* ===== Panel del Cliente: botones con color según su función, y sin desborde a la derecha ===== */
+.cd-content { grid-template-columns: minmax(0, 1.8fr) minmax(330px, 0.95fr); }
+.cd-content > * { min-width: 0; }
+.inventory-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.item-card { min-width: 0; }
+.cliente-dashboard { overflow-x: hidden; }
+
+/* Finalizar Reserva = verde (confirma) */
+.cliente-dashboard button.save { background: linear-gradient(135deg, #22a55b, #15803d); box-shadow: 0 12px 22px -12px #15803d; }
+.cliente-dashboard button.save:hover:not(:disabled) { filter: brightness(1.08); }
+/* Descargar PDF = rojo */
+.cliente-dashboard button.pdf { background: linear-gradient(135deg, #e5533d, #b3261e) !important; box-shadow: 0 10px 20px -12px #b3261e !important; }
+/* Actualizar saldo = dorado */
+.cliente-dashboard button.pdf.pdf-saldo { background: linear-gradient(135deg, #f0c04f, #d99a14) !important; color: #3d2a00 !important; border: none !important; box-shadow: 0 10px 20px -12px #d99a14 !important; }
+.cliente-dashboard button.pdf.pdf-saldo:hover:not(:disabled) { background: linear-gradient(135deg, #f0c04f, #d99a14) !important; filter: brightness(1.06); }
+/* Ver accesorios / Guardar descuento = azul */
+.summary .cd-btn { background: #e8f1fb; color: #1d5fa8; border: 1px solid #c7dcf3; }
+.summary .cd-btn:hover { background: #dbe9f8; }
+/* Añadir = morado de la marca; Quitar = rojo suave; Limpiar filtros = neutro (ya definidos) */
+
+/* Fila de descuento: si no cabe, el botón baja en lugar de salirse del panel */
+.summary div[style*="align-items: center"][style*="gap: 8"] { flex-wrap: wrap !important; }
+.summary .cd-select, .summary .cd-input { min-width: 0; }

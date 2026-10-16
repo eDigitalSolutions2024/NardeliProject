@@ -60,3 +60,92 @@
 .cz-bar button { background:rgba(255,255,255,.15); color:#fff; border:1px solid rgba(255,255,255,.4); border-radius:8px; padding:6px 14px; cursor:pointer; font-weight:600; }
 .cz-body { max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
 @media (max-width: 640px) { .rl-modal { padding:18px; } .rl-table th, .rl-table td { padding:8px; } }
+
+
+/* ===== Usuarios y roles / Cambiar contraseña / Panel del cotizador: estilo de la marca ===== */
+.rl-card { border: 1px solid #efe6f3; border-radius: 16px; box-shadow: 0 1px 2px rgba(73, 22, 86, 0.04), 0 14px 30px -22px rgba(73, 22, 86, 0.3); }
+.rl-toolbar h3 { color: #491656; font-size: 1.2rem; }
+
+/* Pestañas como control segmentado */
+.rl-tabs { display: inline-flex; gap: 2px; padding: 4px; margin-bottom: 1.2rem; background: #fff; border: 1px solid #efe6f3; border-bottom: 1px solid #efe6f3; border-radius: 14px; box-shadow: 0 1px 2px rgba(73, 22, 86, 0.04); }
+.rl-tab { margin: 0; padding: 9px 18px; border: none; border-bottom: none; border-radius: 10px; color: #6b2c5e; font-family: inherit; font-size: 0.9rem; font-weight: 700; transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease; }
+.rl-tab:hover { background: #f6eefa; }
+.rl-tab.active { background: linear-gradient(135deg, #7b247f, #491656); color: #fff; border-bottom-color: transparent; box-shadow: 0 8px 16px -10px #491656; }
+
+/* Botones */
+.rl-btn { display: inline-flex; align-items: center; gap: 0.4rem; background: linear-gradient(135deg, #7b247f, #491656); color: #fff; border: 1px solid transparent; border-radius: 10px; padding: 0 1rem; height: 38px; font-family: inherit; font-weight: 600; font-size: 0.88rem; transition: filter 0.15s ease, background 0.15s ease, border-color 0.15s ease; }
+.rl-btn.sec { background: #fff; color: #6b2c5e; border-color: #e0d0e8; }
+.rl-btn.sec:hover:not(:disabled) { background: #faf5ff; border-color: #c9aedb; filter: none; }
+.rl-btn.danger { background: #fff; color: #c0392b; border-color: #f0c9c4; }
+.rl-btn.danger:hover:not(:disabled) { background: #fdf0ee; border-color: #e4a39b; filter: none; }
+.rl-btn.sm { height: 32px; padding: 0 0.7rem; font-size: 0.8rem; }
+
+/* Tabla */
+.rl-table th { background: #faf5fc; color: #8a7a92; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.05em; border-bottom: 1px solid #efe6f3; }
+.rl-table td { border-top: 1px solid #f4eef7; color: #3a2a42; }
+.rl-table tbody tr { transition: background 0.18s ease, box-shadow 0.18s ease; }
+.rl-table tbody tr:hover { background: #f6eefa; box-shadow: 0 6px 18px -12px rgba(73, 22, 86, 0.55); }
+.rl-table tbody tr:hover td:first-child { box-shadow: inset 4px 0 0 #7b247f; }
+.rl-name { display: flex; align-items: center; gap: 0.6rem; }
+.rl-avatar { flex-shrink: 0; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: linear-gradient(135deg, #7b247f, #491656); color: #f7e0a5; font-size: 0.85rem; font-weight: 800; }
+.rl-you { color: #8a7a92; font-weight: 500; }
+.rl-matrix tbody tr:hover td:first-child { box-shadow: none; }
+
+/* Etiquetas */
+.rl-pill { padding: 3px 11px; }
+.rl-pill.admin { background: #f1def5; color: #6b2c5e; }
+.rl-pill.cotizador { background: #fdf0cf; color: #946200; }
+
+/* Campos y ventanas */
+.rl-field input, .rl-field select { border: 1px solid #e2d6e8; border-radius: 12px; }
+.rl-field input:focus, .rl-field select:focus { border-color: #7b247f; box-shadow: 0 0 0 3px rgba(123, 36, 127, 0.14); }
+.rl-msg { border-radius: 12px; }
+.rl-modal-bg { background: rgba(26, 6, 32, 0.55); }
+.rl-modal { border-radius: 20px; box-shadow: 0 30px 60px -20px rgba(26, 6, 32, 0.6); }
+.rl-modal h3 { color: #491656; font-size: 1.2rem; }
+.rl-pass-box { background: #faf5fc; border-color: #c9aedb; }
+.rl-pass-box code { color: #491656; }
+
+/* Interruptores de permisos */
+.rl-switch input:checked + .rl-slider { background: linear-gradient(135deg, #7b247f, #491656); }
+.rl-slider { background: #d6c8dc; }
+
+/* Cambiar contraseña y panel del cotizador */
+.rl-center { background: radial-gradient(120% 90% at 50% 0%, #6b2c5e 0%, #491656 45%, #2a0b33 100%); }
+.rl-center .rl-card { border-radius: 22px; box-shadow: 0 30px 60px -24px rgba(0, 0, 0, 0.6); }
+.rl-center h2 { color: #491656; }
+.cz-shell { background: #f6f3f8; }
+.cz-bar { background: linear-gradient(135deg, #491656, #6b2c5e); box-shadow: 0 4px 14px -6px rgba(73, 22, 86, 0.6); }
+.cz-bar button { border-radius: 10px; transition: background 0.15s ease; }
+.cz-bar button:hover { background: rgba(255, 255, 255, 0.25); }
+
+
+/* ===== Contraseñas: aviso de cambio único y consulta del admin ===== */
+.rl-warn { padding: 0.9rem 1rem; margin: 0 0 1rem; background: #fff8e8; border: 1px solid #f0d79a; border-radius: 14px; color: #6b4a00; font-size: 0.88rem; }
+.rl-warn strong { display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.4rem; color: #8a5a00; font-size: 0.92rem; }
+.rl-warn ul { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.25rem; }
+.rl-sub { display: block; margin-top: 3px; color: #8a7a92; font-size: 0.72rem; font-weight: 600; }
+.rl-pw-cell { display: inline-flex; align-items: center; gap: 0.35rem; }
+.rl-pw-code { padding: 4px 9px; border-radius: 8px; background: #faf5fc; border: 1px dashed #c9aedb; color: #491656; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.04em; user-select: all; }
+.rl-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 1px solid #e0d0e8; border-radius: 8px; background: #fff; color: #6b2c5e; cursor: pointer; font-size: 0.95rem; }
+.rl-icon-btn:hover { background: #faf5ff; border-color: #c9aedb; }
+.rl-inline { display: flex; gap: 0.5rem; }
+.rl-inline input { flex: 1; min-width: 0; font-family: ui-monospace, Consolas, monospace; letter-spacing: 0.03em; }
+.rl-check { display: flex; align-items: flex-start; gap: 0.6rem; margin: 0 0 0.9rem; font-size: 0.86rem; color: #5b4a63; cursor: pointer; }
+.rl-check input { margin-top: 3px; accent-color: #7b247f; }
+
+/* Acciones de la tabla de usuarios: se acomodan en varias líneas si no caben */
+.rl-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; min-width: 210px; }
+.rl-table td { white-space: normal; }
+.cz-body { max-width: 1380px; width: 96%; }
+.cz-row-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.rl-btn { box-sizing: border-box; text-decoration: none; justify-content: center; white-space: nowrap; }
+.rl-btn.pdf { background: linear-gradient(135deg, #e5533d, #b3261e); color: #fff; border-color: transparent; box-shadow: 0 6px 14px -8px #b3261e; }
+.rl-btn.pdf:hover:not(:disabled) { filter: brightness(1.1); }
+
+/* Sección de contraseña dentro de "Editar usuario" */
+.rl-pwsec { margin: 1.1rem 0 0.4rem; padding-top: 1rem; border-top: 1px solid #f1e8f5; }
+.rl-pwsec-title { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.7rem; color: #491656; font-size: 0.95rem; font-weight: 800; }
+.rl-pw-current { display: flex; align-items: center; gap: 0.4rem; min-height: 36px; }
+.rl-pwsec .rl-hint { margin: 0.2rem 0 0.8rem; }
+.rl-modal { max-height: 92vh; }
