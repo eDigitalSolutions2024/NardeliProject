@@ -1,3 +1,4 @@
+import { LuCalendarDays } from 'react-icons/lu';
 import React, { useEffect, useState } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
@@ -92,7 +93,7 @@ const MiniCalendarioDisponibilidad = ({
   return (
     <div className="mcd-container">
       <div className="mcd-header">
-        <span className="mcd-header-icon">📅</span>
+        <span className="mcd-header-icon"><LuCalendarDays /></span>
         <span>Disponibilidad</span>
       </div>
 

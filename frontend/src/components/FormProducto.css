@@ -224,3 +224,8 @@
 .fp-submit:hover:not(:disabled) { filter: brightness(1.08); }
 .fp-submit:active:not(:disabled) { transform: translateY(1px); }
 .fp-submit:disabled { opacity: 0.65; cursor: not-allowed; }
+
+
+/* ===== Inventario: formularios (rediseño) ===== */
+.fp-header-icon { color: #f7e0a5; font-size: 1.5rem; }
+.fp-file-icon { display: inline-flex; color: #7b247f; font-size: 1.3rem; }

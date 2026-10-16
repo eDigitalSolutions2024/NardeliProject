@@ -1,3 +1,4 @@
+import { aviso, pedirConfirmacion } from '../utils/avisos';
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
@@ -226,7 +227,7 @@ enviarWhatsApp(telefono, json);
   
   const cancelarInvitacion = async (id) => {
     try {
-      const confirmar = window.confirm('¿Cancelar esta invitación?');
+      const confirmar = await pedirConfirmacion('¿Cancelar esta invitación?');
       if (!confirmar) return;
 
       const resp = await fetch(`${API_BASE_URL}/invitaciones-qr/${token}/${id}/cancelar`, {
@@ -260,15 +261,15 @@ enviarWhatsApp(telefono, json);
     const entradas = Number(editEntradas);
 
     if (!Number.isFinite(personas) || personas < 1) {
-      alert('La cantidad de personas debe ser mayor a 0');
+      aviso('La cantidad de personas debe ser mayor a 0');
       return;
     }
     if (!Number.isFinite(entradas) || entradas < 0) {
-      alert('Las entradas restantes no pueden ser negativas');
+      aviso('Las entradas restantes no pueden ser negativas');
       return;
     }
     if (entradas > personas) {
-      alert('Las entradas restantes no pueden ser mayores a las personas autorizadas');
+      aviso('Las entradas restantes no pueden ser mayores a las personas autorizadas');
       return;
     }
 
@@ -295,7 +296,7 @@ enviarWhatsApp(telefono, json);
       setInvitacionEditando(null);
       await cargarInvitaciones();
     } catch (err) {
-      alert(err.message || 'No se pudo editar la invitación');
+      aviso(err.message || 'No se pudo editar la invitación');
     } finally {
       setGuardandoEdicion(false);
     }

@@ -9,7 +9,7 @@ const path = require('path');
 
 // Solo staff administra el catálogo de productos (el inventario público de
 // consulta sigue abierto en GET /inventario, que usan los clientes).
-const { requirePermission } = require('../utils/permisos');
+const { requirePermission, usuarioOpcional, permisosDeRol } = require('../utils/permisos');
 // Permiso validado contra la base (rol y estado actuales); ver utils/permisos.js
 const requireStaff = requirePermission('inventario.gestionar');
 
@@ -71,6 +71,11 @@ router.get('/inventario', async (req, res) => {
     if (categoria) filtro.categoria = categoria.toLowerCase();
     if (q) filtro.nombre = { $regex: q, $options: 'i' };
 
+    // El precio solo se manda a quien lo puede ver (admin, asistente, cotizador); a los clientes no.
+    const quien = await usuarioOpcional(req);
+    const permisos = quien ? await permisosDeRol(quien.role) : {};
+    const verPrecios = !!(permisos['eventos.gestionar'] || permisos['cotizaciones.crear']);
+
     const prods = await Producto.find(filtro)
       .select('nombre categoria cantidad precio descripcion imagen') // ajusta si tu modelo tiene otros campos
       .lean();
@@ -81,8 +86,9 @@ router.get('/inventario', async (req, res) => {
       categoria: p.categoria || 'general',
       unidad: p.unidad || 'pza',    // si tu modelo no tiene "unidad", se mostrará 'pza'
       imagen: p.imagen || null,
-      stock: Number(p.cantidad ?? 0),
-      stock: Number(p.cantidad ?? 0) // 👈 importante: stock = cantidad
+      descripcion: p.descripcion || '',
+      stock: Number(p.cantidad ?? 0), // 👈 importante: stock = cantidad
+      ...(verPrecios ? { precio: Number(p.precio ?? 0) } : {}),
     }));
 
     return res.json(items);

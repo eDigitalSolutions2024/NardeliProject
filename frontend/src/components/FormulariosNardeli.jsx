@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import SelectField from './ui/SelectField';
+import DateField from './ui/DateField';
+import React, { useState, useEffect, useRef } from 'react';
 import API_BASE_URL from '../api';
 
-const PURPLE = '#6d28d9';
+const PURPLE = '#7b247f';
 const GREEN  = '#b7db2d';
-const MUTED  = '#64748b';
+const MUTED  = '#8a7a92';
 
 const CATEGORIAS_PROVEEDORES = [
   'Recinto', 'Mantelería', 'Florería', 'Fotografía y video', 'DJ',
@@ -165,18 +167,18 @@ function mergeWithSaved(base, saved) {
 
 // ── Estilos ───────────────────────────────────────────────────────────────
 const S = {
-  inp: { width: '100%', padding: '7px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13, boxSizing: 'border-box', fontFamily: 'inherit' },
-  label:    { display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 4 },
+  inp: { width: '100%', padding: '9px 12px', border: '1px solid #e2d6e8', borderRadius: 10, fontSize: 13.5, boxSizing: 'border-box', fontFamily: 'inherit', background: '#fff' },
+  label:    { display: 'block', fontSize: 12, fontWeight: 700, color: '#5c1a6e', marginBottom: 5 },
   field:    { marginBottom: 12 },
   row2:     { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 },
   row3:     { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 },
   secTitle: {
-    background: '#f3e8ff', color: PURPLE, fontWeight: 700, fontSize: 12,
-    padding: '5px 10px', borderRadius: 4, marginTop: 18, marginBottom: 10,
-    letterSpacing: '0.04em', textTransform: 'uppercase',
+    background: '#f6eefa', color: PURPLE, fontWeight: 800, fontSize: 12,
+    padding: '7px 12px', borderRadius: 10, marginTop: 22, marginBottom: 12,
+    letterSpacing: '0.07em', textTransform: 'uppercase', borderLeft: `4px solid ${PURPLE}`,
   },
-  btn: { padding: '9px 22px', borderRadius: 8, border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.15s' },
-  textarea: { width: '100%', padding: '7px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13, boxSizing: 'border-box', fontFamily: 'inherit', resize: 'vertical', minHeight: 64 },
+  btn: { padding: '10px 24px', borderRadius: 12, border: 'none', fontWeight: 700, fontSize: 13.5, cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'inherit' },
+  textarea: { width: '100%', padding: '9px 12px', border: '1px solid #e2d6e8', borderRadius: 10, fontSize: 13, boxSizing: 'border-box', fontFamily: 'inherit', resize: 'vertical', minHeight: 64 },
 };
 
 // ── Micro-componentes ─────────────────────────────────────────────────────
@@ -186,7 +188,9 @@ function F({ label, children }) {
 function Inp({ label, value, onChange, type = 'text', ...rest }) {
   return (
     <F label={label}>
-      <input type={type} value={value ?? ''} onChange={onChange} style={S.inp} {...rest} />
+      {type === 'date'
+        ? <DateField value={value ?? ''} onChange={(v) => onChange({ target: { value: v } })} style={{ width: '100%' }} />
+        : <input type={type} value={value ?? ''} onChange={onChange} style={S.inp} {...rest} />}
     </F>
   );
 }
@@ -216,7 +220,16 @@ function DynamicChecklist({ label, items = [], onChange, single = false }) {
 
   const remove = (i) => onChange(items.filter((_, idx) => idx !== i));
 
-  const add = () => onChange([...items, { label: '', checked: false }]);
+  const editRefs = useRef([]);
+  const [focoIdx, setFocoIdx] = useState(null);
+  const add = () => { setFocoIdx(items.length); onChange([...items, { label: '', checked: false }]); };
+  // el campo recién agregado recibe el cursor sin hacer clic
+  useEffect(() => {
+    if (focoIdx == null) return;
+    const el = editRefs.current[focoIdx];
+    if (el) { el.focus(); }
+    setFocoIdx(null);
+  }, [focoIdx, items.length]);
 
   return (
     <div style={S.field}>
@@ -243,13 +256,16 @@ function DynamicChecklist({ label, items = [], onChange, single = false }) {
             <div
               contentEditable
               suppressContentEditableWarning
+              ref={el => { editRefs.current[i] = el; }}
+              className="fm-edit"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
               onBlur={e => updateLabel(i, e.currentTarget.textContent.trim())}
               dangerouslySetInnerHTML={{ __html: it.label || '' }}
               data-placeholder="Nueva opción"
               style={{
                 fontSize: 12, color: it.checked ? '#4c1d95' : '#1e293b',
                 fontWeight: it.checked ? 600 : 400,
-                outline: 'none', cursor: 'text', wordBreak: 'break-word',
+                cursor: 'text', wordBreak: 'break-word',
                 minWidth: 60, lineHeight: '1.4',
               }}
             />
@@ -281,7 +297,15 @@ function DynamicChecklist({ label, items = [], onChange, single = false }) {
 
 // ── Sección de campos extra libres (al final de cada formulario) ───────────
 function DynamicExtras({ extras = [], onChange }) {
-  const add    = () => onChange([...extras, { label: '', value: '' }]);
+  const nombreRefs = useRef([]);
+  const [focoExtra, setFocoExtra] = useState(null);
+  const add    = () => { setFocoExtra(extras.length); onChange([...extras, { label: '', value: '' }]); };
+  useEffect(() => {
+    if (focoExtra == null) return;
+    const el = nombreRefs.current[focoExtra];
+    if (el) el.focus();
+    setFocoExtra(null);
+  }, [focoExtra, extras.length]);
   const remove = (i) => onChange(extras.filter((_, idx) => idx !== i));
   const update = (i, field, val) => {
     const next = [...extras];
@@ -300,7 +324,7 @@ function DynamicExtras({ extras = [], onChange }) {
       {extras.map((ex, i) => (
         <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr auto', gap: 8, marginBottom: 8, alignItems: 'end' }}>
           <F label="Nombre del campo">
-            <input value={ex.label || ''} onChange={e => update(i, 'label', e.target.value)} style={S.inp} placeholder="Ej. Color de alfombra" />
+            <input ref={el => { nombreRefs.current[i] = el; }} value={ex.label || ''} onChange={e => update(i, 'label', e.target.value)} style={S.inp} placeholder="Ej. Color de alfombra" />
           </F>
           <F label="Valor">
             <input value={ex.value || ''} onChange={e => update(i, 'value', e.target.value)} style={S.inp} placeholder="Ej. Rojo vino" />
@@ -421,17 +445,12 @@ export default function FormulariosNardeli({ reservaId }) {
 
   return (
     <div style={{ padding: '0 0 32px' }}>
-      <div style={{ display: 'flex', gap: 4, borderBottom: `2px solid ${PURPLE}22`, marginBottom: 20 }}>
+      <div className="nd-seg">
         {tabs.map(t => (
           <button
             key={t.key}
+            className={`nd-seg-btn ${activeForm === t.key ? 'active' : ''}`}
             onClick={() => setActiveForm(t.key)}
-            style={{
-              padding: '8px 20px', border: 'none', borderRadius: '6px 6px 0 0',
-              fontWeight: 700, fontSize: 13, cursor: 'pointer', marginRight: 2,
-              background: activeForm === t.key ? PURPLE : '#f3e8ff',
-              color:      activeForm === t.key ? '#fff'  : PURPLE,
-            }}
           >
             {t.label}
           </button>
@@ -441,7 +460,7 @@ export default function FormulariosNardeli({ reservaId }) {
       {loading ? (
         <div style={{ color: MUTED, padding: 24 }}>Cargando datos de la reserva…</div>
       ) : (
-        <div style={{ background: '#fff', borderRadius: 10, padding: '20px 24px', border: '1px solid #ede9fe' }}>
+        <div style={{ background: '#fff', borderRadius: 18, padding: '22px 26px 26px', border: '1px solid #efe6f3', boxShadow: '0 1px 2px rgba(73, 22, 86, 0.04), 0 14px 30px -22px rgba(73, 22, 86, 0.3)' }}>
           {activeForm === 'tabla-trabajo' && <FormTablaTrabajoContent data={formData} set={set} />}
           {activeForm === 'degustacion'   && <FormDegustacionContent   data={formData} set={set} />}
           {activeForm === 'proveedores'   && <FormProveedoresContent   data={formData} set={set} setProveedor={setProveedor} />}
@@ -464,7 +483,7 @@ export default function FormulariosNardeli({ reservaId }) {
 
           <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
             <button
-              style={{ ...S.btn, background: PURPLE, color: '#fff' }}
+              style={{ ...S.btn, background: 'linear-gradient(135deg, #7b247f, #491656)', color: '#fff', boxShadow: '0 10px 20px -12px #491656' }}
               onClick={guardar}
               disabled={saving}
               onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; }}
@@ -473,7 +492,7 @@ export default function FormulariosNardeli({ reservaId }) {
               {saving ? 'Guardando…' : 'Guardar'}
             </button>
             <button
-              style={{ ...S.btn, background: GREEN, color: '#1a1a1a' }}
+              style={{ ...S.btn, background: '#fff', color: '#6b2c5e', border: '1px solid #e0d0e8' }}
               onClick={generarPDF}
               onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; }}
               onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
@@ -536,15 +555,20 @@ function FormTablaTrabajoContent({ data, set }) {
       <div style={S.row2}>
         {inp('horario_servir', 'Horario de servir')}
         <F label="Tiempos">
-          <select value={data.tiempos || ''} onChange={e => set('tiempos', e.target.value)} style={S.inp}>
-            <option value="">— Seleccionar —</option>
-            <option value="1">1 tiempo</option>
-            <option value="2">2 tiempos</option>
-            <option value="3">3 tiempos</option>
-            <option value="buffet-pizza">Buffet de pizza</option>
-            <option value="buffet-desayuno">Buffet desayuno</option>
-            <option value="taquiza">Taquiza</option>
-          </select>
+          <SelectField
+            value={data.tiempos || ''}
+            onChange={(v) => set('tiempos', v)}
+            options={[
+              { value: '', label: '— Seleccionar —' },
+              { value: '1', label: '1 tiempo' },
+              { value: '2', label: '2 tiempos' },
+              { value: '3', label: '3 tiempos' },
+              { value: 'buffet-pizza', label: 'Buffet de pizza' },
+              { value: 'buffet-desayuno', label: 'Buffet desayuno' },
+              { value: 'taquiza', label: 'Taquiza' },
+            ]}
+            style={{ width: '100%' }}
+          />
         </F>
       </div>
       <F label="Alimentos">

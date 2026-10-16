@@ -17,6 +17,7 @@ import DashboardCliente from './components/DashboardCliente';
 import IngresarCodigo from './pages/IngresarCodigo';
 import IngresaCodigoInvitacion from './pages/tmpCodigoInvitacion';
 import ScanInvitacionQR from './pages/ScanInvitacionQR';
+import { Toaster } from 'sonner';
 import CambiarPassword from './components/CambiarPassword';
 import Cotizador from './components/Cotizador';
 import { updateStoredUser, rutaInicialPorRol } from './session';
@@ -141,6 +142,7 @@ function App() {
   return (
     <Router>
       <AppWrapper />
+      <Toaster position="top-right" richColors closeButton duration={4200} />
     </Router>
   );
 }

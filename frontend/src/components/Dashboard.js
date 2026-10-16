@@ -1,4 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { aviso, pedirConfirmacion } from '../utils/avisos';
+import TimeField from './ui/TimeField';
+import { pedirPasswordAdmin } from '../utils/pedirPassword';
+import React, { useState, useEffect, useRef } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import dayjs from 'dayjs';
 import './Dashboard.css';
@@ -13,7 +16,89 @@ import Reportes from './Reportes';
 import FormAccesorio from './FormAccesorio';
 import TablaAccesorios from './TablaAccesorios';
 import UsuariosRoles from './UsuariosRoles';
+import { animate, stagger } from 'animejs';
+import SearchField from './ui/SearchField';
+import DateField from './ui/DateField';
+import SelectField from './ui/SelectField';
+import { LuCalendarDays, LuPartyPopper, LuCalendarCheck, LuFileClock, LuFileText, LuFileDown, LuPencil, LuCheck, LuTrash2, LuSearch, LuHourglass, LuInbox, LuBadgeDollarSign, LuX, LuUser, LuPackage, LuGift, LuLayoutDashboard, LuUsers, LuCalendar, LuTrendingUp, LuWarehouse, LuCirclePlus, LuShieldCheck, LuLogOut, LuMenu } from 'react-icons/lu';
 import { getStoredUser } from '../session';
+
+// Marca del menú lateral: 'dorado' (isotipo nítido pintado de dorado) o 'resplandor' (imagen de óvalos con halo).
+const MARCA_SIDEBAR = 'dorado';
+
+
+// Tarjeta de indicador: el número cuenta desde 0 hasta su valor (anime.js).
+function KpiCard({ icon, label, value, tono = 'morado' }) {
+  const numRef = useRef(null);
+  useEffect(() => {
+    const el = numRef.current;
+    const destino = Number(value) || 0;
+    if (!el) return undefined;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      el.textContent = destino;
+      return undefined;
+    }
+    const obj = { v: 0 };
+    const anim = animate(obj, {
+      v: destino,
+      duration: 1100,
+      ease: 'outExpo',
+      onUpdate: () => { el.textContent = Math.round(obj.v); },
+    });
+    return () => anim.pause();
+  }, [value]);
+
+  return (
+    <div className={`nd-kpi nd-kpi-${tono}`}>
+      <span className="nd-kpi-icon">{icon}</span>
+      <div className="nd-kpi-info">
+        <span className="nd-kpi-label">{label}</span>
+        <strong className="nd-kpi-number" ref={numRef}>0</strong>
+      </div>
+    </div>
+  );
+}
+
+
+// Óvalos de fondo (el motivo del logo): solo CSS, se mueven con transform, casi no consumen.
+// x/y = posición en %, w = ancho en px, r = giro en grados, d = duración en s, t = tono.
+const OVALOS_FONDO = [
+  { x: 4,  y: 6,  w: 340, r: -18, d: 38, t: 'm' },
+  { x: 70, y: 2,  w: 280, r: 14,  d: 44, t: 'd' },
+  { x: 38, y: 24, w: 420, r: -8,  d: 52, t: 'l' },
+  { x: 84, y: 36, w: 360, r: 22,  d: 41, t: 'm' },
+  { x: 8,  y: 52, w: 300, r: 10,  d: 47, t: 'd' },
+  { x: 55, y: 60, w: 380, r: -20, d: 56, t: 'm' },
+  { x: 90, y: 78, w: 300, r: 8,   d: 36, t: 'l' },
+  { x: 20, y: 84, w: 400, r: -12, d: 49, t: 'd' },
+  { x: 62, y: 92, w: 260, r: 18,  d: 43, t: 'l' },
+];
+
+// Estrellitas doradas y lilas: parpadean y se desplazan despacio (CSS, casi sin costo).
+// Se generan una sola vez con una semilla fija, así siempre quedan en los mismos lugares.
+const ESTRELLAS_FONDO = (() => {
+  let seed = 7;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  return Array.from({ length: 40 }, (_, i) => ({
+    x: Math.round(rnd() * 96),
+    y: Math.round(rnd() * 94),
+    s: 9 + Math.round(rnd() * 10),
+    d: 3.4 + rnd() * 4.2,          // duración del parpadeo (s)
+    m: 15 + rnd() * 16,            // duración del desplazamiento (s)
+    dx: Math.round((rnd() - 0.5) * 110),
+    dy: -Math.round(30 + rnd() * 90),
+    c: i % 3 === 0 ? 'l' : 'o',
+  }));
+})();
+
+const ORDEN_COTIZACIONES = [
+  { value: 'fecha_asc', label: 'Fecha del evento ↑' },
+  { value: 'fecha_desc', label: 'Fecha del evento ↓' },
+  { value: 'cliente_asc', label: 'Cliente A→Z' },
+  { value: 'cliente_desc', label: 'Cliente Z→A' },
+  { value: 'creacion_desc', label: 'Creadas: más recientes primero' },
+  { value: 'creacion_asc', label: 'Creadas: más antiguas primero' },
+];
 
 const Dashboard = ({ onLogout }) => {
   const [user, setUser] = useState(null);
@@ -23,6 +108,7 @@ const Dashboard = ({ onLogout }) => {
   const [inventarioTick, setInventarioTick] = useState(0);
   const [accesorioTick, setAccesorioTick] = useState(0);
   const [inventarioTab, setInventarioTab] = useState('producto'); // 'producto' | 'accesorio'
+  const listaRef = useRef(null);
 
   // KPIs / actividad
   const [loadingDash, setLoadingDash] = useState(false);
@@ -79,7 +165,7 @@ const Dashboard = ({ onLogout }) => {
 
   const eliminarCotizacion = async (id) => {
   if (!id) return;
-  const ok = window.confirm('¿Eliminar esta cotización? Esta acción no se puede deshacer.');
+  const ok = await pedirConfirmacion('¿Eliminar esta cotización? Esta acción no se puede deshacer.');
   if (!ok) return;
 
   try {
@@ -92,15 +178,15 @@ const Dashboard = ({ onLogout }) => {
       const txt = await resp.text().catch(() => '');
       let err;
       try { err = JSON.parse(txt); } catch { err = { msg: txt || `HTTP ${resp.status}` }; }
-      alert(err?.msg || err?.error || 'No se pudo eliminar la cotización');
+      aviso(err?.msg || err?.error || 'No se pudo eliminar la cotización');
       return;
     }
 
     await cargarDashboardData(); // refresca el panel
-    alert('✅ Cotización eliminada');
+    aviso('✅ Cotización eliminada');
   } catch (e) {
     console.error('eliminarCotizacion error:', e);
-    alert('Error de conexión');
+    aviso('Error de conexión');
   }
 };
 
@@ -155,7 +241,7 @@ const Dashboard = ({ onLogout }) => {
 
   const guardarTipoCambio = async () => {
     const v = Number(tcInput);
-    if (!v || v <= 0) return alert('Ingresa un valor válido.');
+    if (!v || v <= 0) return aviso('Ingresa un valor válido.');
     const token = localStorage.getItem('token') || '';
     const r = await fetch(`${API_BASE_URL}/settings/tipo-cambio`, {
       method: 'PUT',
@@ -167,7 +253,7 @@ const Dashboard = ({ onLogout }) => {
       setEditandoTC(false);
     } else {
       const err = await r.json().catch(() => ({}));
-      alert(err?.error || 'No se pudo guardar.');
+      aviso(err?.error || 'No se pudo guardar.');
     }
   };
 
@@ -237,7 +323,7 @@ const Dashboard = ({ onLogout }) => {
             folioLabel: `#${(r.shortId || r.folio || '').toUpperCase()}`,
             titulo: `Cotización - ${getCliente(r)}`,
             subtitulo: `Para el ${dayjs(getFecha(r)).format('DD [de] MMMM [de] YYYY')}`,
-            icon: '📝',
+            icon: <LuFileText />,
             pdfUrl: buildPdfUrl(r._id),
             cliente: getCliente(r),
             tipoEvento: r.tipoEvento || '',
@@ -279,13 +365,13 @@ const Dashboard = ({ onLogout }) => {
   // `perm`: permisos que habilitan la sección (basta con uno). El servidor
   // también los valida, esto solo evita mostrar menús que no funcionarían.
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊', perm: ['eventos.gestionar', 'clientes.ver', 'calendario.ver', 'cotizaciones.ver_todas'] },
-    { id: 'clientes', label: 'Clientes', icon: '👥', perm: ['clientes.ver'] },
-    { id: 'calendario', label: 'Calendario', icon: '📅', perm: ['calendario.ver'] },
-    { id: 'reportes', label: 'Reportes', icon: '📈', perm: ['reportes.ver'] },
-    { id: 'inventario', label: 'Inventario', icon: '🏬', perm: ['inventario.gestionar'] },
-    { id: 'reservar', label: 'Reservar', icon: '✅', perm: ['cotizaciones.crear'] },
-    { id: 'usuarios', label: 'Usuarios y roles', icon: '🔐', perm: ['usuarios.gestionar'] },
+    { id: 'dashboard', grupo: 'General', label: 'Dashboard', icon: <LuLayoutDashboard />, perm: ['eventos.gestionar', 'clientes.ver', 'calendario.ver', 'cotizaciones.ver_todas'] },
+    { id: 'clientes', grupo: 'General', label: 'Clientes', icon: <LuUsers />, perm: ['clientes.ver'] },
+    { id: 'calendario', grupo: 'General', label: 'Calendario', icon: <LuCalendar />, perm: ['calendario.ver'] },
+    { id: 'reportes', grupo: 'Gestión', label: 'Reportes', icon: <LuTrendingUp />, perm: ['reportes.ver'] },
+    { id: 'inventario', grupo: 'Gestión', label: 'Inventario', icon: <LuWarehouse />, perm: ['inventario.gestionar'] },
+    { id: 'reservar', grupo: 'Gestión', label: 'Reservar', icon: <LuCirclePlus />, perm: ['cotizaciones.crear'] },
+    { id: 'usuarios', grupo: 'Administración', label: 'Usuarios y roles', icon: <LuShieldCheck />, perm: ['usuarios.gestionar'] },
   ];
 
   const visibleMenuItems = menuItems.filter(i => canAny(...i.perm));
@@ -353,12 +439,12 @@ const Dashboard = ({ onLogout }) => {
       if (r.status === 401) {
         const err = await r.json().catch(() => ({}));
         if (err.requierePassword) {
-          const adminPassword = window.prompt(
+          const adminPassword = await pedirPasswordAdmin(
             err.msg || 'Ya existe una cotización reciente para esa fecha. Ingresa la contraseña de un administrador para continuar:'
           );
           if (adminPassword === null) return; // canceló
           if (!adminPassword.trim()) {
-            alert('Debes ingresar una contraseña.');
+            aviso('Debes ingresar una contraseña.');
             return;
           }
           r = await enviar(adminPassword);
@@ -367,7 +453,7 @@ const Dashboard = ({ onLogout }) => {
 
       if (!r.ok) {
         const err = await r.json().catch(()=>({}));
-        alert(err?.msg || err?.motivo || err?.error || 'No se pudo actualizar la cotización');
+        aviso(err?.msg || err?.motivo || err?.error || 'No se pudo actualizar la cotización');
         return;
       }
 
@@ -375,7 +461,7 @@ const Dashboard = ({ onLogout }) => {
       await cargarDashboardData();
     } catch (err) {
       console.error('actualizarCotizacion error:', err);
-      alert('Error de conexión');
+      aviso('Error de conexión');
     }
   };
 
@@ -397,12 +483,12 @@ const Dashboard = ({ onLogout }) => {
       if (resp.status === 401) {
         const err = await resp.json().catch(() => ({}));
         if (err.requierePassword) {
-          const adminPassword = window.prompt(
+          const adminPassword = await pedirPasswordAdmin(
             err.msg || 'Ya existe una cotización reciente para esa fecha. Ingresa la contraseña de un administrador para continuar:'
           );
           if (adminPassword === null) return; // canceló
           if (!adminPassword.trim()) {
-            alert('Debes ingresar una contraseña.');
+            aviso('Debes ingresar una contraseña.');
             return;
           }
           resp = await enviar(adminPassword);
@@ -413,15 +499,15 @@ const Dashboard = ({ onLogout }) => {
         const text = await resp.text();
         let errObj;
         try { errObj = JSON.parse(text); } catch { errObj = { msg: text }; }
-        alert(errObj?.msg || errObj?.motivo || errObj?.error || `Error ${resp.status}`);
+        aviso(errObj?.msg || errObj?.motivo || errObj?.error || `Error ${resp.status}`);
         return;
       }
 
       await cargarDashboardData();
-      alert('✅ Cotización convertida a Evento');
+      aviso('✅ Cotización convertida a Evento');
     } catch (e) {
       console.error('convertirACEvento error:', e);
-      alert('Error de conexión');
+      aviso('Error de conexión');
     }
   };
 
@@ -468,6 +554,27 @@ const actividadFiltrada = actividad
     }
   });
 
+  // Las cotizaciones entran escalonadas la primera vez que cargan.
+  useEffect(() => {
+    const lista = listaRef.current;
+    if (!lista || !actividad.length) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    animate(lista.querySelectorAll('.activity-item'), {
+      opacity: [0, 1],
+      translateY: [18, 0],
+      delay: stagger(70),
+      duration: 600,
+      ease: 'outCubic',
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actividad.length > 0]);
+
+  // El menú entra escalonado la primera vez (solo visual).
+  useEffect(() => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    animate('.sidebar-nav .nav-item', { opacity: [0, 1], translateX: [-16, 0], delay: stagger(55, { start: 150 }), duration: 520, ease: 'outCubic' });
+  }, []);
+
   const renderContent = () => {
     switch (activeSection) {
       case 'usuarios':
@@ -475,321 +582,184 @@ const actividadFiltrada = actividad
       case 'dashboard':
         return (
           <div className="dashboard-content">
-            <div className="dashboard-header">
-              <h1>Bienvenido, {user?.fullname || user?.email}</h1>
-              <p>Panel de control - Salón de Eventos Nardeli</p>
+            <div className="nd-welcome">
+              <div>
+                <h1>Bienvenido, {user?.fullname || user?.email}</h1>
+                <p>Panel de control - Salón de Eventos Nardeli</p>
+              </div>
+              <span className="nd-date-chip">
+                <LuCalendarDays />
+                {(() => { const f = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' }); return f.charAt(0).toUpperCase() + f.slice(1); })()}
+              </span>
             </div>
 
             {/* KPIs */}
-            <div className="stats-grid">
-              <div className="stat-card">
-                <div className="stat-icon">🎉</div>
-                <div className="stat-info">
-                  <h3>Eventos del Mes</h3>
-                  <p className="stat-number">{kpis.eventosMes}</p>
-                </div>
-              </div>
-
-              <div className="stat-card">
-                <div className="stat-icon">📅</div>
-                <div className="stat-info">
-                  <h3>Próximos Eventos</h3>
-                  <p className="stat-number">{kpis.proximosEventos}</p>
-                </div>
-              </div>
+            <div className="nd-kpis">
+              <KpiCard icon={<LuPartyPopper />} label="Eventos del mes" value={kpis.eventosMes} tono="morado" />
+              <KpiCard icon={<LuCalendarCheck />} label="Próximos eventos" value={kpis.proximosEventos} tono="dorado" />
+              <KpiCard icon={<LuFileClock />} label="Cotizaciones pendientes" value={actividad.length} tono="lila" />
             </div>
 
             {/* Widget Tipo de Cambio */}
-            <div style={{
-              background: '#fff',
-              border: '1px solid #e5e7eb',
-              borderRadius: 12,
-              padding: '12px 20px',
-              marginBottom: 16,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 16,
-              flexWrap: 'wrap',
-            }}>
-              <span style={{ fontSize: 20 }}>💵</span>
-              <div>
-                <span style={{ fontWeight: 700, fontSize: 14 }}>Tipo de cambio USD → MXN</span>
+            <div className="nd-tc">
+              <span className="nd-tc-icon"><LuBadgeDollarSign /></span>
+              <div className="nd-tc-info">
+                <span className="nd-tc-label">Tipo de cambio USD → MXN</span>
                 {!editandoTC ? (
-                  <span style={{ marginLeft: 10, fontSize: 16, color: '#6D28D9', fontWeight: 700 }}>
-                    ${tipoCambio.toFixed(2)} MXN
-                  </span>
+                  <span className="nd-tc-value">${tipoCambio.toFixed(2)} MXN</span>
                 ) : null}
               </div>
 
               {isAdmin && !editandoTC && (
-                <button
-                  onClick={() => { setTcInput(tipoCambio); setEditandoTC(true); }}
-                  style={{ background: 'none', border: '1px solid #6D28D9', color: '#6D28D9', borderRadius: 8, padding: '4px 12px', cursor: 'pointer', fontSize: 13 }}
-                >
-                  ✏️ Cambiar
+                <button className="nd-btn nd-btn-ghost" onClick={() => { setTcInput(tipoCambio); setEditandoTC(true); }}>
+                  <LuPencil /> Cambiar
                 </button>
               )}
 
               {isAdmin && editandoTC && (
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div className="nd-tc-edit">
                   <input
                     type="number"
                     step="0.01"
                     min="1"
                     value={tcInput}
                     onChange={e => setTcInput(e.target.value)}
-                    style={{ width: 100, padding: '4px 8px', borderRadius: 8, border: '1px solid #6D28D9', fontSize: 14 }}
+                    className="nd-input nd-input-sm"
                     autoFocus
                   />
-                  <button onClick={guardarTipoCambio} style={{ background: '#6D28D9', color: '#fff', border: 'none', borderRadius: 8, padding: '4px 14px', cursor: 'pointer', fontSize: 13 }}>
-                    Guardar
-                  </button>
-                  <button onClick={() => setEditandoTC(false)} style={{ background: 'none', border: '1px solid #ccc', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 13 }}>
-                    Cancelar
-                  </button>
+                  <button className="nd-btn nd-btn-primary" onClick={guardarTipoCambio}>Guardar</button>
+                  <button className="nd-btn nd-btn-ghost" onClick={() => setEditandoTC(false)}>Cancelar</button>
                 </div>
               )}
 
               {!isAdmin && (
-                <span style={{ fontSize: 12, color: '#9ca3af' }}>Solo el administrador puede modificarlo</span>
+                <span className="nd-tc-note">Solo el administrador puede modificarlo</span>
               )}
             </div>
 
             {/* Cotizaciones pendientes */}
-<div className="recent-activity">
-  <div className="d-flex align-items-center justify-content-between" style={{ gap: 12, flexWrap: 'wrap' }}>
-    <h2 style={{ marginBottom: 0 }}>Cotizacion pendiente</h2>
+            <div className="nd-panel recent-activity">
+              <div className="nd-panel-head">
+                <h2>
+                  Cotizaciones pendientes
+                  <span className="nd-count">{actividadFiltrada.length}</span>
+                </h2>
 
-    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-      {loadingDash && <span className="text-muted small">Actualizando…</span>}
+                <div className="nd-toolbar">
+                  {loadingDash && <span className="nd-loading">Actualizando…</span>}
 
-      {/* 🔍 Buscador */}
-      <input
-        type="text"
-        placeholder="Buscar por cliente, fecha o texto..."
-        value={searchActividad}
-        onChange={(e) => setSearchActividad(e.target.value)}
-        style={{
-          padding: '6px 10px',
-          borderRadius: 8,
-          border: '1px solid #ddd',
-          minWidth: 220,
-          fontSize: 14,
-        }}
-      />
+                  <SearchField
+                    value={searchActividad}
+                    onChange={setSearchActividad}
+                    placeholder="Buscar por cliente, fecha o texto..."
+                  />
 
-      {/* 📅 Filtro por fecha del evento (calendario nativo) */}
-      <input
-        type="date"
-        value={filtroFechaActividad}
-        onChange={(e) => setFiltroFechaActividad(e.target.value)}
-        title="Filtrar por fecha del evento"
-        style={{
-          padding: '6px 10px',
-          borderRadius: 8,
-          border: '1px solid #ddd',
-          fontSize: 14,
-        }}
-      />
-      {filtroFechaActividad && (
-        <button
-          type="button"
-          onClick={() => setFiltroFechaActividad('')}
-          title="Quitar filtro de fecha"
-          style={{
-            border: '1px solid #ddd',
-            background: '#fff',
-            borderRadius: 8,
-            padding: '6px 10px',
-            fontSize: 13,
-            cursor: 'pointer',
-          }}
-        >
-          × Fecha
-        </button>
-      )}
+                  <DateField
+                    value={filtroFechaActividad}
+                    onChange={setFiltroFechaActividad}
+                    placeholder="Fecha del evento"
+                  />
 
-      {/* ⇅ Orden */}
-      <select
-        value={ordenActividad}
-        onChange={(e) => setOrdenActividad(e.target.value)}
-        title="Ordenar por"
-        style={{
-          padding: '6px 10px',
-          borderRadius: 8,
-          border: '1px solid #ddd',
-          fontSize: 14,
-        }}
-      >
-        <option value="fecha_asc">Fecha del evento ↑</option>
-        <option value="fecha_desc">Fecha del evento ↓</option>
-        <option value="cliente_asc">Cliente A→Z</option>
-        <option value="cliente_desc">Cliente Z→A</option>
-        <option value="creacion_desc">Creadas: más recientes primero</option>
-        <option value="creacion_asc">Creadas: más antiguas primero</option>
-      </select>
-    </div>
-  </div>
+                  <SelectField
+                    value={ordenActividad}
+                    onChange={setOrdenActividad}
+                    options={ORDEN_COTIZACIONES}
+                    aria-label="Ordenar por"
+                  />
+                </div>
+              </div>
 
-  <div className="activity-list">
-    {actividadFiltrada.length === 0 && (
-      <div className="activity-item">
-        <span className="activity-icon">ℹ️</span>
-        <div className="activity-details">
-          <p><strong>Sin cotizaciones pendientes</strong></p>
-          <small>
-            {actividad.length === 0
-              ? 'Cuando registres cotizaciones aparecerán aquí.'
-              : 'No hay resultados para ese criterio de búsqueda.'}
-          </small>
-        </div>
-      </div>
-    )}
+              <div className="activity-list" ref={listaRef}>
+                {actividadFiltrada.length === 0 && (
+                  <div className="activity-item nd-empty">
+                    <span className="activity-icon"><LuInbox /></span>
+                    <div className="activity-details">
+                      <p><strong>Sin cotizaciones pendientes</strong></p>
+                      <small>
+                        {actividad.length === 0
+                          ? 'Cuando registres cotizaciones aparecerán aquí.'
+                          : 'No hay resultados para ese criterio de búsqueda.'}
+                      </small>
+                    </div>
+                  </div>
+                )}
 
-    {actividadFiltrada.map(a => {
-      const holdActivo = tieneHoldActivo(a);
-      return (
-      <div key={a.id} className={`activity-item${holdActivo ? ' activity-item-hold' : ''}`}>
-        <span className="activity-icon">{a.icon}</span>
-        <div className="activity-details">
-          <p>
-            <strong>{a.titulo}</strong>
-            {a.folio && (
-              <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.8 }}>
-                #{a.folio}
-              </span>
-            )}
-            {holdActivo && (
-              <span className="hold-badge" title="Esta fecha todavía tiene prioridad de 24h: se necesita contraseña de admin para tomarla">
-                ⏳ prioridad 24h
-              </span>
-            )}
-          </p>
-          <small>{a.subtitulo}</small>
-          <div
-            className="activity-actions"
-            style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}
-          >
-            <button
-              className="btn btn-sm btn-outline-secondary"
-              onClick={() => abrirModalEditarCot(a)}
-            >
-              ✏️ Editar
-            </button>
-            <button
-              className="btn btn-sm btn-outline-success"
-              onClick={() => convertirACEvento(a.id)}
-            >
-              ✅ Convertir a Evento
-            </button>
-            {a.pdfUrl && (
-              <a
-                className="btn btn-sm btn-outline-primary"
-                href={a.pdfUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Ver PDF
-              </a>
-            )}
-            {can('eventos.eliminar') && (
-  <button
-    className="btn btn-sm btn-outline-danger"
-    onClick={() => eliminarCotizacion(a.id)}
-    title="Eliminar cotización"
-  >
-    🗑️ Eliminar
-  </button>
-)}
-          </div>
-        </div>
-      </div>
-      );
-    })}
-  </div>
-</div>
-
+                {actividadFiltrada.map(a => {
+                  const holdActivo = tieneHoldActivo(a);
+                  return (
+                    <div key={a.id} className={`activity-item${holdActivo ? ' activity-item-hold' : ''}`}>
+                      <span className="activity-icon">{a.icon}</span>
+                      <div className="activity-details">
+                        <p>
+                          <strong>{a.titulo}</strong>
+                          {a.folio && <span className="nd-folio">#{a.folio}</span>}
+                          {holdActivo && (
+                            <span className="hold-badge" title="Esta fecha todavía tiene prioridad de 24h: se necesita contraseña de admin para tomarla">
+                              <LuHourglass /> prioridad 24h
+                            </span>
+                          )}
+                        </p>
+                        <small><LuCalendarDays /> {a.subtitulo}</small>
+                        <div className="activity-actions">
+                          <button className="nd-btn nd-btn-ghost" onClick={() => abrirModalEditarCot(a)}>
+                            <LuPencil /> Editar
+                          </button>
+                          <button className="nd-btn nd-btn-primary" onClick={() => convertirACEvento(a.id)}>
+                            <LuCheck /> Convertir a Evento
+                          </button>
+                          {a.pdfUrl && (
+                            <a className="nd-btn nd-btn-ghost" href={a.pdfUrl} target="_blank" rel="noreferrer">
+                              <LuFileDown /> Ver PDF
+                            </a>
+                          )}
+                          {can('eventos.eliminar') && (
+                            <button className="nd-btn nd-btn-danger" onClick={() => eliminarCotizacion(a.id)} title="Eliminar cotización">
+                              <LuTrash2 /> Eliminar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* Modal de edición de cotización */}
             {showEditCot && cotEdit && (
               <div className="modal-overlay">
-                <div className="modal-content">
+                <div className="modal-content nd-modal">
                   <h2>Editar Cotización</h2>
-                  <form onSubmit={actualizarCotizacion}>
-                    <input
-                      type="text"
-                      name="cliente"
-                      placeholder="Nombre del cliente"
-                      value={cotEdit.cliente}
-                      onChange={onChangeCot}
-                      required
-                    />
-                    <input
-                      type="text"
-                      name="tipo"
-                      placeholder="Tipo de evento"
-                      value={cotEdit.tipo}
-                      onChange={onChangeCot}
-                      required
-                    />
-                    <input
-                      type="date"
+                  <form onSubmit={actualizarCotizacion} className="nd-form">
+                  <div className="nd-grid-2">
+                    <label className="nd-field"><span>Cliente</span><input autoFocus type="text" name="cliente" placeholder="Nombre del cliente" value={cotEdit.cliente} onChange={onChangeCot} required /></label>
+                    <label className="nd-field"><span>Tipo de evento</span><input type="text" name="tipo" placeholder="Tipo de evento" value={cotEdit.tipo} onChange={onChangeCot} required /></label>
+                  </div>
+                  <div className="nd-field"><span>Fecha</span><DateField
                       name="fecha"
                       value={dayjs(cotEdit.fecha).format('YYYY-MM-DD')}
-                      onChange={(e) => setCotEdit(prev => ({ ...prev, fecha: new Date(`${e.target.value}T12:00:00`) }))}
+                      onChange={(v) => setCotEdit(prev => ({ ...prev, fecha: new Date(`${v}T12:00:00`) }))}
                       required
-                    />
+                      clearable={false}
+                      style={{ width: '100%' }}
+                    /></div>
+                  <div className="nd-grid-2">
+                    <div className="nd-field"><span>Hora de inicio</span><TimeField name="horaInicio" value={toHHmm(cotEdit.horaInicio)} onChange={(v) => onChangeCot({ target: { name: 'horaInicio', value: v } })} required clearable={false} style={{ width: '100%' }} /></div>
+                    <div className="nd-field"><span>Hora de fin</span><TimeField name="horaFin" value={toHHmm(cotEdit.horaFin)} onChange={(v) => onChangeCot({ target: { name: 'horaFin', value: v } })} required clearable={false} style={{ width: '100%' }} /></div>
+                  </div>
+                  <label className="nd-field"><span>Invitados</span><input type="number" name="invitados" placeholder="Cantidad de personas" value={cotEdit.invitados} onChange={onChangeCot} required /></label>
+                  <label className="nd-field"><span>Observaciones</span><textarea name="descripcion" placeholder="Observaciones" value={cotEdit.descripcion} onChange={onChangeCot} /></label>
 
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <div style={{ flex: 1 }}>
-                        <label style={{ display: 'block', fontSize: 12, marginBottom: 4 }}>Hora inicio</label>
-                        <input
-                          type="time"
-                          name="horaInicio"
-                          value={toHHmm(cotEdit.horaInicio)}
-                          onChange={onChangeCot}
-                          required
-                        />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <label style={{ display: 'block', fontSize: 12, marginBottom: 4 }}>Hora fin</label>
-                        <input
-                          type="time"
-                          name="horaFin"
-                          value={toHHmm(cotEdit.horaFin)}
-                          onChange={onChangeCot}
-                          required
-                        />
-                      </div>
+                  <div className="nd-form-actions">
+                    <button type="button" className="nd-btn nd-btn-ghost nd-btn-block" onClick={abrirPanelArticulosAdmin}>
+                      Abrir panel de artículos (admin)
+                    </button>
+                    <div className="nd-form-actions-main">
+                      <button type="button" className="nd-btn nd-btn-ghost" onClick={cerrarModalCot}>Cancelar</button>
+                      <button type="submit" className="nd-btn nd-btn-primary">Guardar</button>
                     </div>
-
-                    <input
-                      type="number"
-                      name="invitados"
-                      placeholder="Cantidad de personas"
-                      value={cotEdit.invitados}
-                      onChange={onChangeCot}
-                      required
-                    />
-
-                    <textarea
-                      name="descripcion"
-                      placeholder="Observaciones"
-                      value={cotEdit.descripcion}
-                      onChange={onChangeCot}
-                    />
-
-                    <div className="modal-actions" style={{ display: 'flex', gap: 8, justifyContent: 'space-between', marginTop: 8 }}>
-                      <button type="button" className="btn btn-outline-secondary" onClick={abrirPanelArticulosAdmin}>
-                        Abrir panel de artículos (admin)
-                      </button>
-
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button type="submit" className="btn btn-primary">Guardar</button>
-                        <button type="button" className="btn" onClick={cerrarModalCot}>Cancelar</button>
-                      </div>
-                    </div>
-                  </form>
+                  </div>
+                </form>
                 </div>
               </div>
             )}
@@ -798,8 +768,8 @@ const actividadFiltrada = actividad
 
       case 'clientes':
         return (
-          <div className="dashboard-content">
-            <h1>Gestión de Clientes</h1>
+          <div className="dashboard-content nd-wide">
+            <h1 className="nd-page-title">Gestión de Clientes</h1>
             <Clientes />
           </div>
         );
@@ -824,42 +794,20 @@ const actividadFiltrada = actividad
       case 'inventario':
         return (
     <div className='dashboard-content'>
-      <h1 style={{ marginBottom: 4 }}>Inventario</h1>
-      <p style={{ margin: '0 0 1.25rem', color: '#777' }}>Administra los productos y accesorios disponibles para tus eventos.</p>
+      <div className="nd-welcome">
+        <div>
+          <h1>Inventario</h1>
+          <p>Administra los productos y accesorios disponibles para tus eventos.</p>
+        </div>
+      </div>
 
       {/* Selector de formulario */}
-      <div style={{ display:'flex', gap:8, margin:'0 0 20px', background:'#fff', padding:6, borderRadius:14, width:'fit-content', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' }}>
-        <button
-          onClick={() => setInventarioTab('producto')}
-          style={{
-            border: 0,
-            borderRadius: 10,
-            padding: '9px 18px',
-            fontWeight: 700,
-            fontSize: '0.9rem',
-            cursor: 'pointer',
-            transition: 'background .15s, color .15s',
-            background: inventarioTab === 'producto' ? 'linear-gradient(135deg, #491656, #6b2c5e)' : 'transparent',
-            color: inventarioTab === 'producto' ? '#fff' : '#555',
-          }}
-        >
-          Productos
+      <div className="nd-seg">
+        <button className={`nd-seg-btn ${inventarioTab === 'producto' ? 'active' : ''}`} onClick={() => setInventarioTab('producto')}>
+          <LuPackage /> Productos
         </button>
-        <button
-          onClick={() => setInventarioTab('accesorio')}
-          style={{
-            border: 0,
-            borderRadius: 10,
-            padding: '9px 18px',
-            fontWeight: 700,
-            fontSize: '0.9rem',
-            cursor: 'pointer',
-            transition: 'background .15s, color .15s',
-            background: inventarioTab === 'accesorio' ? 'linear-gradient(135deg, #491656, #6b2c5e)' : 'transparent',
-            color: inventarioTab === 'accesorio' ? '#fff' : '#555',
-          }}
-        >
-          Accesorios
+        <button className={`nd-seg-btn ${inventarioTab === 'accesorio' ? 'active' : ''}`} onClick={() => setInventarioTab('accesorio')}>
+          <LuGift /> Accesorios
         </button>
       </div>
 
@@ -893,32 +841,47 @@ const actividadFiltrada = actividad
       {/* Sidebar */}
       <div className={`sidebar ${sidebarOpen ? '' : 'collapsed'}`}>
         <div className='hamburger-wrapper'>
-          <button className='hamburger-icon' onClick={() => setSidebarOpen(!sidebarOpen)}>☰</button>
+          <button className='hamburger-icon' onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="Mostrar u ocultar menú" title="Menú"><LuMenu /></button>
         </div>
 
         <div className="sidebar-header">
+          <div className={`sidebar-mark ${MARCA_SIDEBAR}`} role="img" aria-label="Nardeli" />
           <h2 className="sidebar-brand">Nardeli</h2>
           <p className="sidebar-subtitle">Salón de Eventos</p>
         </div>
 
         <nav className="sidebar-nav">
-          {visibleMenuItems.map(item => (
-            <button
-              key={item.id}
-              className={`nav-item ${activeSection === item.id ? 'active' : ''}`}
-              onClick={() => {
-                setActiveSection(item.id);
-              }}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
-            </button>
+          {visibleMenuItems.map((item, i) => (
+            <React.Fragment key={item.id}>
+              {(i === 0 || item.grupo !== visibleMenuItems[i - 1].grupo) && (
+                <div className="nav-group"><span>{item.grupo}</span></div>
+              )}
+              <button
+                className={`nav-item ${activeSection === item.id ? 'active' : ''}`}
+                data-tip={item.label}
+                aria-label={item.label}
+                aria-current={activeSection === item.id ? 'page' : undefined}
+                onClick={() => {
+                  setActiveSection(item.id);
+                }}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                <span className="nav-label">{item.label}</span>
+              </button>
+            </React.Fragment>
           ))}
         </nav>
 
         <div className="sidebar-footer">
-          <button className="logout-btn" onClick={onLogout}>
-            <span className="nav-icon">🚪</span>
+          <div className="sidebar-user" data-tip={user?.fullname || user?.email}>
+            <span className="sidebar-user-avatar" aria-hidden="true">{(user?.fullname || user?.email || '?').trim().charAt(0).toUpperCase()}</span>
+            <div className="sidebar-user-info">
+              <strong>{user?.fullname || user?.email}</strong>
+              <small>{{ admin: 'Administrador', asistente: 'Asistente', cotizador: 'Cotizador' }[rolActual] || 'Usuario'}</small>
+            </div>
+          </div>
+          <button className="logout-btn" onClick={onLogout} data-tip="Cerrar Sesión" aria-label="Cerrar Sesión">
+            <span className="nav-icon"><LuLogOut /></span>
             <span className="nav-label">Cerrar Sesión</span>
           </button>
         </div>
@@ -926,13 +889,35 @@ const actividadFiltrada = actividad
 
       {/* Main Content */}
       <div className="main-content">
+        <div className="nd-bg" aria-hidden="true">
+          {OVALOS_FONDO.map((o, i) => (
+            <span
+              key={i}
+              className={`nd-oval nd-oval-${o.t}`}
+              style={{ left: `${o.x}%`, top: `${o.y}%`, width: o.w, height: o.w * 0.58, '--r': `${o.r}deg`, '--d': `${o.d}s`, animationDelay: `${-i * 5}s` }}
+            />
+          ))}
+          {ESTRELLAS_FONDO.map((e, i) => (
+            <span
+              key={`s${i}`}
+              className={`nd-star nd-star-${e.c}`}
+              style={{ left: `${e.x}%`, top: `${e.y}%`, '--s': `${e.s}px`, '--d': `${e.d}s`, '--m': `${e.m}s`, '--dx': `${e.dx}px`, '--dy': `${e.dy}px`, animationDelay: `${-i * 0.9}s, ${-i * 1.7}s` }}
+            />
+          ))}
+        </div>
+
         <header className="main-header">
           <div className="header-left">
             <h1 className="page-title">
               {menuItems.find(item => item.id === activeSection)?.label || 'Dashboard'}
             </h1>
           </div>
-          {/* user info dropdown comentado */}
+          <div className="header-right">
+            <div className="user-info">
+              <span className="user-avatar"><LuUser /></span>
+              <span className="user-name">{user?.fullname || user?.email}</span>
+            </div>
+          </div>
         </header>
 
         <main className="content-area">

@@ -1,3 +1,4 @@
+import { LuPackage, LuGift, LuImage, LuCheck, LuTriangleAlert } from 'react-icons/lu';
 import React, { useState } from 'react';
 import axios from 'axios';
 import './FormProducto.css';
@@ -66,7 +67,7 @@ const FormProducto = ({ onProductoAgregado = () => {} }) => {
   return (
     <div className="fp-card">
       <div className="fp-header">
-        <div className="fp-header-icon" aria-hidden="true">📦</div>
+        <div className="fp-header-icon" aria-hidden="true"><LuPackage /></div>
         <div>
           <h2>Registrar nuevo producto</h2>
           <p className="fp-subtitle">Agrega un artículo al inventario de Nardéli</p>
@@ -75,7 +76,7 @@ const FormProducto = ({ onProductoAgregado = () => {} }) => {
 
       {texto && (
         <div className={`fp-alert ${tipo === 'ok' ? 'fp-alert-ok' : 'fp-alert-error'}`}>
-          {tipo === 'ok' ? '✓' : '⚠'} {texto}
+          {tipo === 'ok' ? <LuCheck /> : <LuTriangleAlert />} {texto}
         </div>
       )}
 
@@ -153,7 +154,7 @@ const FormProducto = ({ onProductoAgregado = () => {} }) => {
         <div className="fp-field">
           <label>Imagen</label>
           <label htmlFor="fp-imagen" className="fp-file-drop">
-            <span className="fp-file-icon" aria-hidden="true">🖼️</span>
+            <span className="fp-file-icon" aria-hidden="true"><LuImage /></span>
             <span className="fp-file-text">
               {formData.imagen ? formData.imagen.name : 'Elige una imagen (opcional)'}
             </span>

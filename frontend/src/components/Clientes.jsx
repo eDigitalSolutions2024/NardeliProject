@@ -1,4 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { aviso } from '../utils/avisos';
+import SearchField from './ui/SearchField';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { animate, stagger } from "animejs";
+import { LuRefreshCw, LuEye, LuFileDown, LuChevronLeft, LuChevronRight, LuInbox } from "react-icons/lu";
 import API_BASE_URL, { authHeaders } from "../api";
 import "./Clientes.css";
 
@@ -27,6 +31,9 @@ function fmtDateTime(d) {
   }
 }
 
+// inicial para el círculo de cada cliente
+const inicial = (nombre) => (String(nombre || "?").trim().charAt(0) || "?").toUpperCase();
+
 // badge de estado de pago
 function payBadgeClass(estado) {
   const e = String(estado || "").toLowerCase();
@@ -42,6 +49,7 @@ export default function Clientes() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [rows, setRows] = useState([]);
+  const tablaRef = useRef(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -227,10 +235,19 @@ const filtered = useMemo(() => {
     return "badge";
   };
 
+  // Las filas entran escalonadas al cargar y al cambiar de página o pestaña (solo visual).
+  useEffect(() => {
+    const cont = tablaRef.current;
+    if (!cont || loading || paginated.length === 0) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    animate(cont.querySelectorAll("tbody tr"), { opacity: [0, 1], translateY: [10, 0], delay: stagger(28), duration: 420, ease: "outCubic" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, page, tab]);
+
   const abrirPanelCliente = (row) => {
   // solo reservas pueden abrir el panel
   if (row.fuente !== "reservas" || !row._id) {
-    alert("Este registro no es una reserva.");
+    aviso("Este registro no es una reserva.");
     return;
   }
 
@@ -248,7 +265,10 @@ const filtered = useMemo(() => {
   return (
     <div className="clientes-container">
       <div className="clientes-header">
-        <h2>Clientes</h2>
+        <div className="cl-title-row">
+          <h2>Clientes</h2>
+          <span className="cl-count">{filtered.length}</span>
+        </div>
         <div className="toolbar">
           <div className="tabs">
             <button
@@ -271,13 +291,14 @@ const filtered = useMemo(() => {
             </button>
           </div>
 
-          <input
-            className="search"
+          <SearchField
             placeholder="Buscar por nombre, correo, teléfono, evento o ID…"
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={setQ}
+            style={{ flex: "1 1 260px", minWidth: 220 }}
           />
           <button className="refresh" onClick={fetchData} disabled={loading}>
+            <LuRefreshCw className={loading ? "cl-spin" : ""} aria-hidden="true" />
             {loading ? "Cargando…" : "Actualizar"}
           </button>
         </div>
@@ -285,7 +306,7 @@ const filtered = useMemo(() => {
 
       {error && <div className="alert">{error}</div>}
 
-      <div className="table-wrapper">
+      <div className="table-wrapper" ref={tablaRef}>
         <table className="clientes-table">
           <thead>
             <tr>
@@ -307,7 +328,7 @@ const filtered = useMemo(() => {
           <tbody>
             {paginated.length === 0 && !loading && (
               <tr>
-                <td colSpan="13" className="empty">Sin resultados</td>
+                <td colSpan="13" className="empty"><LuInbox aria-hidden="true" /> Sin resultados</td>
               </tr>
             )}
 
@@ -328,7 +349,12 @@ const filtered = useMemo(() => {
                   </span>
                 </td>
 
-                <td className="nombre">{r.cliente}</td>
+                <td className="nombre">
+                  <div className="cl-name">
+                    <span className="cl-avatar" aria-hidden="true">{inicial(r.cliente)}</span>
+                    <span>{r.cliente}</span>
+                  </div>
+                </td>
                 <td className="correo">{r.correo}</td>
                 <td>{r.telefono}</td>
                 <td>{r.tipoEvento}</td>
@@ -368,20 +394,22 @@ const filtered = useMemo(() => {
                 <td className="acciones">
                   <button
   className="btn btn-light"
+  title="Ver panel del cliente"
   onClick={() => {
     if (r.fuente === "reservas" && r._id) {
       const url = `/cliente/dashboard?reservaId=${r._id}&mode=admin`;
       window.open(url, "_blank");
     } else {
-      alert("Este cliente no tiene una reserva asociada.");
+      aviso("Este cliente no tiene una reserva asociada.");
     }
   }}
 >
-  Ver
+  <LuEye aria-hidden="true" /> <span className="cl-btn-text">Ver</span>
 </button>
                   {r.fuente === "reservas" && r._id && (
                     <button
                       className="btn"
+                      title="Descargar PDF"
                       onClick={() =>
                         window.open(
                           `${API_BASE_URL}/reservas/${r._id}/pdf`,
@@ -389,7 +417,7 @@ const filtered = useMemo(() => {
                         )
                       }
                     >
-                      PDF
+                      <LuFileDown aria-hidden="true" /> <span className="cl-btn-text">PDF</span>
                     </button>
                   )}
                 </td>
@@ -405,7 +433,7 @@ const filtered = useMemo(() => {
           onClick={() => setPage((p) => Math.max(1, p - 1))}
           disabled={page === 1}
         >
-          ←
+          <LuChevronLeft aria-label="Anterior" />
         </button>
         <span className="page-info">
           Página {page} de {totalPages}
@@ -415,7 +443,7 @@ const filtered = useMemo(() => {
           onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
           disabled={page === totalPages}
         >
-          →
+          <LuChevronRight aria-label="Siguiente" />
         </button>
       </div>
     </div>

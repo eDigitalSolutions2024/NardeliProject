@@ -1,3 +1,4 @@
+import { LuClipboardList, LuCircleCheck, LuSquare, LuNotebookPen, LuX } from 'react-icons/lu';
 import React, { useEffect, useState, useCallback } from 'react';
 import API_BASE_URL, { API_ORIGIN } from '../api';
 
@@ -59,7 +60,7 @@ export default function ChecklistsReserva({ reservaId }) {
   if (summaries.length === 0) {
     return (
       <div style={{ padding: 32, textAlign: 'center', color: '#9ca3af' }}>
-        <div style={{ fontSize: 48 }}>📋</div>
+        <div style={{ fontSize: 48, color: '#c9aedb' }}><LuClipboardList /></div>
         <div style={{ marginTop: 12 }}>No hay checklists asignados a este evento.</div>
       </div>
     );
@@ -69,19 +70,19 @@ export default function ChecklistsReserva({ reservaId }) {
     <div style={{ padding: '0 0 32px' }}>
       {/* Resumen global */}
       <div style={{
-        background: '#f9fafb', borderRadius: 12, padding: '16px 20px',
-        marginBottom: 16, border: '1px solid #e5e7eb'
+        background: '#faf5fc', borderRadius: 12, padding: '16px 20px',
+        marginBottom: 16, border: '1px solid #efe6f3'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <strong style={{ fontSize: 15 }}>Progreso global del evento</strong>
-          <span style={{ fontWeight: 700, fontSize: 18, color: globalPct === 100 ? '#10b981' : '#6d28d9' }}>
+          <span style={{ fontWeight: 700, fontSize: 18, color: globalPct === 100 ? '#10b981' : '#7b247f' }}>
             {globalPct}%
           </span>
         </div>
-        <div style={{ background: '#e5e7eb', borderRadius: 6, height: 10, overflow: 'hidden' }}>
+        <div style={{ background: '#efe6f3', borderRadius: 6, height: 10, overflow: 'hidden' }}>
           <div style={{
             height: '100%', borderRadius: 6, transition: 'width .3s',
-            background: globalPct === 100 ? '#10b981' : '#6d28d9',
+            background: globalPct === 100 ? '#10b981' : '#7b247f',
             width: `${globalPct}%`
           }} />
         </div>
@@ -99,9 +100,9 @@ export default function ChecklistsReserva({ reservaId }) {
 
         return (
           <div key={cl._id} style={{
-            background: '#fff', borderRadius: 12, marginBottom: 10,
-            border: '1px solid #e5e7eb', overflow: 'hidden',
-            boxShadow: '0 1px 4px rgba(0,0,0,.05)'
+            background: '#fff', borderRadius: 16, marginBottom: 12,
+            border: '1px solid #efe6f3', overflow: 'hidden',
+            boxShadow: '0 1px 2px rgba(73, 22, 86, 0.04), 0 14px 30px -24px rgba(73, 22, 86, 0.3)'
           }}>
             {/* Cabecera clickeable */}
             <div
@@ -112,11 +113,11 @@ export default function ChecklistsReserva({ reservaId }) {
                 userSelect: 'none'
               }}
             >
-              <span style={{ fontSize: 26 }}>{cl.icon || '📋'}</span>
+              <span style={{ width: 46, height: 46, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 14, background: 'linear-gradient(135deg, #f4e6f7, #ead3f0)', color: '#6b2c5e', fontSize: 24 }}><LuClipboardList /></span>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: 15 }}>{cl.categoryName}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                  <div style={{ flex: 1, background: '#e5e7eb', borderRadius: 4, height: 6, overflow: 'hidden' }}>
+                  <div style={{ flex: 1, background: '#efe6f3', borderRadius: 4, height: 6, overflow: 'hidden' }}>
                     <div style={{
                       height: '100%', borderRadius: 4,
                       background: statusColor[cl.status] || '#9ca3af',
@@ -150,11 +151,11 @@ export default function ChecklistsReserva({ reservaId }) {
                     <div key={item._id} style={{
                       padding: '10px 12px', borderRadius: 8, marginBottom: 8,
                       background: item.completed ? '#f0fdf4' : '#fafafa',
-                      border: `1px solid ${item.completed ? '#bbf7d0' : '#e5e7eb'}`
+                      border: `1px solid ${item.completed ? '#bbf7d0' : '#efe6f3'}`
                     }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                        <span style={{ fontSize: 18, marginTop: 1 }}>
-                          {item.completed ? '✅' : '⬜'}
+                        <span style={{ fontSize: 20, marginTop: 1, display: 'inline-flex', color: item.completed ? '#16a34a' : '#c9aedb' }}>
+                          {item.completed ? <LuCircleCheck /> : <LuSquare />}
                         </span>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 600, fontSize: 14, color: item.completed ? '#166534' : '#374151' }}>
@@ -165,7 +166,7 @@ export default function ChecklistsReserva({ reservaId }) {
                           )}
                           {item.observation && (
                             <div style={{ fontSize: 12, color: '#374151', marginTop: 4, fontStyle: 'italic' }}>
-                              📝 {item.observation}
+                              <LuNotebookPen style={{ verticalAlign: '-0.15em' }} /> {item.observation}
                             </div>
                           )}
                           {/* Evidencias */}
@@ -234,7 +235,7 @@ export default function ChecklistsReserva({ reservaId }) {
               background: 'rgba(255,255,255,.2)', border: 'none', color: '#fff',
               fontSize: 24, width: 40, height: 40, borderRadius: '50%', cursor: 'pointer'
             }}
-          >✕</button>
+          ><LuX /></button>
         </div>
       )}
     </div>

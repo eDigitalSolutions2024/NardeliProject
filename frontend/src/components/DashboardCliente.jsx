@@ -1,3 +1,8 @@
+import { LuArrowLeft } from 'react-icons/lu';
+import { aviso, pedirConfirmacion, pedirValor } from '../utils/avisos';
+import SelectField from './ui/SelectField';
+import SearchField from './ui/SearchField';
+import { pedirPasswordAdmin } from '../utils/pedirPassword';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './DashboardCliente.css';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
@@ -204,7 +209,7 @@ const [discountItems, setDiscountItems] = useState({}); // { [itemId]: true }
       setError('');
       try {
         const urlInv = `${API_BASE_URL}/productos/inventario`;
-        const rInv = await fetch(urlInv, { headers: { 'Content-Type': 'application/json' } });
+        const rInv = await fetch(urlInv, { headers: { 'Content-Type': 'application/json', ...authHeaders() } });
         if (!rInv.ok) throw new Error(`HTTP ${rInv.status} inventario`);
         const dInv = await rInv.json();
         const listInv = Array.isArray(dInv) ? dInv : (dInv.items || []);
@@ -622,7 +627,7 @@ const saldoRestante = useMemo(() => {
   // ====== Guardar selección (persiste productos/utensilios)
   const guardarSeleccion = async () => {
     if (!reservaId) {
-      alert('No se encontró el ID de la reserva.');
+      aviso('No se encontró el ID de la reserva.');
       return false;
     }
 
@@ -630,10 +635,10 @@ const saldoRestante = useMemo(() => {
     // aplicado, se pide contraseña de administrador como filtro extra.
     let adminPassword;
     if (seQuitaAlgunDescuento(discountItems)) {
-      adminPassword = window.prompt('Vas a quitar el descuento de un producto. Ingresa la contraseña de un administrador para confirmar:');
+      adminPassword = await pedirPasswordAdmin('Vas a quitar el descuento de un producto. Ingresa la contraseña de un administrador para confirmar:');
       if (adminPassword === null) return false; // canceló
       if (!adminPassword.trim()) {
-        alert('Debes ingresar una contraseña.');
+        aviso('Debes ingresar una contraseña.');
         return false;
       }
     }
@@ -678,11 +683,11 @@ const saldoRestante = useMemo(() => {
         const r = await fetch(`${API_BASE_URL}/reservas/${reservaId}/utensilios`);
         if (r.ok) setUtensiliosBD(await r.json());
       } catch {}
-      alert('¡Selección guardada!');
+      aviso('¡Selección guardada!');
       return true;
     } catch (e) {
       console.error(e);
-      alert(e.message || 'No se pudo guardar la selección');
+      aviso(e.message || 'No se pudo guardar la selección');
       return false;
     } finally {
       setSaving(false);
@@ -692,7 +697,7 @@ const saldoRestante = useMemo(() => {
   const cargarHistorial = async () => {
   try {
     if (!reservaId) {
-      alert('No se encontró la reserva.');
+      aviso('No se encontró la reserva.');
       return;
     }
 
@@ -709,7 +714,7 @@ const saldoRestante = useMemo(() => {
     setShowHistorial(true);
   } catch (e) {
     console.error('cargarHistorial:', e);
-    alert('No se pudo cargar el historial');
+    aviso('No se pudo cargar el historial');
   }
 };
 
@@ -767,11 +772,11 @@ const saldoRestante = useMemo(() => {
         const r2 = await fetch(`${API_BASE_URL}/reservas/${reservaId}/utensilios`);
         if (r2.ok) setUtensiliosBD(await r2.json());
       } catch {}
-      alert('Accesorios guardados en la reserva');
+      aviso('Accesorios guardados en la reserva');
       setShowAccModal(false);
     } catch (e) {
       console.error('aplicarAccesorios', e);
-      alert('No se pudieron aplicar los accesorios a la reserva');
+      aviso('No se pudieron aplicar los accesorios a la reserva');
     }
   };
 
@@ -781,10 +786,10 @@ const saldoRestante = useMemo(() => {
     const ok = await guardarSeleccion();
     if (!ok) return;
     await aplicarAccesorios();
-    alert('Reserva finalizada y cambios guardados');
+    aviso('Reserva finalizada y cambios guardados');
   } catch (e) {
     console.error('finalizarReserva', e);
-    alert('No se pudo finalizar la reserva');
+    aviso('No se pudo finalizar la reserva');
   }
 };
 
@@ -793,25 +798,25 @@ const actualizarReserva = async () => {
     const ok = await guardarSeleccion();
     if (!ok) return;
     await aplicarAccesorios();
-    alert('Saldos Actualizados');
+    aviso('Saldos Actualizados');
   } catch (e) {
     console.error('Actualizar Saldo', e);
-    alert('No se pudo Actualizar el saldo de la reserva');
+    aviso('No se pudo Actualizar el saldo de la reserva');
   }
 };
 
   // ====== Editar precio (solo admin) — modifica SOLO el snapshot de utensilios
   const editarPrecio = async (item) => {
     if (!isAdmin) return;
-    if (!reservaId) { alert('No hay reservaId'); return; }
+    if (!reservaId) { aviso('No hay reservaId'); return; }
 
     const actual = priceFor(item.id);
-    const input = window.prompt(`Nuevo precio para "${item.nombre}"`, (Number.isFinite(actual) ? actual : 0).toFixed(2));
+    const input = await pedirValor(`Nuevo precio para "${item.nombre}"`, (Number.isFinite(actual) ? actual : 0).toFixed(2));
     if (input === null) return;
 
     const value = Number(String(input).replace(',', '.').trim());
     if (!Number.isFinite(value) || value < 0) {
-      alert('Precio inválido');
+      aviso('Precio inválido');
       return;
     }
 
@@ -854,7 +859,7 @@ const actualizarReserva = async () => {
       setSeleccion(prev => (prev[item.id] ? { ...prev, [item.id]: { ...prev[item.id] } } : prev));
     } catch (err) {
       console.error('editarPrecio', err);
-      alert(
+      aviso(
         err?.message?.includes('Failed to fetch')
           ? 'No se pudo contactar al servidor (posible CORS/preflight).'
           : err?.message || 'No se pudo actualizar el precio en la reserva'
@@ -911,7 +916,7 @@ const actualizarReserva = async () => {
 
  async function openReceiptModalPrefill() {
   if (!reservaData) {
-    alert('Aún no se carga la reserva. Intenta de nuevo en unos segundos.');
+    aviso('Aún no se carga la reserva. Intenta de nuevo en unos segundos.');
     return;
   }
 
@@ -962,7 +967,7 @@ const actualizarReserva = async () => {
 
 async function deleteReceiptById(id) {
   if (!id) return;
-  if (!window.confirm('¿Eliminar este recibo? Esta acción no se puede deshacer.')) return;
+  if (!await pedirConfirmacion('¿Eliminar este recibo? Esta acción no se puede deshacer.')) return;
 
   try {
     const r = await fetch(`${API_BASE_URL}/receipts/${id}`, {
@@ -995,10 +1000,10 @@ async function deleteReceiptById(id) {
       console.error('refresh receipts after delete', e);
     }
 
-    alert('Recibo eliminado correctamente');
+    aviso('Recibo eliminado correctamente');
   } catch (err) {
     console.error('deleteReceiptById', err);
-    alert(err?.message || 'No se pudo eliminar el recibo');
+    aviso(err?.message || 'No se pudo eliminar el recibo');
   }
 }
 
@@ -1006,7 +1011,7 @@ async function deleteReceiptById(id) {
 
   async function submitReceipt() {
     try {
-      if (!reservaId) return alert('No hay reservaId');
+      if (!reservaId) return aviso('No hay reservaId');
 
       const itemsPayload = Object.values(seleccion).map(({ item, qty }) => ({
         description: item.nombre,
@@ -1017,18 +1022,18 @@ async function deleteReceiptById(id) {
 const esUSD = receiptForm.currency === 'USD';
 const tipoCambio = Number(receiptForm.exchangeRate || 0);
 if (esUSD && (!tipoCambio || tipoCambio <= 0)) {
-  return alert('Ingresa el tipo de cambio (MXN por USD) para continuar.');
+  return aviso('Ingresa el tipo de cambio (MXN por USD) para continuar.');
 }
 const amtOriginal = Number(paymentAmount || 0);
 let amt = esUSD ? amtOriginal * tipoCambio : amtOriginal;
 if (!Number.isFinite(amtOriginal) || amtOriginal <= 0) {
-  return alert('El monto a cobrar debe ser mayor a cero.');
+  return aviso('El monto a cobrar debe ser mayor a cero.');
 }
 // Tolerancia: USD puede generar diferencias de centavos por redondeo del tipo de cambio
 const tolerancia = esUSD ? 1.0 : 0.01;
 if (amt > saldoRestante + tolerancia) {
   const maxUSD = esUSD ? (saldoRestante / tipoCambio).toFixed(2) : null;
-  return alert(esUSD
+  return aviso(esUSD
     ? `No puedes cobrar más del saldo restante. Máximo: USD $${maxUSD} (= $${saldoRestante.toFixed(2)} MXN)`
     : `No puedes cobrar más del saldo restante ($${saldoRestante.toFixed(2)}).`
   );
@@ -1038,7 +1043,7 @@ if (amt > saldoRestante) amt = saldoRestante;
 
 
       if (itemsPayload.length === 0) {
-        return alert('No hay artículos en la selección para generar el recibo.');
+        return aviso('No hay artículos en la selección para generar el recibo.');
       }
 
       const payload = {
@@ -1088,7 +1093,7 @@ if (amt > saldoRestante) amt = saldoRestante;
 
       const id = data?.receipt?._id || data?.receipt?.id;
       if (!id) {
-        alert('Recibo creado, pero no se obtuvo el ID para el PDF.');
+        aviso('Recibo creado, pero no se obtuvo el ID para el PDF.');
         setShowReceiptModal(false);
         return;
       }
@@ -1096,7 +1101,7 @@ if (amt > saldoRestante) amt = saldoRestante;
       setShowReceiptModal(false);
     } catch (e) {
       console.error('submitReceipt', e);
-      alert(e?.message || 'Error al generar el recibo');
+      aviso(e?.message || 'Error al generar el recibo');
     }
   }
 
@@ -1113,7 +1118,7 @@ function openReceiptPdfById(id) {
 
 function openEstadoCuentaPdf() {
   if (!reservaId) {
-    alert('No hay reserva seleccionada');
+    aviso('No hay reserva seleccionada');
     return;
   }
 
@@ -1128,10 +1133,19 @@ function openEstadoCuentaPdf() {
 }
 
 
+  // Cierra esta ventana y regresa a la página que la abrió; si se abrió directo, vuelve al panel.
+  const volver = () => {
+    window.close();
+    setTimeout(() => navigate(isCotizador ? '/cotizador' : '/dashboard'), 250);
+  };
+
   return (
     <div className="cliente-dashboard">
       <div className="cd-header">
-        <div>
+        <button type="button" className="cd-back" onClick={volver} title="Volver y cerrar esta ventana">
+          <LuArrowLeft aria-hidden="true" /> Volver
+        </button>
+        <div className="cd-header-text">
           <h2>Panel del Cliente</h2>
           <small>
             {isAdmin ? 'Vista de administrador — se muestran precios (desde la reserva)' : 'Selecciona los artículos que necesitas para tu evento'}
@@ -1143,22 +1157,16 @@ function openEstadoCuentaPdf() {
       </div>
 
       {isStaff && (
-        <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #ede9fe', marginBottom: 16 }}>
+        <div className="nd-seg">
           {[
             { key: 'panel',      label: 'Panel Cliente' },
             { key: 'formatos',   label: 'Formatos' },
-            { key: 'checklists', label: '✅ Checklists' },
+            { key: 'checklists', label: 'Checklists' },
           ].map(t => (
             <button
               key={t.key}
+              className={`nd-seg-btn ${activeTab === t.key ? 'active' : ''}`}
               onClick={() => setActiveTab(t.key)}
-              style={{
-                padding: '9px 22px', border: 'none', borderRadius: '6px 6px 0 0',
-                fontWeight: 700, fontSize: 13, cursor: 'pointer',
-                background: activeTab === t.key ? '#6d28d9' : '#f3e8ff',
-                color: activeTab === t.key ? '#fff' : '#6d28d9',
-                marginRight: 2,
-              }}
             >
               {t.label}
             </button>
@@ -1175,21 +1183,25 @@ function openEstadoCuentaPdf() {
       )}
 
       <div className="cd-toolbar" style={{ display: activeTab !== 'panel' ? 'none' : undefined }}>
-        <input
-          className="cd-input"
+        <SearchField
           placeholder="Buscar (mesas, platos, sillas...)"
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={setQ}
+          style={{ flex: '1 1 260px' }}
         />
-        <select className="cd-select" value={cat} onChange={(e) => setCat(e.target.value)}>
-          {cats.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
+        <SelectField
+          value={cat || 'Todas'}
+          onChange={setCat}
+          options={cats.map(c => ({ value: c, label: c }))}
+          aria-label="Categoría"
+        />
         <button className="cd-btn cd-btn-clear" onClick={() => { setQ(''); setCat(''); }}>
           Limpiar filtros
         </button>
       </div>
 
       <div className="cd-content" style={{ display: activeTab !== 'panel' ? 'none' : undefined }}>
+        <div className="cd-main-col">
         {/* Inventario */}
         <div className="cd-card">
           {loading ? (
@@ -1275,6 +1287,65 @@ function openEstadoCuentaPdf() {
               })}
             </div>
           )}
+        </div>
+
+        {/* ACCESORIOS */}
+        <div className="cd-card">
+          <h3>Accesorios (préstamo)</h3>
+          {loadingAcc ? (
+            <div className="empty">Cargando accesorios…</div>
+          ) : accesorios.length === 0 ? (
+            <div className="empty">No hay accesorios disponibles.</div>
+          ) : (
+            <div className="inventory-grid">
+              {accesorios.map(acc => {
+                const qty = selAccesorios[acc._id] || 0;
+                const stock = Number(acc.stock ?? 0);
+                const agotado = stock <= 0;
+                return (
+                  <div key={acc._id} className="item-card">
+                    <img
+                      className="item-img"
+                      src={resolveImg(acc.imagen)}
+                      alt={acc.nombre}
+                      onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}
+                    />
+                    <div>
+                      <h4 className="item-title">{acc.nombre}</h4>
+                      <div className="item-meta">
+                        <span className="badge">{acc.categoria || 'Accesorio'}</span>
+                        <span className={`badge ${agotado ? 'out' : stock < 10 ? 'warn' : 'ok'}`}>
+                          Stock: {stock} {acc.unidad || 'pza'}
+                        </span>
+                      </div>
+
+                      <div className="item-actions">
+                        <div className="qty">
+                          <button onClick={() => setQtyAcc(acc, Math.max(0, qty - 1))} disabled={qty <= 0}>−</button>
+                          <input
+                            type="number"
+                            min="0"
+                            max={stock}
+                            value={qty}
+                            onChange={(e) => setQtyAcc(acc, Number(e.target.value))}
+                          />
+                          <button onClick={() => setQtyAcc(acc, Math.min(qty + 1, stock))} disabled={qty >= stock}>+</button>
+                        </div>
+                        <button
+                          className="add-btn"
+                          onClick={() => setQtyAcc(acc, Math.min((qty || 0) + 1, stock))}
+                          disabled={agotado}
+                        >
+                          Añadir
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
         </div>
 
         {/* Resumen (productos) */}
@@ -1365,15 +1436,15 @@ function openEstadoCuentaPdf() {
 
               <h4 style={{ marginBottom: 8 }}>Descuento</h4>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                <select
-                  className="cd-select"
+                <SelectField
                   value={descTipo}
-                  onChange={(e) => setDescTipo(e.target.value)}
-                  style={{ maxWidth: 160 }}
-                >
-                  <option value="monto">Monto ($)</option>
-                  <option value="porcentaje">% Porcentaje</option>
-                </select>
+                  onChange={setDescTipo}
+                  options={[
+                    { value: 'monto', label: 'Monto ($)' },
+                    { value: 'porcentaje', label: '% Porcentaje' },
+                  ]}
+                  style={{ maxWidth: 170 }}
+                />
 
                 <input
                   className="cd-input"
@@ -1388,13 +1459,13 @@ function openEstadoCuentaPdf() {
 
                 <button className="cd-btn" type="button" onClick={() => {
                   (async () => {
-                    if (!reservaId) return alert('No hay reservaId');
+                    if (!reservaId) return aviso('No hay reservaId');
                     try {
                           const hayProductosConDescuento =
                           Object.values(discountItems).some(v => v === true);
 
                         if (!hayProductosConDescuento) {
-                          alert('Debes seleccionar al menos un producto para aplicar descuento.');
+                          aviso('Debes seleccionar al menos un producto para aplicar descuento.');
                           return;
                         }
 
@@ -1404,10 +1475,10 @@ function openEstadoCuentaPdf() {
                       // aplicado requiere la contraseña de un admin.
                       let adminPassword;
                       if (seQuitaAlgunDescuento(discountItems)) {
-                        adminPassword = window.prompt('Vas a quitar el descuento de un producto. Ingresa la contraseña de un administrador para confirmar:');
+                        adminPassword = await pedirPasswordAdmin('Vas a quitar el descuento de un producto. Ingresa la contraseña de un administrador para confirmar:');
                         if (adminPassword === null) return; // canceló
                         if (!adminPassword.trim()) {
-                          alert('Debes ingresar una contraseña.');
+                          aviso('Debes ingresar una contraseña.');
                           return;
                         }
                       }
@@ -1429,9 +1500,9 @@ function openEstadoCuentaPdf() {
                         throw new Error(err.msg || `HTTP ${res.status}`);
                       }
                       discountBaselineRef.current = discountItems;
-                      alert('Descuento guardado');
+                      aviso('Descuento guardado');
                     } catch (e) {
-                      console.error(e); alert(e.message || 'No se pudo guardar el descuento');
+                      console.error(e); aviso(e.message || 'No se pudo guardar el descuento');
                     }
                   })();
                 }}>
@@ -1493,7 +1564,7 @@ onMouseLeave={(e) => {
   e.target.style.boxShadow = '0 4px 10px rgba(183, 219, 45, 0.35)'
 }}
               onClick={async () => {
-                if (!reservaId) return alert('No hay reservaId');
+                if (!reservaId) return aviso('No hay reservaId');
                 const url = `${API_BASE_URL}/reservas/${reservaId}/pdf`;
                 window.open(url, '_blank');
 
@@ -1513,7 +1584,7 @@ onMouseLeave={(e) => {
             </button>
 
             <button
-            className="pdf"
+            className="pdf pdf-saldo"
             style={{
               background: 'linear-gradient(135deg, #d4ff3f, #b7db2d)',
               color: '#1a1a1a',
@@ -1680,64 +1751,6 @@ onMouseLeave={(e) => {
           )}
 
         </div>
-
-        {/* ACCESORIOS */}
-        <div className="cd-card">
-          <h3>Accesorios (préstamo)</h3>
-          {loadingAcc ? (
-            <div className="empty">Cargando accesorios…</div>
-          ) : accesorios.length === 0 ? (
-            <div className="empty">No hay accesorios disponibles.</div>
-          ) : (
-            <div className="inventory-grid">
-              {accesorios.map(acc => {
-                const qty = selAccesorios[acc._id] || 0;
-                const stock = Number(acc.stock ?? 0);
-                const agotado = stock <= 0;
-                return (
-                  <div key={acc._id} className="item-card">
-                    <img
-                      className="item-img"
-                      src={resolveImg(acc.imagen)}
-                      alt={acc.nombre}
-                      onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}
-                    />
-                    <div>
-                      <h4 className="item-title">{acc.nombre}</h4>
-                      <div className="item-meta">
-                        <span className="badge">{acc.categoria || 'Accesorio'}</span>
-                        <span className={`badge ${agotado ? 'out' : stock < 10 ? 'warn' : 'ok'}`}>
-                          Stock: {stock} {acc.unidad || 'pza'}
-                        </span>
-                      </div>
-
-                      <div className="item-actions">
-                        <div className="qty">
-                          <button onClick={() => setQtyAcc(acc, Math.max(0, qty - 1))} disabled={qty <= 0}>−</button>
-                          <input
-                            type="number"
-                            min="0"
-                            max={stock}
-                            value={qty}
-                            onChange={(e) => setQtyAcc(acc, Number(e.target.value))}
-                          />
-                          <button onClick={() => setQtyAcc(acc, Math.min(qty + 1, stock))} disabled={qty >= stock}>+</button>
-                        </div>
-                        <button
-                          className="add-btn"
-                          onClick={() => setQtyAcc(acc, Math.min((qty || 0) + 1, stock))}
-                          disabled={agotado}
-                        >
-                          Añadir
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* MODAL SOLO ACCESORIOS */}
@@ -1850,27 +1863,29 @@ onMouseLeave={(e) => {
               </div>
               <div>
                 <label>Método de pago</label>
-                <select
-                  className="cd-select"
+                <SelectField
                   value={receiptForm.paymentMethod}
-                  onChange={(e)=>setReceiptForm(s=>({...s, paymentMethod:e.target.value}))}
-                >
-                  <option value="EFECTIVO">EFECTIVO</option>
-                  <option value="TARJETA">TARJETA</option>
-                  <option value="TRANSFERENCIA">TRANSFERENCIA</option>
-                  <option value="OTRO">OTRO</option>
-                </select>
+                  onChange={(v) => setReceiptForm(s => ({ ...s, paymentMethod: v }))}
+                  options={[
+                    { value: 'EFECTIVO', label: 'EFECTIVO' },
+                    { value: 'TARJETA', label: 'TARJETA' },
+                    { value: 'TRANSFERENCIA', label: 'TRANSFERENCIA' },
+                    { value: 'OTRO', label: 'OTRO' },
+                  ]}
+                  style={{ width: '100%' }}
+                />
               </div>
               <div>
                 <label>Moneda del pago</label>
-                <select
-                  className="cd-select"
+                <SelectField
                   value={receiptForm.currency}
-                  onChange={(e)=>setReceiptForm(s=>({...s, currency:e.target.value}))}
-                >
-                  <option value="MXN">MXN — Pesos mexicanos</option>
-                  <option value="USD">USD — Dólares</option>
-                </select>
+                  onChange={(v) => setReceiptForm(s => ({ ...s, currency: v }))}
+                  options={[
+                    { value: 'MXN', label: 'MXN — Pesos mexicanos' },
+                    { value: 'USD', label: 'USD — Dólares' },
+                  ]}
+                  style={{ width: '100%' }}
+                />
               </div>
               {receiptForm.currency === 'USD' && (
                 <div>

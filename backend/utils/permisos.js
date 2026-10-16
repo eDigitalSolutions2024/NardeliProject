@@ -41,8 +41,10 @@ const PERMISOS_POR_DEFECTO = {
     'cotizaciones.crear': true,
     'cotizaciones.ver_todas': true,
   },
+  // El cotizador VE todas las cotizaciones, pero solo EDITA las suyas (eso lo valida routes/reservas.js).
   cotizador: {
     'cotizaciones.crear': true,
+    'cotizaciones.ver_todas': true,
   },
 };
 

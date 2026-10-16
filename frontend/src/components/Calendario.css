@@ -493,3 +493,98 @@
   justify-content: flex-end;
   gap: 1rem;
 }
+
+
+/* ===== Calendario (rediseño; todo dentro de .calendario-container) ===== */
+.calendario-container { gap: 1.5rem; padding: 0; max-width: none; align-items: flex-start; }
+
+.calendario-container .eventos-panel,
+.calendario-container .calendario-panel { border: 1px solid #efe6f3; border-radius: 16px; background: #fff; box-shadow: 0 1px 2px rgba(73, 22, 86, 0.04), 0 14px 30px -22px rgba(73, 22, 86, 0.3); }
+.calendario-container .eventos-panel { max-height: calc(100vh - 150px); min-width: 0; }
+.calendario-container .calendario-panel { min-width: 0; }
+
+.calendario-container .eventos-header,
+.calendario-container .calendario-header { background: #fff; color: #491656; padding: 1.25rem 1.4rem 1rem; border-bottom: 1px solid #f4eef7; }
+.calendario-container .eventos-header h2,
+.calendario-container .calendario-header h2 { margin: 0; color: #491656; font-size: 1.25rem; font-weight: 700; text-align: left; }
+.calendario-container .calendario-header { text-align: left; }
+.calendario-container .calendario-subtitle { margin: 0.25rem 0 0; color: #8a7a92; font-size: 0.9rem; }
+.calendario-container .eventos-count { display: inline-block; margin-top: 0.35rem; padding: 2px 10px; border-radius: 999px; background: #f1def5; color: #6b2c5e; font-size: 0.78rem; font-weight: 700; }
+
+/* Tarjetas de eventos */
+.calendario-container .eventos-lista { padding: 1rem 1.1rem 1.1rem; display: flex; flex-direction: column; gap: 0.8rem; background: #fbf9fc; }
+.calendario-container .evento-card { position: relative; display: flex; align-items: flex-start; gap: 0.9rem; padding: 1rem 1.05rem 1rem 1.2rem; background: #fff; border: 1px solid #efe6f3; border-left: 1px solid #efe6f3; border-radius: 14px; box-shadow: none; transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+.calendario-container .evento-card::before { content: ''; position: absolute; left: 0; top: 12px; bottom: 12px; width: 4px; border-radius: 0 4px 4px 0; background: linear-gradient(180deg, #7b247f, #491656); }
+.calendario-container .evento-card:hover { transform: translateY(-2px); border-color: #dcc4e6; box-shadow: 0 16px 30px -22px rgba(73, 22, 86, 0.5); }
+.calendario-container .evento-icon { flex-shrink: 0; width: 46px; height: 46px; display: inline-flex; align-items: center; justify-content: center; border-radius: 14px; background: linear-gradient(135deg, #f4e6f7, #ead3f0); color: #6b2c5e; font-size: 1.45rem; box-shadow: none; }
+.calendario-container .evento-info { flex: 1; min-width: 0; }
+.calendario-container .evento-titulo { margin: 0 0 0.15rem; font-size: 1rem; color: #2f1a36; }
+.calendario-container .evento-fecha { margin: 0 0 0.55rem; color: #7a6a82; font-size: 0.86rem; }
+.calendario-container .evento-detalles { display: flex; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.7rem; }
+.calendario-container .evento-hora,
+.calendario-container .evento-invitados { display: inline-flex; align-items: center; gap: 0.35rem; padding: 3px 10px; border-radius: 999px; background: #f6f0f9; color: #6b2c5e; font-size: 0.78rem; font-weight: 600; }
+.calendario-container .evento-acciones { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.calendario-container .evento-acciones button { display: inline-flex; align-items: center; gap: 0.35rem; height: 32px; padding: 0 0.75rem; border: 1px solid #e0d0e8; border-radius: 10px; background: #fff; color: #6b2c5e; font-size: 0.8rem; font-weight: 600; font-family: inherit; cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease; }
+.calendario-container .evento-acciones button:hover { background: #faf5ff; border-color: #c9aedb; }
+.calendario-container .evento-acciones button:nth-child(2) { color: #c0392b; border-color: #f0c9c4; }
+.calendario-container .evento-acciones button:nth-child(2):hover { background: #fdf0ee; border-color: #e4a39b; }
+
+/* Calendario */
+.calendario-container .calendario-wrapper { padding: 1rem 1.2rem 0.4rem; }
+.calendario-container .calendario-wrapper .react-calendar { width: 100%; max-width: 560px; margin: 0 auto; border: 0; background: transparent; font-family: inherit; box-shadow: none; }
+.calendario-container .calendario-wrapper .react-calendar__navigation { height: 46px; margin-bottom: 0.6rem; background: #faf5fc; border-radius: 14px; padding: 0 4px; }
+.calendario-container .calendario-wrapper .react-calendar__navigation button { background: transparent; color: #491656; border-radius: 10px; min-width: 42px; font-size: 1.1rem; display: inline-flex; align-items: center; justify-content: center; }
+.calendario-container .calendario-wrapper .react-calendar__navigation button:enabled:hover { background: #f1def5; }
+.calendario-container .calendario-wrapper .react-calendar__navigation__label { font-size: 0.95rem; font-weight: 800; letter-spacing: 0.04em; }
+.calendario-container .calendario-wrapper .react-calendar__month-view__weekdays { text-transform: uppercase; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.05em; color: #a99bb0; }
+.calendario-container .calendario-wrapper .react-calendar__month-view__weekdays__weekday abbr { text-decoration: none; }
+.calendario-container .calendario-wrapper .react-calendar__month-view__days { gap: 0; }
+.calendario-container .calendario-wrapper .react-calendar__tile { position: relative; height: 56px; padding: 0; margin: 2px 0; background: transparent; border: 0; border-radius: 14px; color: #3a2a42; font-size: 0.95rem; font-weight: 600; font-family: inherit; transition: background 0.15s ease, transform 0.15s ease; }
+.calendario-container .calendario-wrapper .react-calendar__tile:enabled:hover { background: #f6eefa; transform: scale(1.04); }
+.calendario-container .calendario-wrapper .react-calendar__month-view__days__day--neighboringMonth { color: #cdc2d3; }
+.calendario-container .calendario-wrapper .react-calendar__month-view__days__day--weekend { color: #c06c84; }
+.calendario-container .calendario-wrapper .react-calendar__month-view__days__day--neighboringMonth.react-calendar__month-view__days__day--weekend { color: #dcc3cc; }
+
+/* Hoy */
+.calendario-container .calendario-wrapper .react-calendar__tile--now { background: #fff8e8; box-shadow: inset 0 0 0 2px #f0c04f; color: #7a5200; }
+
+/* Días con evento: tono lila y punto debajo del número */
+.calendario-container .calendario-wrapper .react-calendar__tile.evento { background: #f1def5 !important; color: #491656 !important; font-weight: 800; border-radius: 14px; }
+.calendario-container .calendario-wrapper .react-calendar__tile.evento-pasado { background: #f1eef3 !important; color: #8a8290 !important; font-weight: 700; border-radius: 14px; }
+.calendario-container .calendario-wrapper .react-calendar__tile.evento::after,
+.calendario-container .calendario-wrapper .react-calendar__tile.evento-pasado::after { content: ''; position: absolute; left: 50%; bottom: 9px; width: 6px; height: 6px; border-radius: 50%; transform: translateX(-50%); background: #7b247f; }
+.calendario-container .calendario-wrapper .react-calendar__tile.evento-pasado::after { background: #b9b1bf; }
+
+/* Día seleccionado */
+.calendario-container .calendario-wrapper .react-calendar__tile--active,
+.calendario-container .calendario-wrapper .react-calendar__tile--active:enabled:hover,
+.calendario-container .calendario-wrapper .react-calendar__tile--active:enabled:focus { background: linear-gradient(135deg, #7b247f, #491656) !important; color: #fff !important; box-shadow: 0 10px 18px -10px #491656; }
+.calendario-container .calendario-wrapper .react-calendar__tile--active::after { background: #f7e0a5 !important; }
+.calendario-container .calendario-wrapper .react-calendar__tile--hasActive:after { display: none; }
+
+/* Fecha seleccionada */
+.calendario-container .fecha-seleccionada { margin: 0.6rem 1.2rem 1.2rem; padding: 1.1rem 1.2rem; background: #fbf9fc; border: 1px solid #f1e8f5; border-radius: 14px; }
+.calendario-container .fecha-info h3 { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.8rem; color: #491656; font-size: 1.05rem; font-weight: 700; }
+.calendario-container .fecha-info h3 svg { color: #7b247f; flex-shrink: 0; }
+.calendario-container .eventos-dia h4 { margin: 0 0 0.6rem; color: #8a7a92; font-size: 0.76rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.calendario-container .evento-dia-item { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.4rem; background: #fff; }
+.calendario-container .evento-dia-icon { flex-shrink: 0; width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; background: #f4e6f7; color: #6b2c5e; font-size: 1.2rem; }
+.calendario-container .evento-dia-info strong { color: #2f1a36; }
+.calendario-container .evento-dia-info small { color: #7a6a82; }
+.calendario-container .sin-eventos { display: flex; align-items: center; gap: 0.5rem; margin: 0; color: #8a7a92; font-style: normal; font-size: 0.92rem; }
+.calendario-container .sin-eventos svg { flex-shrink: 0; font-size: 1.15rem; }
+
+@media (max-width: 1024px) { .calendario-container { flex-direction: column; } .calendario-container .eventos-panel { max-height: none; width: 100%; } .calendario-container .calendario-panel { width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .calendario-container .calendario-wrapper .react-calendar__tile, .calendario-container .evento-card { transition: none; } }
+
+/* Mayúscula solo al inicio de la fecha (no en cada palabra) */
+.calendario-container .evento-fecha { text-transform: none; }
+.calendario-container .evento-fecha::first-letter { text-transform: uppercase; }
+
+/* El día seleccionado se ve igual aunque tenga evento */
+.calendario-container .calendario-wrapper .react-calendar__tile--active.evento,
+.calendario-container .calendario-wrapper .react-calendar__tile--active.evento-pasado,
+.calendario-container .calendario-wrapper .react-calendar__tile--active.evento:enabled:hover,
+.calendario-container .calendario-wrapper .react-calendar__tile--active.evento-pasado:enabled:hover { background: linear-gradient(135deg, #7b247f, #491656) !important; color: #fff !important; box-shadow: 0 10px 18px -10px #491656; }
+.calendario-container .calendario-wrapper .react-calendar__tile--active.evento::after,
+.calendario-container .calendario-wrapper .react-calendar__tile--active.evento-pasado::after { background: #f7e0a5 !important; }
