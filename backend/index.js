@@ -61,6 +61,7 @@ app.get('/api/ping', (_req, res) => res.send('pong'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api', require('./routes/login'));
 app.use('/api/usuarios', require('./routes/usuarios'));
+app.use('/api/permisos', require('./routes/permisos'));
 app.use('/api/reservas', require('./routes/reservas'));
 app.use('/api/reservas', require('./routes/formatosReserva'));
 app.use('/api/productos', require('./routes/productos'));

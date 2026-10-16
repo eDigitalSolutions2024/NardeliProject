@@ -10,21 +10,10 @@ const Receipt = require('../models/Receipt');
 const { streamReceiptPdf } = require('../services/receiptPdf');
 
 // Solo personal (admin/asistente) puede cobrar, generar o borrar recibos.
-function requireStaff(req, res, next) {
-  const h = req.headers.authorization || '';
-  const t = h.startsWith('Bearer ') ? h.slice(7) : null;
-  if (!t) return res.status(401).json({ ok: false, msg: 'No autorizado' });
-  try {
-    const payload = jwt.verify(t, JWT_SECRET);
-    if (payload.role !== 'admin' && payload.role !== 'asistente') {
-      return res.status(403).json({ ok: false, msg: 'Requiere permisos de staff' });
-    }
-    req.user = payload;
-    next();
-  } catch {
-    return res.status(401).json({ ok: false, msg: 'Token inválido' });
-  }
-}
+const { requirePermission } = require('../utils/permisos');
+// Permiso validado contra la base (rol y estado actuales); ver utils/permisos.js
+const requireStaff = requirePermission('eventos.gestionar');
+const requireEliminar = requirePermission('eventos.eliminar');
 
 // Helper: totales
 async function getTotals(orderId) {
@@ -194,7 +183,7 @@ router.get('/reservas/:id/saldo', requireStaff, async (req, res) => {
 });
 
 /** DELETE /receipts/:id -> eliminar un recibo */
-router.delete('/receipts/:id', requireStaff, async (req, res) => {
+router.delete('/receipts/:id', requireEliminar, async (req, res) => {
   const { id } = req.params;
 
   try {

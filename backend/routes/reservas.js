@@ -67,21 +67,11 @@ function auth(req, res, next) {
 // solo el personal del salón debe poder hacer (listar todas las reservas,
 // borrar, aplicar descuentos, aceptar cotizaciones, etc.) — NO usar en rutas
 // que los clientes deben poder alcanzar por su link directo (ej. GET /:id).
-function requireStaff(req, res, next) {
-  const h = req.headers.authorization || '';
-  const t = h.startsWith('Bearer ') ? h.slice(7) : null;
-  if (!t) return res.status(401).json({ ok: false, msg: 'No autorizado' });
-  try {
-    const payload = jwt.verify(t, JWT_SECRET);
-    if (payload.role !== 'admin' && payload.role !== 'asistente') {
-      return res.status(403).json({ ok: false, msg: 'Requiere permisos de staff' });
-    }
-    req.user = payload;
-    next();
-  } catch {
-    return res.status(401).json({ ok: false, msg: 'Token inválido' });
-  }
-}
+const { requirePermission, usuarioOpcional } = require('../utils/permisos');
+// Permiso validado contra la base (rol y estado actuales); ver utils/permisos.js
+const requireStaff = requirePermission('eventos.gestionar');
+const requireListar = requirePermission('eventos.gestionar', 'clientes.ver', 'calendario.ver', 'cotizaciones.ver_todas');
+const requireEliminar = requirePermission('eventos.eliminar');
 
 // ¿El nuevo mapa discountItems desmarca algún producto que hoy tiene
 // aplicarDescuento:true? Eso es "quitar" el descuento de ese producto, sin
@@ -563,7 +553,16 @@ router.post('/', async (req, res) => {
       cotizacionesForzadas = check.cotizacionesForzadas || [];
     }
 
-    const guardada = await new Reserva({ ...req.body, tipoReserva }).save();
+    // Si quien captura tiene sesión (staff/cotizador) se guarda quién fue, para que
+    // un 'cotizador' pueda ver después solo sus propias cotizaciones. Nunca se
+    // acepta este dato desde el body.
+    delete req.body.creadoPor;
+    const autor = await usuarioOpcional(req);
+    const creadoPor = autor
+      ? { id: autor._id, nombre: autor.fullname || '', email: autor.email || '', rol: autor.role || '' }
+      : undefined;
+
+    const guardada = await new Reserva({ ...req.body, tipoReserva, ...(creadoPor ? { creadoPor } : {}) }).save();
 
     // Se usó la contraseña de administrador para tomar esta fecha: las
     // cotizaciones con las que chocó pierden su prioridad de 24h (siguen
@@ -582,6 +581,30 @@ router.post('/', async (req, res) => {
     return res.status(500).json({ msg: 'Error del servidor' });
   }
 });
+// ===== Mis cotizaciones (cotizador: solo las suyas; con 'ver_todas': todas) =====
+router.get('/mis-cotizaciones', requirePermission('cotizaciones.crear', 'cotizaciones.ver_todas'), async (req, res) => {
+  try {
+    const filtro = { tipoReserva: 'cotizacion' };
+    if (!req.permisos['cotizaciones.ver_todas']) filtro['creadoPor.id'] = req.user.sub;
+
+    const docs = await Reserva.find(filtro)
+      .sort({ createdAt: -1 })
+      .limit(300)
+      .select('cliente correo telefono tipoEvento fecha horaInicio horaFin cantidadPersonas estado createdAt creadoPor utensilios')
+      .lean();
+
+    const items = docs.map((d) => {
+      const subtotal = (d.utensilios || []).reduce((a, u) => a + Number(u.precio || 0) * Number(u.cantidad || 0), 0);
+      const { utensilios, ...resto } = d;
+      return { ...resto, subtotal, articulos: (utensilios || []).length };
+    });
+    res.json({ ok: true, items });
+  } catch (e) {
+    console.error('reservas/mis-cotizaciones error:', e);
+    res.status(500).json({ ok: false, msg: 'No se pudieron cargar las cotizaciones' });
+  }
+});
+
 // ===== Reserva activa (montado en /reservas => /reservas/activa) =====
 router.get('/activa', auth, async (req, res) => {
   try {
@@ -598,7 +621,7 @@ router.get('/activa', auth, async (req, res) => {
 });
   
 // GET /reservas
-router.get('/', requireStaff, async (req, res) => {
+router.get('/', requireListar, async (req, res) => {
   try {
     const { correo } = req.query;
     const tipo = req.query.tipo || req.query.tipoReserva;
@@ -1264,7 +1287,7 @@ router.put('/:id', requireStaff, async (req, res) => {
   }
 });
 
-router.delete('/:id', requireStaff, async (req, res) => {
+router.delete('/:id', requireEliminar, async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.isValidObjectId(id)) return res.status(400).json({ msg: 'ID inválido' });
