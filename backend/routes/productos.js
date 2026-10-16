@@ -9,21 +9,9 @@ const path = require('path');
 
 // Solo staff administra el catálogo de productos (el inventario público de
 // consulta sigue abierto en GET /inventario, que usan los clientes).
-function requireStaff(req, res, next) {
-  const h = req.headers.authorization || '';
-  const t = h.startsWith('Bearer ') ? h.slice(7) : null;
-  if (!t) return res.status(401).json({ msg: 'No autorizado' });
-  try {
-    const payload = jwt.verify(t, JWT_SECRET);
-    if (payload.role !== 'admin' && payload.role !== 'asistente') {
-      return res.status(403).json({ msg: 'Requiere permisos de staff' });
-    }
-    req.user = payload;
-    next();
-  } catch {
-    return res.status(401).json({ msg: 'Token inválido' });
-  }
-}
+const { requirePermission } = require('../utils/permisos');
+// Permiso validado contra la base (rol y estado actuales); ver utils/permisos.js
+const requireStaff = requirePermission('inventario.gestionar');
 
 // ===== Multer (imagen opcional) =====
 const storage = multer.diskStorage({

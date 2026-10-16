@@ -120,13 +120,20 @@ const [discountItems, setDiscountItems] = useState({}); // { [itemId]: true }
   const navigate = useNavigate();
 
   // Modo admin vía ?mode=admin
-  const isAdmin = useMemo(() => {
-    const sp = new URLSearchParams(search);
-    return sp.get('mode') === 'admin';
-  }, [search]);
+  // El "modo admin" ya no se activa solo con la URL: además el servidor tiene
+  // que confirmar que la sesión es de admin/asistente (GET /auth/me).
+  const modeParam = useMemo(() => new URLSearchParams(search).get('mode'), [search]);
+  const isAdmin = useMemo(
+    () => modeParam === 'admin' && (userRole === 'admin' || userRole === 'asistente'),
+    [modeParam, userRole]
+  );
 
-  // Rol assistant por API
-  const isAssistant = useMemo(() => userRole === 'assistant', [userRole]);
+  // Cotizador: ve precios y subtotal, pero no edita precios ni aplica descuentos.
+  const isCotizador = userRole === 'cotizador';
+  const verPrecios = isAdmin || isCotizador;
+
+  // Rol asistente por API
+  const isAssistant = useMemo(() => userRole === 'asistente', [userRole]);
   // ✅ staff = admin (por query) o admin/assistant real por API
   const isStaff = useMemo(() => isAdmin || isAssistant || userRole === 'admin', [isAdmin, isAssistant, userRole]);
 
@@ -1211,6 +1218,7 @@ function openEstadoCuentaPdf() {
                     <div>
                       <h4 className="item-title" style={{ display:'flex', alignItems:'center', gap:8 }}>
                         {it.nombre}
+                        {isCotizador && !isAdmin && <span className="item-price"> ${precioNum.toFixed(2)}</span>}
                         {isAdmin && (
                           <>
                             <span className="item-price"> ${precioNum.toFixed(2)}</span>
@@ -1299,7 +1307,7 @@ function openEstadoCuentaPdf() {
                     <div className="small">
                       <small>
                         {qty} {item.unidad || 'pza'} • {item.categoria}
-                        {isAdmin && <strong>{money(sub)}</strong>}
+                        {verPrecios && <strong>{money(sub)}</strong>}
                       </small>
                     </div>
 
@@ -1324,7 +1332,7 @@ function openEstadoCuentaPdf() {
                   </div>
 
                   <div className="d-flex" style={{ display:'flex', alignItems:'center', gap:8 }}>
-                    {isAdmin && <strong>${sub.toFixed(2)}</strong>}
+                    {verPrecios && <strong>${sub.toFixed(2)}</strong>}
                     <button className="del" onClick={() => setQty(item, 0)}>Quitar</button>
                   </div>
                 </div>
@@ -1338,6 +1346,13 @@ function openEstadoCuentaPdf() {
             <strong>Total unidades</strong>
             <strong>{totalUnidades}</strong>
           </div>
+
+          {isCotizador && !isAdmin && (
+            <div style={{display:'flex', justifyContent:'space-between', marginBottom:12}}>
+              <strong>Subtotal $</strong>
+              <strong>{money(subTotalUI)}</strong>
+            </div>
+          )}
 
           {isAdmin && (
             <>

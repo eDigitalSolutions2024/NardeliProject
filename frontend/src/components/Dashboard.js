@@ -12,6 +12,8 @@ import Reportes from './Reportes';
 // imports nuevos arriba
 import FormAccesorio from './FormAccesorio';
 import TablaAccesorios from './TablaAccesorios';
+import UsuariosRoles from './UsuariosRoles';
+import { getStoredUser } from '../session';
 
 const Dashboard = ({ onLogout }) => {
   const [user, setUser] = useState(null);
@@ -126,6 +128,21 @@ const Dashboard = ({ onLogout }) => {
         console.error('Token inválido', error);
       }
     }
+  }, []);
+
+  // Permisos vigentes del rol (los define el admin en "Usuarios y roles").
+  // Arranca con lo guardado al iniciar sesión y se refresca contra el servidor.
+  const [permisos, setPermisos] = useState(() => getStoredUser()?.permisos || {});
+  const [rolServidor, setRolServidor] = useState(null);
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/permisos/me`, { headers: authHeaders() })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => {
+        if (!d) return;
+        setPermisos(d.permisos || {});
+        setRolServidor(d.role || null);
+      })
+      .catch(() => {});
   }, []);
 
   // ---- Tipo de cambio ----
@@ -252,22 +269,35 @@ const Dashboard = ({ onLogout }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSection]);
 
-  const isAdmin = user?.role === 'admin';
-  const isAsistente = user?.role === 'asistente'; // ← añadido
+  const rolActual = rolServidor || user?.role;
+  const isAdmin = rolActual === 'admin';
+  const isAsistente = rolActual === 'asistente';
+  // El admin siempre puede todo; el resto según la tabla de permisos.
+  const can = (p) => isAdmin || !!permisos[p];
+  const canAny = (...ps) => ps.some(can);
 
+  // `perm`: permisos que habilitan la sección (basta con uno). El servidor
+  // también los valida, esto solo evita mostrar menús que no funcionarían.
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { id: 'clientes', label: 'Clientes', icon: '👥' },
-    { id: 'calendario', label: 'Calendario', icon: '📅' },
-    { id: 'reportes', label: 'Reportes', icon: '📈' },
-    { id: 'inventario', label: 'Inventario', icon: '🏬'},
-    { id: 'reservar', label: 'Reservar', icon: '✅'},
+    { id: 'dashboard', label: 'Dashboard', icon: '📊', perm: ['eventos.gestionar', 'clientes.ver', 'calendario.ver', 'cotizaciones.ver_todas'] },
+    { id: 'clientes', label: 'Clientes', icon: '👥', perm: ['clientes.ver'] },
+    { id: 'calendario', label: 'Calendario', icon: '📅', perm: ['calendario.ver'] },
+    { id: 'reportes', label: 'Reportes', icon: '📈', perm: ['reportes.ver'] },
+    { id: 'inventario', label: 'Inventario', icon: '🏬', perm: ['inventario.gestionar'] },
+    { id: 'reservar', label: 'Reservar', icon: '✅', perm: ['cotizaciones.crear'] },
+    { id: 'usuarios', label: 'Usuarios y roles', icon: '🔐', perm: ['usuarios.gestionar'] },
   ];
 
-  // ocultar solo a asistentes: reportes
-  const visibleMenuItems = isAsistente
-    ? menuItems.filter(i => !['reportes'].includes(i.id))
-    : menuItems;
+  const visibleMenuItems = menuItems.filter(i => canAny(...i.perm));
+
+  // Si la sección abierta ya no está permitida (p. ej. el admin apagó un permiso), salta a la primera disponible.
+  useEffect(() => {
+    if (!visibleMenuItems.length) return;
+    if (!visibleMenuItems.some(i => i.id === activeSection)) {
+      setActiveSection(visibleMenuItems[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [permisos, rolServidor]);
 
   // ===== Acciones de cotizaciones =====
   const abrirModalEditarCot = (a) => {
@@ -440,6 +470,8 @@ const actividadFiltrada = actividad
 
   const renderContent = () => {
     switch (activeSection) {
+      case 'usuarios':
+        return can('usuarios.gestionar') ? <UsuariosRoles currentUser={user} /> : null;
       case 'dashboard':
         return (
           <div className="dashboard-content">
@@ -660,7 +692,7 @@ const actividadFiltrada = actividad
                 Ver PDF
               </a>
             )}
-            {!isAsistente && (
+            {can('eventos.eliminar') && (
   <button
     className="btn btn-sm btn-outline-danger"
     onClick={() => eliminarCotizacion(a.id)}
@@ -875,8 +907,6 @@ const actividadFiltrada = actividad
               key={item.id}
               className={`nav-item ${activeSection === item.id ? 'active' : ''}`}
               onClick={() => {
-                // bloqueo suave solo para asistentes en secciones prohibidas
-                if (isAsistente && ['reportes'].includes(item.id)) return;
                 setActiveSection(item.id);
               }}
             >

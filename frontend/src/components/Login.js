@@ -51,7 +51,9 @@ const Login = ({ onLoginSuccess }) => {
             fullname: data.user?.fullname || data.user?.name || 'Usuario',
             email: data.user?.email || formData.email,
             role: data.user?.role,
-            id: data.user?.id || data.user?._id
+            id: data.user?.id || data.user?._id,
+            mustChangePassword: !!data.user?.mustChangePassword,
+            permisos: data.user?.permisos || {}
           };
           localStorage.setItem('user', JSON.stringify(userData));
           onLoginSuccess?.(userData);

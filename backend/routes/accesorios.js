@@ -14,21 +14,9 @@ const upload = multer({
 
 // Solo staff da de alta accesorios en el catálogo (listar sigue abierto,
 // los clientes también consultan accesorios disponibles para su evento).
-function requireStaff(req, res, next) {
-  const h = req.headers.authorization || '';
-  const t = h.startsWith('Bearer ') ? h.slice(7) : null;
-  if (!t) return res.status(401).json({ error: 'No autorizado' });
-  try {
-    const payload = jwt.verify(t, JWT_SECRET);
-    if (payload.role !== 'admin' && payload.role !== 'asistente') {
-      return res.status(403).json({ error: 'Requiere permisos de staff' });
-    }
-    req.user = payload;
-    next();
-  } catch {
-    return res.status(401).json({ error: 'Token inválido' });
-  }
-}
+const { requirePermission } = require('../utils/permisos');
+// Permiso validado contra la base (rol y estado actuales); ver utils/permisos.js
+const requireStaff = requirePermission('inventario.gestionar');
 
 // listar activos
 router.get('/', async (_req, res) => {
