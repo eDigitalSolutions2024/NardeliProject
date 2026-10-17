@@ -6,6 +6,7 @@ import API_BASE_URL from '../api';
 import { jsonAuthHeaders } from '../session';
 import Reserva from './ReservarEvento';
 import './Roles.css';
+import { useTema, TEMA_OSCURO_ACTIVO } from '../utils/tema';
 
 const money = (n) => `$${Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const ymd = (v) => (v ? String(v).slice(0, 10) : '—');
@@ -191,6 +192,7 @@ function Cotizaciones() {
 
 // Vista única del rol "cotizador": crear cotizaciones, ver todas y editar las suyas.
 export default function Cotizador({ user, onLogout }) {
+  const [tema, alternarTema] = useTema();
   const [tab, setTab] = useState('nueva');
 
   return (
@@ -199,6 +201,7 @@ export default function Cotizador({ user, onLogout }) {
         <strong>Nardeli · Cotizaciones</strong>
         <div>
           <span>{user?.fullname || user?.email}</span>
+          {TEMA_OSCURO_ACTIVO && <button onClick={alternarTema}>{tema === "oscuro" ? "Tema claro" : "Tema oscuro"}</button>}
           <button onClick={onLogout}>Cerrar sesión</button>
         </div>
       </div>

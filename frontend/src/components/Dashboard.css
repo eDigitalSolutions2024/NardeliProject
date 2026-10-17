@@ -856,9 +856,18 @@
 @keyframes nd-sidebar-texto { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
 .hamburger-icon { transition: transform 0.25s ease; }
 
-.nd-seccion-anim { animation: nd-seccion-entra 0.38s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.nd-seccion-anim { animation: nd-seccion-entra 0.38s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
 @keyframes nd-seccion-entra { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
   .sidebar, .nd-seccion-anim, .sidebar .nav-label, .sidebar .sidebar-brand, .sidebar .sidebar-subtitle, .sidebar .sidebar-user-info { animation: none !important; transition: none !important; }
 }
+
+/* Ventana de edición: centrada en la pantalla, con su propio scroll si es alta */
+.modal-overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 1000; }
+.modal-overlay > .modal-content { max-height: calc(100vh - 2rem); overflow-y: auto; margin: 0; }
+
+/* Botón de tema en el encabezado */
+.header-right { display: flex; align-items: center; gap: 0.6rem; }
+.tema-toggle { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid #eadcf2; background: #faf5ff; color: #6b2c5e; font-size: 1.15rem; cursor: pointer; }
+.tema-toggle:hover { background: #f1def5; transform: rotate(-12deg); }

@@ -4,6 +4,8 @@ import SelectField from './ui/SelectField';
 import SearchField from './ui/SearchField';
 import { pedirPasswordAdmin } from '../utils/pedirPassword';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTema } from '../utils/tema';
+import './Dashboard.css'; // estilos compartidos nd-* (pestañas, botones); ya no vienen de Dashboard al cargar por partes
 import './DashboardCliente.css';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import API_BASE_URL, { API_ORIGIN, authHeaders } from '../api';
@@ -50,6 +52,7 @@ const money = (n) =>
   });
 
 const DashboardCliente = ({ reservaId: reservaIdProp }) => {
+  useTema(); // sigue el tema elegido en el Dashboard
   // Inventario (con precio para fallback visual)
   const [items, setItems] = useState([]); // [{id, nombre, categoria, stock, unidad, imagen, precio, descripcion}]
   const [loading, setLoading] = useState(true);
@@ -2044,7 +2047,7 @@ onMouseLeave={(e) => {
       )}
 
       {showHistorial && (
-  <div className="modal-overlay">
+  <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowHistorial(false); }}>
     <div className="modal-content">
       <h2>Historial de cambios</h2>
 

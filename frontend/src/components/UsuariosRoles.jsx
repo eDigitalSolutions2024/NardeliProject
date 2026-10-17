@@ -119,7 +119,7 @@ function ModalUsuario({ usuario, esUnoMismo, onClose, onSaved }) {
   };
 
   return (
-    <div className="rl-modal-bg">
+    <div className="rl-modal-bg" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <form className="rl-modal" onSubmit={guardar}>
         <h3>{edita ? 'Editar usuario' : 'Nuevo usuario'}</h3>
         {error && <div className="rl-msg err">{error}</div>}

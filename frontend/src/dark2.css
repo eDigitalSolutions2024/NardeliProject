@@ -1,0 +1,116 @@
+/* ===== Tema oscuro, tercera pasada: Calendario, Reportes, Inventario, Reservar, Usuarios y Panel del Cliente ===== */
+
+/* Calendario */
+html[data-theme="dark"] .calendario-container .calendario-panel,
+html[data-theme="dark"] .calendario-container .eventos-panel { background: var(--d-panel) !important; border-color: var(--d-borde) !important; }
+html[data-theme="dark"] .calendario-container .eventos-header,
+html[data-theme="dark"] .calendario-container .calendario-header { background: var(--d-panel) !important; border-color: var(--d-borde) !important; }
+html[data-theme="dark"] .calendario-container .eventos-header h2,
+html[data-theme="dark"] .calendario-container .calendario-header h2,
+html[data-theme="dark"] .calendario-container .fecha-info h3,
+html[data-theme="dark"] .calendario-container .evento-card h3,
+html[data-theme="dark"] .calendario-container .evento-card strong,
+html[data-theme="dark"] .calendario-container .evento-dia-info strong { color: var(--d-texto) !important; }
+html[data-theme="dark"] .calendario-container .calendario-subtitle,
+html[data-theme="dark"] .calendario-container .eventos-dia h4,
+html[data-theme="dark"] .calendario-container .evento-card p,
+html[data-theme="dark"] .calendario-container .evento-dia-info span { color: var(--d-suave) !important; }
+html[data-theme="dark"] .calendario-container .eventos-lista { background: var(--d-panel) !important; }
+html[data-theme="dark"] .calendario-container .evento-card,
+html[data-theme="dark"] .calendario-container .evento-dia-item { background: var(--d-panel2) !important; border-color: var(--d-borde) !important; color: var(--d-texto); }
+html[data-theme="dark"] .calendario-container .fecha-seleccionada { background: var(--d-panel2) !important; border-color: var(--d-borde) !important; }
+html[data-theme="dark"] .calendario-container .evento-acciones button { background: var(--d-panel) !important; color: var(--d-acento) !important; border-color: var(--d-borde) !important; }
+html[data-theme="dark"] .calendario-container .calendario-wrapper .react-calendar__navigation { background: var(--d-panel2) !important; }
+html[data-theme="dark"] .calendario-container .calendario-wrapper .react-calendar__navigation button,
+html[data-theme="dark"] .calendario-container .calendario-wrapper .react-calendar__navigation__label { color: var(--d-texto) !important; background: transparent !important; }
+html[data-theme="dark"] .calendario-container .calendario-wrapper .react-calendar__tile { color: var(--d-texto); }
+html[data-theme="dark"] .calendario-container .calendario-wrapper .react-calendar__tile:disabled,
+html[data-theme="dark"] .calendario-container .calendario-wrapper .react-calendar__month-view__days__day--neighboringMonth { color: #5d4d6e !important; }
+html[data-theme="dark"] .calendario-container .calendario-wrapper .react-calendar__tile--now { background: #3a2a47 !important; color: #fff !important; }
+html[data-theme="dark"] .calendario-container .calendario-wrapper .react-calendar__tile:enabled:hover { background: var(--d-panel2) !important; }
+html[data-theme="dark"] .calendario-container .eventos-count { background: #3a2548 !important; color: #e8cdf3 !important; }
+
+/* Reportes */
+html[data-theme="dark"] .rep-filtros,
+html[data-theme="dark"] .rep-tabla,
+html[data-theme="dark"] .rep-tabla .table-wrapper { background: var(--d-panel) !important; border-color: var(--d-borde) !important; }
+html[data-theme="dark"] .rep-filtros > div > label { color: var(--d-suave) !important; }
+html[data-theme="dark"] .rep-tabla td,
+html[data-theme="dark"] .rep-tabla .clientes-table td { color: var(--d-texto) !important; background: transparent !important; border-color: var(--d-borde) !important; }
+html[data-theme="dark"] .rep-tabla .clientes-table thead th { background: var(--d-panel2) !important; color: var(--d-suave) !important; }
+html[data-theme="dark"] .rep-tabla .clientes-table tbody tr:hover { background: var(--d-panel2) !important; }
+html[data-theme="dark"] .rep-tabla h3,
+html[data-theme="dark"] .rep-tabla h2 { color: var(--d-texto) !important; }
+html[data-theme="dark"] .rep-tabla .pager { background: var(--d-panel2) !important; color: var(--d-acento) !important; border-color: var(--d-borde) !important; }
+html[data-theme="dark"] .rep-tabla .nd-btn-ghost { background: var(--d-panel2) !important; color: var(--d-acento) !important; }
+
+/* Inventario y formularios */
+html[data-theme="dark"] .fp-file-drop,
+html[data-theme="dark"] .fp-price-input { background: var(--d-panel2) !important; border-color: var(--d-borde) !important; color: var(--d-suave) !important; }
+html[data-theme="dark"] .fp-price-input input { background: transparent !important; border: none !important; }
+html[data-theme="dark"] .fp-file-text,
+html[data-theme="dark"] .fp-subtitle { color: var(--d-suave) !important; }
+html[data-theme="dark"] .tp-card .tp-table thead th { background: var(--d-panel2) !important; }
+html[data-theme="dark"] .tp-card .tp-btn-edit,
+html[data-theme="dark"] .tp-card .tp-btn-delete,
+html[data-theme="dark"] .tp-card .tp-thumb-empty { background: var(--d-panel2) !important; border-color: var(--d-borde) !important; }
+html[data-theme="dark"] .tp-card .tp-btn-edit { color: var(--d-acento) !important; }
+html[data-theme="dark"] .tp-card .tp-btn-delete { color: #ff8d80 !important; }
+html[data-theme="dark"] .tp-card .tp-count { background: #3a2548 !important; color: #e8cdf3 !important; }
+
+/* Reservar */
+html[data-theme="dark"] .rv-toggle,
+html[data-theme="dark"] .rv-draft,
+html[data-theme="dark"] .rv-draft-btn { background: var(--d-panel2) !important; border-color: var(--d-borde) !important; color: var(--d-texto) !important; }
+html[data-theme="dark"] .reserva-form-container label,
+html[data-theme="dark"] .rv-toggle * { color: var(--d-acento) !important; }
+html[data-theme="dark"] .mcd-container { background: var(--d-panel) !important; }
+html[data-theme="dark"] .mcd-header,
+html[data-theme="dark"] .mcd-header * { color: var(--d-suave) !important; }
+html[data-theme="dark"] .mcd-leyenda-chip { background: var(--d-panel2) !important; color: var(--d-suave) !important; border-color: var(--d-borde) !important; }
+
+/* Usuarios y roles */
+html[data-theme="dark"] .rl-tabs { background: var(--d-panel) !important; border-color: var(--d-borde) !important; }
+html[data-theme="dark"] .rl-tab { color: var(--d-suave) !important; background: transparent; }
+html[data-theme="dark"] .rl-tab.active { background: #7b247f !important; color: #fff !important; }
+html[data-theme="dark"] .rl-tab:hover:not(.active) { background: var(--d-panel2) !important; }
+html[data-theme="dark"] .rl-pwsec { border-color: var(--d-borde) !important; border-top-color: var(--d-borde) !important; }
+html[data-theme="dark"] .rl-pwsec-title,
+html[data-theme="dark"] .rl-pwsec-title * { color: var(--d-acento) !important; }
+html[data-theme="dark"] .rl-btn.sec,
+html[data-theme="dark"] .rl-icon-btn { background: var(--d-panel2) !important; color: var(--d-acento) !important; border-color: var(--d-borde) !important; }
+html[data-theme="dark"] .rl-pw-code { background: var(--d-panel2) !important; color: var(--d-texto) !important; }
+
+/* Panel del Cliente */
+html[data-theme="dark"] .cd-toolbar { background: var(--d-panel) !important; border-color: var(--d-borde) !important; }
+html[data-theme="dark"] .item-title,
+html[data-theme="dark"] .item-card strong { color: var(--d-texto) !important; }
+html[data-theme="dark"] .item-price { color: #e8c6ff !important; }
+html[data-theme="dark"] .item-card .qty,
+html[data-theme="dark"] .item-card .qty button,
+html[data-theme="dark"] .item-card .qty input,
+html[data-theme="dark"] .item-card button:not(.add-btn):not(.edit-price-btn) { background: var(--d-panel2) !important; color: var(--d-texto) !important; border-color: var(--d-borde) !important; }
+html[data-theme="dark"] .edit-price-btn,
+html[data-theme="dark"] .edit-price-inline { background: var(--d-panel2) !important; color: var(--d-acento) !important; border-color: var(--d-borde) !important; }
+html[data-theme="dark"] .sel-item { background: var(--d-panel2) !important; border-color: var(--d-borde) !important; color: var(--d-texto) !important; }
+html[data-theme="dark"] .sel-item * { color: var(--d-texto); }
+html[data-theme="dark"] .sel-item .del { background: transparent !important; color: #ff8d80 !important; border-color: #6b2f2a !important; }
+html[data-theme="dark"] .del { background: transparent !important; color: #ff8d80 !important; border-color: #6b2f2a !important; }
+html[data-theme="dark"] .cd-back { background: var(--d-panel2) !important; color: var(--d-texto) !important; border-color: var(--d-borde) !important; }
+html[data-theme="dark"] .cd-btn-clear { background: var(--d-panel2) !important; }
+
+/* Mini calendario de disponibilidad (Reservar y Panel del Cliente) */
+html[data-theme="dark"] .mcd-container .react-calendar__tile { color: var(--d-texto) !important; }
+html[data-theme="dark"] .mcd-container .mcd-tile-disponible { background: rgba(46, 160, 100, 0.22) !important; }
+html[data-theme="dark"] .mcd-container .mcd-tile-cotizacion { background: rgba(46, 134, 193, 0.28) !important; color: #bfe3fb !important; }
+html[data-theme="dark"] .mcd-container .mcd-tile-evento { background: rgba(217, 154, 20, 0.28) !important; color: #ffe2a6 !important; }
+html[data-theme="dark"] .mcd-container .react-calendar__tile:disabled { background: var(--d-panel2) !important; color: #6a5a7c !important; }
+html[data-theme="dark"] .mcd-container .react-calendar__tile:enabled:hover { background: #3a2a47 !important; }
+html[data-theme="dark"] .mcd-container .react-calendar__tile--active { background: #7b247f !important; }
+html[data-theme="dark"] .mcd-container .react-calendar__navigation { background: var(--d-panel2) !important; }
+html[data-theme="dark"] .mcd-container .react-calendar__navigation button { color: var(--d-texto) !important; background: transparent !important; }
+html[data-theme="dark"] .calendario-container .calendario-wrapper .react-calendar__tile.evento,
+html[data-theme="dark"] .calendario-container .calendario-wrapper .react-calendar__tile.evento-pasado { background: rgba(217, 154, 20, 0.22) !important; color: #ffe2a6 !important; }
+html[data-theme="dark"] .calendario-container .evento-card span, html[data-theme="dark"] .calendario-container .evento-invitados { background: var(--d-panel) !important; color: var(--d-acento) !important; border-color: var(--d-borde) !important; }
+html[data-theme="dark"] .rep-tabla .nd-panel-head h2, html[data-theme="dark"] .rep-tabla .nd-panel-head h3, html[data-theme="dark"] .rep-tabla [class*="head"] * { color: var(--d-texto) !important; }
+html[data-theme="dark"] .rep-tabla td:first-child, html[data-theme="dark"] .rep-tabla td:first-child * { color: #e8c6ff !important; }
