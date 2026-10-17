@@ -319,20 +319,28 @@ const Dashboard = ({ onLogout }) => {
 
       // Candado blando de 24h: la fecha/horario a la que se está moviendo
       // esta cotización choca con otra cotización reciente. Se pide la
-      // contraseña de un administrador para forzar el cambio.
-      if (r.status === 401) {
+      // contraseña de un administrador para forzar el cambio. Si vuelve a
+      // dar 401 después de mandar una contraseña, significa que esa
+      // contraseña estaba mal (el backend responde igual en ambos casos) —
+      // se lo decimos claro y se deja reintentar, en vez de repetir el
+      // mismo mensaje como si nada hubiera pasado.
+      let yaIntentoConPassword = false;
+      while (r.status === 401) {
         const err = await r.json().catch(() => ({}));
-        if (err.requierePassword) {
-          const adminPassword = window.prompt(
-            err.msg || 'Ya existe una cotización reciente para esa fecha. Ingresa la contraseña de un administrador para continuar:'
-          );
-          if (adminPassword === null) return; // canceló
-          if (!adminPassword.trim()) {
-            alert('Debes ingresar una contraseña.');
-            return;
-          }
-          r = await enviar(adminPassword);
+        if (!err.requierePassword) break;
+
+        const mensaje = yaIntentoConPassword
+          ? `❌ Contraseña incorrecta. ${err.msg || 'Ingresa la contraseña de un administrador para continuar:'}`
+          : (err.msg || 'Ya existe una cotización reciente para esa fecha. Ingresa la contraseña de un administrador para continuar:');
+
+        const adminPassword = window.prompt(mensaje);
+        if (adminPassword === null) return; // canceló
+        if (!adminPassword.trim()) {
+          alert('Debes ingresar una contraseña.');
+          continue;
         }
+        r = await enviar(adminPassword);
+        yaIntentoConPassword = true;
       }
 
       if (!r.ok) {
@@ -364,19 +372,25 @@ const Dashboard = ({ onLogout }) => {
 
       // Candado blando de 24h: ya existe otra cotización reciente para esa
       // fecha. Se pide contraseña de administrador para forzar la conversión.
-      if (resp.status === 401) {
+      // Si vuelve a dar 401 después de mandar una contraseña, es que estaba
+      // mal — se avisa claro y se deja reintentar.
+      let yaIntentoConPassword = false;
+      while (resp.status === 401) {
         const err = await resp.json().catch(() => ({}));
-        if (err.requierePassword) {
-          const adminPassword = window.prompt(
-            err.msg || 'Ya existe una cotización reciente para esa fecha. Ingresa la contraseña de un administrador para continuar:'
-          );
-          if (adminPassword === null) return; // canceló
-          if (!adminPassword.trim()) {
-            alert('Debes ingresar una contraseña.');
-            return;
-          }
-          resp = await enviar(adminPassword);
+        if (!err.requierePassword) break;
+
+        const mensaje = yaIntentoConPassword
+          ? `❌ Contraseña incorrecta. ${err.msg || 'Ingresa la contraseña de un administrador para continuar:'}`
+          : (err.msg || 'Ya existe una cotización reciente para esa fecha. Ingresa la contraseña de un administrador para continuar:');
+
+        const adminPassword = window.prompt(mensaje);
+        if (adminPassword === null) return; // canceló
+        if (!adminPassword.trim()) {
+          alert('Debes ingresar una contraseña.');
+          continue;
         }
+        resp = await enviar(adminPassword);
+        yaIntentoConPassword = true;
       }
 
       if (!resp.ok) {

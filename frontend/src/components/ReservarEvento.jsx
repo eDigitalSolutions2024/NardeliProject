@@ -224,6 +224,7 @@ function getDashboardModeFromRole(role) {
       });
 
       let response = await enviarReserva();
+      let seIntentoConPassword = false;
 
       // Candado blando de 24h: ya existe una cotización reciente para esa
       // fecha. Se pide la contraseña de un administrador para forzar, o se
@@ -424,6 +425,7 @@ function getDashboardModeFromRole(role) {
             if (action === 'dashboard') {
               prewin = window.open('about:blank', '_blank');
             }
+            seIntentoConPassword = true;
             response = await enviarReserva(adminPassword);
           } else if (nuevaFechaElegida) {
             // Se eligió otra fecha para ESTA reserva — se reintenta con esa
@@ -450,6 +452,17 @@ function getDashboardModeFromRole(role) {
             text: err.msg || 'Ya existe un evento en ese horario. Selecciona otro horario o fecha.',
             confirmButtonColor: '#7b247f'
           });
+        } else if (response.status === 401 && seIntentoConPassword) {
+          // Se mandó una contraseña y el backend sigue pidiéndola — el
+          // backend responde igual para "falta contraseña" y "contraseña
+          // incorrecta", pero aquí SÍ sabemos que se mandó una, así que solo
+          // puede ser que estaba mal.
+          await Swal.fire({
+            icon: 'error',
+            title: 'Contraseña incorrecta',
+            text: 'La contraseña de administrador no es correcta.',
+            confirmButtonColor: '#7b247f'
+          });
         } else if (response.status === 401 && err.requierePassword) {
           // Pasa cuando se eligió otra fecha pero ESA fecha también tiene
           // una cotización reciente — hay que intentar con otra.
@@ -462,8 +475,8 @@ function getDashboardModeFromRole(role) {
         } else if (response.status === 401) {
           await Swal.fire({
             icon: 'error',
-            title: 'Contraseña incorrecta',
-            text: err.msg || 'La contraseña de administrador no es correcta.',
+            title: 'Sesión no válida',
+            text: err.msg || 'Tu sesión ya no es válida. Vuelve a iniciar sesión.',
             confirmButtonColor: '#7b247f'
           });
         } else {
