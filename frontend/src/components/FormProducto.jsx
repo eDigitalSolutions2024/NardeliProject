@@ -1,4 +1,4 @@
-import { LuPackage, LuGift, LuImage, LuCheck, LuTriangleAlert } from 'react-icons/lu';
+import { LuPackage, LuImage, LuCheck, LuTriangleAlert } from 'react-icons/lu';
 import React, { useState } from 'react';
 import axios from 'axios';
 import './FormProducto.css';

@@ -1,27 +1,28 @@
 import { aviso, pedirConfirmacion } from '../utils/avisos';
 import TimeField from './ui/TimeField';
 import { pedirPasswordAdmin } from '../utils/pedirPassword';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import dayjs from 'dayjs';
 import './Dashboard.css';
-import Calendario from './Calendario';
-import FormProducto from './FormProducto';
-import TablaProductos from './TablaProductos';
 import API_BASE_URL, { authHeaders } from '../api';
-import Clientes from './Clientes';
-import Reserva from './ReservarEvento';
-import Reportes from './Reportes';
 // imports nuevos arriba
-import FormAccesorio from './FormAccesorio';
-import TablaAccesorios from './TablaAccesorios';
-import UsuariosRoles from './UsuariosRoles';
 import { animate, stagger } from 'animejs';
 import SearchField from './ui/SearchField';
 import DateField from './ui/DateField';
 import SelectField from './ui/SelectField';
-import { LuCalendarDays, LuPartyPopper, LuCalendarCheck, LuFileClock, LuFileText, LuFileDown, LuPencil, LuCheck, LuTrash2, LuSearch, LuHourglass, LuInbox, LuBadgeDollarSign, LuX, LuUser, LuPackage, LuGift, LuLayoutDashboard, LuUsers, LuCalendar, LuTrendingUp, LuWarehouse, LuCirclePlus, LuShieldCheck, LuLogOut, LuMenu } from 'react-icons/lu';
+import { LuCalendarDays, LuPartyPopper, LuCalendarCheck, LuFileClock, LuFileText, LuFileDown, LuPencil, LuCheck, LuTrash2, LuHourglass, LuInbox, LuBadgeDollarSign, LuUser, LuPackage, LuGift, LuLayoutDashboard, LuUsers, LuCalendar, LuTrendingUp, LuWarehouse, LuCirclePlus, LuShieldCheck, LuLogOut, LuMenu } from 'react-icons/lu';
 import { getStoredUser } from '../session';
+
+const Calendario = lazy(() => import('./Calendario'));
+const FormProducto = lazy(() => import('./FormProducto'));
+const TablaProductos = lazy(() => import('./TablaProductos'));
+const Clientes = lazy(() => import('./Clientes'));
+const Reserva = lazy(() => import('./ReservarEvento'));
+const Reportes = lazy(() => import('./Reportes'));
+const FormAccesorio = lazy(() => import('./FormAccesorio'));
+const TablaAccesorios = lazy(() => import('./TablaAccesorios'));
+const UsuariosRoles = lazy(() => import('./UsuariosRoles'));
 
 // Marca del menú lateral: 'dorado' (isotipo nítido pintado de dorado) o 'resplandor' (imagen de óvalos con halo).
 const MARCA_SIDEBAR = 'dorado';
@@ -708,7 +709,7 @@ const actividadFiltrada = actividad
                             <LuCheck /> Convertir a Evento
                           </button>
                           {a.pdfUrl && (
-                            <a className="nd-btn nd-btn-ghost" href={a.pdfUrl} target="_blank" rel="noreferrer">
+                            <a className="nd-btn nd-btn-ghost btn-pdf-rojo" href={a.pdfUrl} target="_blank" rel="noreferrer">
                               <LuFileDown /> Ver PDF
                             </a>
                           )}
@@ -921,7 +922,11 @@ const actividadFiltrada = actividad
         </header>
 
         <main className="content-area">
-          {renderContent()}
+          <div key={activeSection} className="nd-seccion-anim">
+            <Suspense fallback={<div className="sk-carga" role="status" aria-label="Cargando"><span className="sk sk-titulo" /><span className="sk sk-fila" /><span className="sk sk-fila" /><span className="sk sk-fila corta" /></div>}>
+              {renderContent()}
+            </Suspense>
+          </div>
         </main>
       </div>
     </div>

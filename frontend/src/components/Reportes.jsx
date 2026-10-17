@@ -400,7 +400,7 @@ export default function Reportes() {
                     <button className="nd-btn nd-btn-ghost" onClick={() => openPanelCliente(x._id)}>
                       <LuEye /> Ver panel
                     </button>
-                    <button className="nd-btn nd-btn-primary" onClick={() => openEventoPdf(x._id)}>
+                    <button className="nd-btn nd-btn-primary btn-pdf-rojo" onClick={() => openEventoPdf(x._id)}>
                       <LuFileDown /> PDF evento
                     </button>
                   </td>

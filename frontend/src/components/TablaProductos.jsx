@@ -1,5 +1,5 @@
 import { aviso, pedirConfirmacion } from '../utils/avisos';
-import { LuImage, LuGift, LuPencil, LuTrash2, LuInbox, LuX } from 'react-icons/lu';
+import { LuImage, LuPencil, LuTrash2, LuInbox, LuX } from 'react-icons/lu';
 import SearchField from './ui/SearchField';
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';

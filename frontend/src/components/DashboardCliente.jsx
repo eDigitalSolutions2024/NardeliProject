@@ -2037,7 +2037,7 @@ onMouseLeave={(e) => {
 
             <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:16 }}>
               <button className="cd-btn cd-btn-clear" onClick={()=>setShowReceiptModal(false)}>Cancelar</button>
-              <button className="cd-btn" onClick={submitReceipt}>Generar y abrir PDF</button>
+              <button className="cd-btn btn-pdf-rojo" onClick={submitReceipt}>Generar y abrir PDF</button>
             </div>
           </div>
         </div>

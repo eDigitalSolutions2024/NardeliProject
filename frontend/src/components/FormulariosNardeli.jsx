@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import API_BASE_URL from '../api';
 
 const PURPLE = '#7b247f';
-const GREEN  = '#b7db2d';
 const MUTED  = '#8a7a92';
 
 const CATEGORIAS_PROVEEDORES = [
@@ -492,7 +491,7 @@ export default function FormulariosNardeli({ reservaId }) {
               {saving ? 'Guardando…' : 'Guardar'}
             </button>
             <button
-              style={{ ...S.btn, background: '#fff', color: '#6b2c5e', border: '1px solid #e0d0e8' }}
+              style={{ ...S.btn, background: 'linear-gradient(135deg, #e5533d, #b3261e)', color: '#fff', border: 'none' }}
               onClick={generarPDF}
               onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; }}
               onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
