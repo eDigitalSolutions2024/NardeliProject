@@ -1,0 +1,27 @@
+.ovalos-flotantes {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Cada capa se desplaza con el mouse según su profundidad (--mx/--my vienen del panel padre) */
+.ovalos-capa {
+  position: absolute;
+  inset: 0;
+  transform: translate3d(calc(var(--mx, 0) * var(--depth) * -1px), calc(var(--my, 0) * var(--depth) * -1px), 0);
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ovalo {
+  position: absolute;
+  display: block;
+}
+
+.ovalo-cuerpo {
+  position: absolute;
+  inset: 0;
+  display: block;
+  border-radius: 50%;
+  will-change: transform; /* capa propia: se mueve en la GPU sin repintar */
+}

@@ -8,8 +8,24 @@ const UsuarioSchema = new mongoose.Schema({
   password: { type: String },   // Login tradicional (opcional): guarda aquí el HASH (bcrypt) si lo usas
   googleId: { type: String, index: true },  // Login con Google (opcional)
   foto: { type: String },
-  role: { type: String, enum: ['admin', 'user','asistente'], default: 'user' },
+  role: { type: String, enum: ['admin', 'user', 'asistente', 'cotizador'], default: 'user' },
   emailVerified: { type: Boolean, default: true },   // Estado del correo (si manejas verificación)
+
+  telefono: { type: String, trim: true },
+  lastLoginAt: { type: Date, default: null },
+
+  // === Administración de cuentas (módulo Usuarios y roles) ===
+  // activo=false bloquea el acceso sin borrar el historial de la cuenta.
+  activo: { type: Boolean, default: true },
+  // true mientras el usuario siga con la contraseña temporal que generó el admin:
+  // el servidor le niega todo salvo cambiar su contraseña.
+  mustChangePassword: { type: Boolean, default: false },
+  creadoPor: { type: mongoose.Schema.Types.ObjectId, ref: 'Usuario', default: null },
+  // Contraseña actual CIFRADA (utils/boveda.js) para que el admin pueda consultarla. select:false = no sale en consultas normales.
+  passwordRecuperable: { type: String, default: null, select: false },
+  // El usuario solo puede cambiar su contraseña UNA vez después de que el admin se la asigna.
+  passwordCambiadaPorUsuario: { type: Boolean, default: false },
+  passwordCambiadaEn: { type: Date, default: null },
 
   // === Acceso por código/enlace mágico ===
   magicTokenHash: { type: String, default: null },

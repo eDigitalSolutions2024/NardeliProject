@@ -42,6 +42,14 @@ export function AuthProvider({ children }) {
     if (!data?.success || !data?.token) {
       throw new Error(data?.message || 'No se pudo iniciar sesión');
     }
+    // La app es de operación en el evento: el rol cotizador solo usa la página web.
+    if (data.user?.role === 'cotizador') {
+      throw new Error('Tu cuenta es de cotizaciones y solo funciona en la página web.');
+    }
+    // La app no tiene pantalla para cambiar la contraseña temporal.
+    if (data.user?.mustChangePassword) {
+      throw new Error('Primero entra a la página web con tu contraseña temporal para crear tu contraseña.');
+    }
     setAuthToken(data.token);
     setUser(data.user);
     await AsyncStorage.setItem(TOKEN_KEY, data.token);

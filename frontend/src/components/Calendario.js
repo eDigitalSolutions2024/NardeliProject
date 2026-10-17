@@ -1,4 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { aviso, pedirConfirmacion } from '../utils/avisos';
+import TimeField from './ui/TimeField';
+import DateField from './ui/DateField';
+import SearchField from './ui/SearchField';
+import React, { useState, useEffect, useRef } from 'react';
+import { animate, stagger } from 'animejs';
+import { LuHeart, LuCake, LuGraduationCap, LuCrown, LuBriefcase, LuLaugh, LuMusic, LuPartyPopper, LuClock, LuUsers, LuPencil, LuTrash2, LuRepeat, LuCalendarDays, LuX, LuChevronLeft, LuChevronRight, LuCalendarX } from 'react-icons/lu';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import './Calendario.css';
@@ -21,20 +27,21 @@ const Calendario = () => {
   const [activeStartDate, setActiveStartDate] = useState(null);
   const [searchEventos, setSearchEventos] = useState('');
   const [eventoRapido, setEventoRapido] = useState(null);
+  const listaRef = useRef(null);
 
   const usuario = JSON.parse(localStorage.getItem('user') || '{}');
 const role = usuario.role;
 
   const obtenerIcono = (tipo) => {
     switch ((tipo || '').toLowerCase()) {
-      case 'boda': return '💒';
-      case 'cumpleaños': return '🎂';
-      case 'graduación': return '🎓';
-      case 'xv': return '👑';
-      case 'reunión': return '💼';
-      case 'comedia': return '🤡';
-      case 'musica': return '🎶';
-      default: return '🎉';
+      case 'boda': return <LuHeart />;
+      case 'cumpleaños': return <LuCake />;
+      case 'graduación': return <LuGraduationCap />;
+      case 'xv': return <LuCrown />;
+      case 'reunión': return <LuBriefcase />;
+      case 'comedia': return <LuLaugh />;
+      case 'musica': return <LuMusic />;
+      default: return <LuPartyPopper />;
     }
   };
 
@@ -105,18 +112,18 @@ const role = usuario.role;
   useEffect(() => { obtenerEventos(); }, []);
 
   const manejarEliminar = async (id) => {
-    if (window.confirm('¿Estás seguro de eliminar esta reserva?')) {
+    if (await pedirConfirmacion('¿Estás seguro de eliminar esta reserva?')) {
       try {
         const response = await fetch(`${API_BASE_URL}/reservas/${id}`, { method: 'DELETE', headers: authHeaders() });
         if (response.ok) setEventos(prev => prev.filter(e => e.id !== id));
-        else alert('Error al eliminar la reserva.');
+        else aviso('Error al eliminar la reserva.');
       } catch (error) {
         console.error('Error al eliminar:', error);
       }
     }
   };
 const convertirACotizacion = async (id) => {
-  const ok = window.confirm('¿Convertir este evento a cotización?');
+  const ok = await pedirConfirmacion('¿Convertir este evento a cotización?');
   if (!ok) return;
   try {
     const resp = await fetch(`${API_BASE_URL}/reservas/${id}/convertir-a-cotizacion`, {
@@ -126,13 +133,13 @@ const convertirACotizacion = async (id) => {
     });
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({}));
-      alert(err?.msg || 'No se pudo convertir a cotización.');
+      aviso(err?.msg || 'No se pudo convertir a cotización.');
       return;
     }
     await obtenerEventos(); // ya no aparecerá en “eventos”
   } catch (e) {
     console.error(e);
-    alert('Error al convertir a cotización');
+    aviso('Error al convertir a cotización');
   }
 };
 
@@ -166,7 +173,7 @@ const convertirACotizacion = async (id) => {
     e.preventDefault();
 
     if (rangoIgual(reservaEditando.horaInicio, reservaEditando.horaFin)) {
-      const seguir = window.confirm('La hora de inicio y fin son iguales. ¿Deseas continuar?');
+      const seguir = await pedirConfirmacion('La hora de inicio y fin son iguales. ¿Deseas continuar?');
       if (!seguir) return;
     }
 
@@ -195,7 +202,7 @@ const convertirACotizacion = async (id) => {
         await obtenerEventos();
       } else {
         const err = await response.json().catch(() => ({}));
-        alert(err.msg || 'Error al actualizar');
+        aviso(err.msg || 'Error al actualizar');
       }
     } catch (error) {
       console.error('Error al actualizar:', error);
@@ -240,6 +247,15 @@ const convertirACotizacion = async (id) => {
   };
 
   const eventosDelDia = getEventosDelDia(date);
+
+  // Las tarjetas de eventos entran escalonadas cuando llegan los datos (solo visual).
+  useEffect(() => {
+    const lista = listaRef.current;
+    if (!lista || eventos.length === 0) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    animate(lista.querySelectorAll('.evento-card'), { opacity: [0, 1], translateY: [14, 0], delay: stagger(60), duration: 500, ease: 'outCubic' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventos.length > 0]);
 
   const eventosFiltrados = eventosFuturos.filter((e) => {
   if (eventoRapido) return e.id === eventoRapido;
@@ -298,30 +314,23 @@ const convertirACotizacion = async (id) => {
         onClick={() => setEventoRapido(null)}
         title="Limpiar filtro rápido"
       >
-        Filtro rápido ✕
+        Filtro rápido <LuX />
       </span>
     )}
   </div>
 
   {!eventoRapido && (
-  <input
-    type="text"
-    placeholder="Buscar por cliente, fecha o tipo..."
+  <SearchField
     value={searchEventos}
-    onChange={(e) => setSearchEventos(e.target.value)}
-    style={{
-      padding: '6px 10px',
-      borderRadius: 8,
-      border: '1px solid #ddd',
-      fontSize: 14,
-      minWidth: 220,
-    }}
+    onChange={setSearchEventos}
+    placeholder="Buscar por cliente, fecha o tipo..."
+    size="sm"
   />
   )}
 </div>
 
 
-        <div className="eventos-lista">
+        <div className="eventos-lista" ref={listaRef}>
   {eventosFiltrados.length === 0 ? (
     <div className="evento-card">
       <div className="evento-info">
@@ -351,9 +360,9 @@ const convertirACotizacion = async (id) => {
           <p className="evento-fecha">{formatearFecha(evento.ymd)}</p>
           <div className="evento-detalles">
             <span className="evento-hora">
-              ⏰ {toHHmm(evento.horaInicio)} – {toHHmm(evento.horaFin)}
+              <LuClock /> {toHHmm(evento.horaInicio)} – {toHHmm(evento.horaFin)}
             </span>
-            <span className="evento-invitados">👥 {evento.invitados}</span>
+            <span className="evento-invitados"><LuUsers /> {evento.invitados}</span>
           </div>
           <div className="evento-acciones">
             <button
@@ -362,7 +371,7 @@ const convertirACotizacion = async (id) => {
                 manejarEditar(evento);
               }}
             >
-              ✏️ Editar
+              <LuPencil /> Editar
             </button>
             {/* Solo administrador puede eliminar */}
 {role !== 'asistente' && (
@@ -372,7 +381,7 @@ const convertirACotizacion = async (id) => {
       manejarEliminar(evento.id);
     }}
   >
-    🗑️ Eliminar
+    <LuTrash2 /> Eliminar
   </button>
 )}
             {role === 'admin' && (
@@ -382,7 +391,7 @@ const convertirACotizacion = async (id) => {
                   convertirACotizacion(evento.id);
                 }}
               >
-                💱 A cotización
+                <LuRepeat /> A cotización
               </button>
             )}
           </div>
@@ -395,77 +404,37 @@ const convertirACotizacion = async (id) => {
 
         {mostrarModal && reservaEditando && (
           <div className="modal-overlay">
-            <div className="modal-content">
+            <div className="modal-content nd-modal">
               <h2>Editar Reserva</h2>
-              <form onSubmit={actualizarReserva}>
-                <input
-                  type="text"
-                  name="cliente"
-                  placeholder="Nombre del cliente"
-                  value={reservaEditando.cliente}
-                  onChange={handleEditarChange}
-                  required
-                />
-                <input
-                  type="text"
-                  name="tipo"
-                  placeholder="Tipo de evento"
-                  value={reservaEditando.tipo}
-                  onChange={handleEditarChange}
-                  required
-                />
-                <input
-                  type="date"
+              <form onSubmit={actualizarReserva} className="nd-form">
+                  <div className="nd-grid-2">
+                    <label className="nd-field"><span>Cliente</span><input autoFocus type="text" name="cliente" placeholder="Nombre del cliente" value={reservaEditando.cliente} onChange={handleEditarChange} required /></label>
+                    <label className="nd-field"><span>Tipo de evento</span><input type="text" name="tipo" placeholder="Tipo de evento" value={reservaEditando.tipo} onChange={handleEditarChange} required /></label>
+                  </div>
+                  <div className="nd-field"><span>Fecha</span><DateField
                   name="fecha"
                   value={dayjs(reservaEditando.fecha).format('YYYY-MM-DD')}
-                  onChange={handleEditarChange}
+                  onChange={(v) => handleEditarChange({ target: { name: 'fecha', value: v } })}
                   required
-                />
-
-                {/* Horas separadas */}
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: 12, marginBottom: 4 }}>Hora inicio</label>
-                    <input
-                      type="time"
-                      name="horaInicio"
-                      value={toHHmm(reservaEditando.horaInicio)}
-                      onChange={handleEditarChange}
-                      required
-                    />
+                  clearable={false}
+                  style={{ width: '100%' }}
+                /></div>
+                  <div className="nd-grid-2">
+                    <div className="nd-field"><span>Hora de inicio</span><TimeField name="horaInicio" value={toHHmm(reservaEditando.horaInicio)} onChange={(v) => handleEditarChange({ target: { name: 'horaInicio', value: v } })} required clearable={false} style={{ width: '100%' }} /></div>
+                    <div className="nd-field"><span>Hora de fin</span><TimeField name="horaFin" value={toHHmm(reservaEditando.horaFin)} onChange={(v) => handleEditarChange({ target: { name: 'horaFin', value: v } })} required clearable={false} style={{ width: '100%' }} /></div>
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: 12, marginBottom: 4 }}>Hora fin</label>
-                    <input
-                      type="time"
-                      name="horaFin"
-                      value={toHHmm(reservaEditando.horaFin)}
-                      onChange={handleEditarChange}
-                      required
-                    />
+                  <label className="nd-field"><span>Invitados</span><input type="number" name="invitados" placeholder="Cantidad de personas" value={reservaEditando.invitados} onChange={handleEditarChange} required /></label>
+
+                  <div className="nd-form-actions">
+                    <button type="button" className="nd-btn nd-btn-ghost nd-btn-block" onClick={irAlPanelAdmin}>
+                      Abrir panel de artículos (admin)
+                    </button>
+                    <div className="nd-form-actions-main">
+                      <button type="button" className="nd-btn nd-btn-ghost" onClick={cerrarModal}>Cancelar</button>
+                      <button type="submit" className="nd-btn nd-btn-primary">Guardar</button>
+                    </div>
                   </div>
-                </div>
-
-                <input
-                  type="number"
-                  name="invitados"
-                  placeholder="Cantidad de personas"
-                  value={reservaEditando.invitados}
-                  onChange={handleEditarChange}
-                  required
-                />
-
-                <div className="modal-actions" style={{ display: 'flex', gap: 8, justifyContent: 'space-between' }}>
-                  <button type="button" className="btn btn-outline-secondary" onClick={irAlPanelAdmin}>
-                    Abrir panel de artículos (admin)
-                  </button>
-
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button type="submit">Guardar</button>
-                    <button type="button" onClick={cerrarModal}>Cancelar</button>
-                  </div>
-                </div>
-              </form>
+                </form>
             </div>
           </div>
         )}
@@ -491,8 +460,8 @@ const convertirACotizacion = async (id) => {
             }
             prev2Label={null}
             next2Label={null}
-            prevLabel="‹"
-            nextLabel="›"
+            prevLabel={<LuChevronLeft />}
+            nextLabel={<LuChevronRight />}
             activeStartDate={activeStartDate || undefined}
             onActiveStartDateChange={({ activeStartDate }) => setActiveStartDate(activeStartDate)}
           />
@@ -501,7 +470,7 @@ const convertirACotizacion = async (id) => {
 
         <div className="fecha-seleccionada">
           <div className="fecha-info">
-            <h3>📅 {formatearFecha(date)}</h3>
+            <h3><LuCalendarDays /> {(() => { const f = String(formatearFecha(date)); return f.charAt(0).toUpperCase() + f.slice(1); })()}</h3>
             {eventosDelDia.length > 0 ? (
               <div className="eventos-dia">
                 <h4>Eventos programados:</h4>
@@ -536,7 +505,7 @@ const convertirACotizacion = async (id) => {
                 ))}
               </div>
             ) : (
-              <p className="sin-eventos">No hay eventos programados para esta fecha</p>
+              <p className="sin-eventos"><LuCalendarX /> No hay eventos programados para esta fecha</p>
             )}
           </div>
         </div>

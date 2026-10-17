@@ -6,6 +6,9 @@ const Usuario = require('../models/Usuario');
 
 const { generarCodigo, hashCodigo, verificarCodigo } = require('../utils/magic');
 const mailer = require('../utils/mailer');
+const bcrypt = require('bcryptjs');
+const { requireSesion } = require('../utils/permisos');
+const boveda = require('../utils/boveda');
 
 // === ENV ===
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -68,6 +71,10 @@ router.get('/google/callback', async (req, res) => {
 
     // Buscar/crear usuario
     let usuario = await Usuario.findOne({ email });
+
+    if (usuario && usuario.activo === false) {
+      return res.status(403).send('Tu cuenta está desactivada. Contacta al administrador.');
+    }
 
     if (usuario) {
       if (!usuario.googleId && usuario.password) {
@@ -138,6 +145,10 @@ router.post('/start', async (req, res) => {
       if (telefono && !user.telefono) user.telefono = telefono;
     }
 
+    if (user.activo === false) {
+      return res.status(403).json({ msg: 'Tu cuenta está desactivada. Contacta al administrador.' });
+    }
+
     // Rate limit por usuario
     const now = Date.now();
     if (user.magicTokenSentAt && now - user.magicTokenSentAt.getTime() < RESEND_WINDOW_MS) {
@@ -194,6 +205,7 @@ router.post('/verify', async (req, res) => {
     if (!user || !user.magicTokenHash || !user.magicTokenExp) {
       return res.status(400).json({ msg: 'Código inválido o expirado' });
     }
+    if (user.activo === false) return res.status(403).json({ msg: 'Tu cuenta está desactivada. Contacta al administrador.' });
     if (user.magicTokenExp < new Date()) {
       return res.status(400).json({ msg: 'Código expirado' });
     }
@@ -256,6 +268,7 @@ router.get('/magic', async (req, res) => {
 
     const user = await Usuario.findById(payload.sub);
     if (!user) return res.status(400).json({ msg: 'Usuario no encontrado' });
+    if (user.activo === false) return res.status(403).json({ msg: 'Tu cuenta está desactivada. Contacta al administrador.' });
 
     // Emite sesión normal
     const session = jwt.sign(
@@ -276,6 +289,67 @@ router.get('/magic', async (req, res) => {
     console.error('auth/magic error:', e);
     return res.status(500).json({ msg: 'Error al validar magic link' });
   }
+});
+
+/**
+ * POST /auth/cambiar-password
+ * Cambia la contraseña de la sesión actual. Es la ÚNICA ruta que acepta a un
+ * usuario con contraseña temporal. Devuelve un token nuevo.
+ * body: { actual, nueva }
+ */
+router.post('/cambiar-password', requireSesion({ permitirCambioPassword: true }), async (req, res) => {
+  try {
+    const { actual, nueva } = req.body || {};
+    if (!actual || !nueva) return res.status(400).json({ ok: false, msg: 'Faltan la contraseña actual y la nueva' });
+    if (String(nueva).length < 8) return res.status(400).json({ ok: false, msg: 'La nueva contraseña debe tener al menos 8 caracteres' });
+    if (!/[A-Za-z]/.test(nueva) || !/\d/.test(nueva)) {
+      return res.status(400).json({ ok: false, msg: 'La nueva contraseña debe incluir letras y números' });
+    }
+    if (actual === nueva) return res.status(400).json({ ok: false, msg: 'La nueva contraseña debe ser distinta a la actual' });
+
+    const user = await Usuario.findById(req.user.sub);
+    if (!user || !user.password) return res.status(400).json({ ok: false, msg: 'Esta cuenta no usa contraseña' });
+    // Solo hay UN cambio por contraseña asignada: cuando el admin la asigna (mustChangePassword) y el usuario la cambia.
+    if (!user.mustChangePassword) {
+      return res.status(403).json({ ok: false, code: 'PASSWORD_CHANGE_NOT_ALLOWED', msg: 'Ya usaste tu único cambio de contraseña. Si necesitas otra, pídesela al administrador.' });
+    }
+    if (!(await bcrypt.compare(String(actual), user.password))) {
+      return res.status(401).json({ ok: false, msg: 'La contraseña actual no es correcta' });
+    }
+
+    user.password = await bcrypt.hash(String(nueva), 10);
+    user.passwordRecuperable = boveda.cifrar(String(nueva));
+    user.passwordCambiadaPorUsuario = true;
+    user.passwordCambiadaEn = new Date();
+    user.mustChangePassword = false;
+    await user.save();
+
+    const token = jwt.sign(
+      { sub: String(user._id), id: String(user._id), email: user.email, role: user.role || 'user' },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    return res.json({ ok: true, token, msg: 'Contraseña actualizada' });
+  } catch (e) {
+    console.error('auth/cambiar-password error:', e);
+    return res.status(500).json({ ok: false, msg: 'No se pudo cambiar la contraseña' });
+  }
+});
+
+/**
+ * GET /auth/me
+ * Datos de la sesión actual leídos de la BASE (rol vigente, no el del token).
+ */
+router.get('/me', requireSesion({ permitirCambioPassword: true }), async (req, res) => {
+  const u = req.usuarioDoc;
+  res.json({
+    ok: true,
+    id: String(u._id),
+    name: u.fullname || '',
+    email: u.email,
+    role: u.role,
+    mustChangePassword: !!u.mustChangePassword,
+  });
 });
 
 module.exports = router;

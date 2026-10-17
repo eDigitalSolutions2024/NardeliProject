@@ -9,21 +9,9 @@ const { streamChecklistPdf } = require('../services/checklistPdf');
 
 // Solo staff logueado puede resetear las plantillas oficiales (borra todas
 // las existentes). Nada en la app llama esta ruta automáticamente.
-function requireStaff(req, res, next) {
-  const h = req.headers.authorization || '';
-  const t = h.startsWith('Bearer ') ? h.slice(7) : null;
-  if (!t) return res.status(401).json({ ok: false, msg: 'No autorizado' });
-  try {
-    const payload = jwt.verify(t, JWT_SECRET);
-    if (payload.role !== 'admin' && payload.role !== 'asistente') {
-      return res.status(403).json({ ok: false, msg: 'Requiere permisos de staff' });
-    }
-    req.user = payload;
-    next();
-  } catch {
-    return res.status(401).json({ ok: false, msg: 'Token inválido' });
-  }
-}
+const { requirePermission } = require('../utils/permisos');
+// Permiso validado contra la base (rol y estado actuales); ver utils/permisos.js
+const requireStaff = requirePermission('eventos.gestionar');
 
 // ── Multer ────────────────────────────────────────────────────────────────
 let upload;

@@ -3,6 +3,7 @@ const router = require('express').Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const JWT_SECRET = require('../utils/jwtSecret');
+const { permisosDeRol } = require('../utils/permisos');
 
 router.post('/login', async (req, res) => {
   try {
@@ -18,6 +19,13 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Usuario inválidos' });
     }
 
+    if (usuario.activo === false) {
+      return res.status(403).json({ success: false, message: 'Tu cuenta está desactivada. Contacta al administrador.' });
+    }
+    if (!usuario.password) {
+      return res.status(401).json({ success: false, message: 'Usuario inválidos' });
+    }
+
     const passwordValida = await bcrypt.compare(password, usuario.password); // ← compara plain vs HASH
     if (!passwordValida) {
       return res.status(401).json({ success: false, message: ' contraseña inválidos' });
@@ -30,6 +38,9 @@ router.post('/login', async (req, res) => {
       { expiresIn: '7d' }
     );
 
+    usuario.lastLoginAt = new Date();
+    await usuario.save();
+
     return res.json({
       success: true,
       token,
@@ -37,7 +48,9 @@ router.post('/login', async (req, res) => {
         id: usuario._id,
         email: usuario.email,
         role: usuario.role,
-        fullname: usuario.fullname
+        fullname: usuario.fullname,
+        mustChangePassword: !!usuario.mustChangePassword,
+        permisos: usuario.role === 'user' ? {} : await permisosDeRol(usuario.role)
       }
     });
   } catch (error) {

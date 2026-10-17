@@ -133,6 +133,15 @@ const reservaSchema = new mongoose.Schema(
       pospuestoHasta: { type: Date, default: null },
     },
 
+    // Quién capturó la reserva (solo si lo hizo alguien con sesión iniciada).
+    // Sirve para que un 'cotizador' vea únicamente sus propias cotizaciones.
+    creadoPor: {
+      id: { type: mongoose.Schema.Types.ObjectId, ref: 'Usuario', default: null, index: true },
+      nombre: { type: String, default: '' },
+      email: { type: String, default: '' },
+      rol: { type: String, default: '' },
+    },
+
     // Cotización / Evento
     tipoReserva: {
       type: String,

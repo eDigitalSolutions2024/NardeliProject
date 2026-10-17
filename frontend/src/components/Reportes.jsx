@@ -1,3 +1,7 @@
+import { LuCalendarCheck, LuCircleCheck, LuCircleDot, LuHourglass, LuCoins, LuBadgeDollarSign, LuReceipt, LuTrendingUp, LuEye, LuFileDown, LuChevronLeft, LuChevronRight, LuInbox } from 'react-icons/lu';
+import SelectField from './ui/SelectField';
+import DateField from './ui/DateField';
+import SearchField from './ui/SearchField';
 import React, { useEffect, useMemo, useState } from 'react';
 import API_BASE_URL, { authHeaders } from '../api';
 import * as XLSX from 'xlsx';
@@ -202,20 +206,22 @@ export default function Reportes() {
       fontSize: 12,
       border: '1px solid #ddd',
     };
-    if (v === 'PAGADO') return <span style={{ ...style, borderColor: '#16a34a' }}>PAGADO</span>;
-    if (v === 'PARCIAL') return <span style={{ ...style, borderColor: '#f59e0b' }}>PARCIAL</span>;
-    return <span style={{ ...style, borderColor: '#ef4444' }}>PENDIENTE</span>;
+    if (v === 'PAGADO') return <span className="badge success">PAGADO</span>;
+    if (v === 'PARCIAL') return <span className="badge warning">PARCIAL</span>;
+    return <span className="badge danger">PENDIENTE</span>;
   };
 
   return (
-    <div className="dashboard-content">
-      <div className="dashboard-header">
-        <h1>Reportes</h1>
-        <p>Historial de eventos y recibos (pagados / pendientes) con filtros</p>
+    <div className="dashboard-content nd-wide">
+      <div className="nd-welcome">
+        <div>
+          <h1>Reportes</h1>
+          <p>Historial de eventos y recibos (pagados / pendientes) con filtros</p>
+        </div>
       </div>
 
       {/* Filtros */}
-      <div style={{
+      <div className="rep-filtros" style={{
         display: 'flex',
         gap: 10,
         flexWrap: 'wrap',
@@ -228,21 +234,26 @@ export default function Reportes() {
       }}>
         <div>
           <label style={{ fontSize: 12 }}>Desde</label>
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <DateField value={from} onChange={setFrom} placeholder="Desde" size="sm" />
         </div>
         <div>
           <label style={{ fontSize: 12 }}>Hasta</label>
-          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          <DateField value={to} onChange={setTo} placeholder="Hasta" size="sm" />
         </div>
 
         <div>
           <label style={{ fontSize: 12 }}>Estatus pago</label>
-          <select value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option value="ALL">Todos</option>
-            <option value="PAGADO">Pagado</option>
-            <option value="PARCIAL">Parcial</option>
-            <option value="PENDIENTE">Pendiente</option>
-          </select>
+          <SelectField
+            size="sm"
+            value={status}
+            onChange={setStatus}
+            options={[
+              { value: 'ALL', label: 'Todos' },
+              { value: 'PAGADO', label: 'Pagado' },
+              { value: 'PARCIAL', label: 'Parcial' },
+              { value: 'PENDIENTE', label: 'Pendiente' },
+            ]}
+          />
         </div>
 
         <div>
@@ -262,92 +273,93 @@ export default function Reportes() {
 
         <div style={{ flex: 1, minWidth: 220 }}>
           <label style={{ fontSize: 12 }}>Buscar</label>
-          <input
-            style={{ width: '100%' }}
+          <SearchField
+            size="sm"
             placeholder="Cliente / correo / teléfono / shortId"
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={setQ}
+            style={{ width: '100%' }}
           />
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-outline-secondary" onClick={() => { setTipoEvento(''); setStatus('ALL'); setQ(''); }}>
+          <button className="nd-btn nd-btn-ghost" onClick={() => { setTipoEvento(''); setStatus('ALL'); setQ(''); }}>
             Limpiar
           </button>
-          <button className="btn btn-outline-primary" onClick={exportExcel} disabled={(items || []).length === 0}>
+          <button className="nd-btn nd-btn-primary" onClick={exportExcel} disabled={(items || []).length === 0}>
             Export Excel
           </button>
         </div>
       </div>
 
       {/* KPIs */}
-      <div className="stats-grid" style={{ marginBottom: 12 }}>
-        <div className="stat-card">
-          <div className="stat-icon">📌</div>
-          <div className="stat-info">
-            <h3>Eventos</h3>
-            <p className="stat-number">{loadingSummary ? '…' : summary.counts.eventos}</p>
+      <div className="nd-kpis">
+        <div className="nd-kpi nd-kpi-morado">
+          <span className="nd-kpi-icon"><LuCalendarCheck /></span>
+          <div className="nd-kpi-info">
+            <span className="nd-kpi-label">Eventos</span>
+            <strong className="nd-kpi-number">{loadingSummary ? '…' : summary.counts.eventos}</strong>
           </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon">✅</div>
-          <div className="stat-info">
-            <h3>Pagados</h3>
-            <p className="stat-number">{loadingSummary ? '…' : summary.counts.pagados}</p>
+        <div className="nd-kpi nd-kpi-verde">
+          <span className="nd-kpi-icon"><LuCircleCheck /></span>
+          <div className="nd-kpi-info">
+            <span className="nd-kpi-label">Pagados</span>
+            <strong className="nd-kpi-number">{loadingSummary ? '…' : summary.counts.pagados}</strong>
           </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon">🟡</div>
-          <div className="stat-info">
-            <h3>Parciales</h3>
-            <p className="stat-number">{loadingSummary ? '…' : summary.counts.parciales}</p>
+        <div className="nd-kpi nd-kpi-dorado">
+          <span className="nd-kpi-icon"><LuCircleDot /></span>
+          <div className="nd-kpi-info">
+            <span className="nd-kpi-label">Parciales</span>
+            <strong className="nd-kpi-number">{loadingSummary ? '…' : summary.counts.parciales}</strong>
           </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon">⏳</div>
-          <div className="stat-info">
-            <h3>Pendientes</h3>
-            <p className="stat-number">{loadingSummary ? '…' : summary.counts.pendientes}</p>
+        <div className="nd-kpi nd-kpi-rojo">
+          <span className="nd-kpi-icon"><LuHourglass /></span>
+          <div className="nd-kpi-info">
+            <span className="nd-kpi-label">Pendientes</span>
+            <strong className="nd-kpi-number">{loadingSummary ? '…' : summary.counts.pendientes}</strong>
           </div>
         </div>
       </div>
 
-      <div className="stats-grid" style={{ marginBottom: 12 }}>
-        <div className="stat-card">
-          <div className="stat-icon">💰</div>
-          <div className="stat-info">
-            <h3>Total</h3>
-            <p className="stat-number">{loadingSummary ? '…' : money(summary.money.total)}</p>
+      <div className="nd-kpis">
+        <div className="nd-kpi nd-kpi-morado nd-kpi-money">
+          <span className="nd-kpi-icon"><LuCoins /></span>
+          <div className="nd-kpi-info">
+            <span className="nd-kpi-label">Total</span>
+            <strong className="nd-kpi-number">{loadingSummary ? '…' : money(summary.money.total)}</strong>
           </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon">💵</div>
-          <div className="stat-info">
-            <h3>Pagado</h3>
-            <p className="stat-number">{loadingSummary ? '…' : money(summary.money.paid)}</p>
+        <div className="nd-kpi nd-kpi-verde nd-kpi-money">
+          <span className="nd-kpi-icon"><LuBadgeDollarSign /></span>
+          <div className="nd-kpi-info">
+            <span className="nd-kpi-label">Pagado</span>
+            <strong className="nd-kpi-number">{loadingSummary ? '…' : money(summary.money.paid)}</strong>
           </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon">🧾</div>
-          <div className="stat-info">
-            <h3>Saldo</h3>
-            <p className="stat-number">{loadingSummary ? '…' : money(summary.money.remaining)}</p>
+        <div className="nd-kpi nd-kpi-lila nd-kpi-money">
+          <span className="nd-kpi-icon"><LuReceipt /></span>
+          <div className="nd-kpi-info">
+            <span className="nd-kpi-label">Saldo</span>
+            <strong className="nd-kpi-number">{loadingSummary ? '…' : money(summary.money.remaining)}</strong>
           </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon">📈</div>
-          <div className="stat-info">
-            <h3>Ticket prom.</h3>
-            <p className="stat-number">{loadingSummary ? '…' : money(summary.money.avgTicket)}</p>
+        <div className="nd-kpi nd-kpi-dorado nd-kpi-money">
+          <span className="nd-kpi-icon"><LuTrendingUp /></span>
+          <div className="nd-kpi-info">
+            <span className="nd-kpi-label">Ticket prom.</span>
+            <strong className="nd-kpi-number">{loadingSummary ? '…' : money(summary.money.avgTicket)}</strong>
           </div>
         </div>
       </div>
 
       {/* Tabla */}
-      <div style={{ background: '#fff', border: '1px solid #eee', borderRadius: 12, overflow: 'hidden' }}>
-        <div style={{ padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="rep-tabla">
+        <div className="rep-tabla-head">
           <strong>Historial</strong>
-          <small style={{ opacity: 0.7 }}>{loading ? 'Cargando…' : `${items.length} registros (página ${page}/${totalPages})`}</small>
+          <small>{loading ? 'Cargando…' : `${items.length} registros (página ${page}/${totalPages})`}</small>
         </div>
 
         {error && <div style={{ padding: 12, color: '#b91c1c' }}>{error}</div>}
@@ -370,7 +382,7 @@ export default function Reportes() {
             </thead>
             <tbody>
               {!loading && (items || []).length === 0 && (
-                <tr><td colSpan="10" className="empty">Sin resultados</td></tr>
+                <tr><td colSpan="10" className="empty"><LuInbox /> Sin resultados</td></tr>
               )}
 
               {(items || []).map((x) => (
@@ -384,12 +396,12 @@ export default function Reportes() {
                   <td>{money(x.paid)}</td>
                   <td>{money(x.remaining)}</td>
                   <td>{badge(x.paymentStatus)}</td>
-                  <td style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <button className="btn btn-light" onClick={() => openPanelCliente(x._id)}>
-                      Ver panel
+                  <td className="acciones">
+                    <button className="nd-btn nd-btn-ghost" onClick={() => openPanelCliente(x._id)}>
+                      <LuEye /> Ver panel
                     </button>
-                    <button className="btn" onClick={() => openEventoPdf(x._id)}>
-                      PDF evento
+                    <button className="nd-btn nd-btn-primary" onClick={() => openEventoPdf(x._id)}>
+                      <LuFileDown /> PDF evento
                     </button>
                   </td>
                 </tr>
@@ -405,7 +417,7 @@ export default function Reportes() {
             onClick={() => fetchTable(Math.max(1, page - 1))}
             disabled={page <= 1 || loading}
           >
-            ←
+            <LuChevronLeft aria-label="Anterior" />
           </button>
           <span className="page-info">Página {page} de {totalPages}</span>
           <button
@@ -413,7 +425,7 @@ export default function Reportes() {
             onClick={() => fetchTable(Math.min(totalPages, page + 1))}
             disabled={page >= totalPages || loading}
           >
-            →
+            <LuChevronRight aria-label="Siguiente" />
           </button>
         </div>
       </div>
