@@ -168,7 +168,7 @@ function Cotizaciones() {
                           <button className="rl-btn sm" onClick={() => abrir(c._id)}>Artículos</button>
                         </>
                       )}
-                      <a className="rl-btn pdf sm"
+                      <a className="rl-btn pdf sm btn-pdf-rojo"
                          href={`${API_BASE_URL}/reservas/${c._id}/pdf`} target="_blank" rel="noopener noreferrer">PDF</a>
                     </div>
                   </td>

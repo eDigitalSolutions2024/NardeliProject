@@ -1,5 +1,5 @@
 // src/App.js
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import {
   BrowserRouter as Router,
   Routes,
@@ -11,16 +11,17 @@ import {
 
 import Home from './components/Home';
 import Login from './components/Login';
-import Dashboard from './components/Dashboard';
-import Reservar from './components/ReservarEvento';
-import DashboardCliente from './components/DashboardCliente';
 import IngresarCodigo from './pages/IngresarCodigo';
-import IngresaCodigoInvitacion from './pages/tmpCodigoInvitacion';
-import ScanInvitacionQR from './pages/ScanInvitacionQR';
 import { Toaster } from 'sonner';
 import CambiarPassword from './components/CambiarPassword';
-import Cotizador from './components/Cotizador';
 import { updateStoredUser, rutaInicialPorRol } from './session';
+
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const Reservar = lazy(() => import('./components/ReservarEvento'));
+const DashboardCliente = lazy(() => import('./components/DashboardCliente'));
+const IngresaCodigoInvitacion = lazy(() => import('./pages/tmpCodigoInvitacion'));
+const ScanInvitacionQR = lazy(() => import('./pages/ScanInvitacionQR'));
+const Cotizador = lazy(() => import('./components/Cotizador'));
 
 function AppWrapper() {
   // ✅ Levanta la sesión desde localStorage si existe
@@ -84,6 +85,7 @@ function AppWrapper() {
   };
 
   return (
+    <Suspense fallback={<div className="sk-carga" role="status" aria-label="Cargando"><span className="sk sk-titulo" /><span className="sk sk-fila" /><span className="sk sk-fila" /><span className="sk sk-fila corta" /></div>}>
     <Routes>
       <Route path="/" element={<Home user={user} onLogout={handleLogout} />} />
 
@@ -135,6 +137,7 @@ function AppWrapper() {
 
       <Route path="/invitacion-qr/:qrToken" element={<ScanInvitacionQR />} />
     </Routes>
+    </Suspense>
   );
 }
 

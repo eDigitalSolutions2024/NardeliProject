@@ -408,7 +408,7 @@ const filtered = useMemo(() => {
 </button>
                   {r.fuente === "reservas" && r._id && (
                     <button
-                      className="btn"
+                      className="btn btn-pdf-rojo"
                       title="Descargar PDF"
                       onClick={() =>
                         window.open(

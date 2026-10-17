@@ -2,6 +2,7 @@ import PasswordInput from './PasswordInput';
 import { pedirConfirmacion } from '../utils/avisos';
 import { LuPencil, LuKeyRound, LuBan, LuCheck, LuCopy, LuLock } from 'react-icons/lu';
 import SelectField from './ui/SelectField';
+import DateField from './ui/DateField';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import API_BASE_URL from '../api';
 import { jsonAuthHeaders } from '../session';
@@ -403,40 +404,89 @@ function TabPermisos() {
 }
 
 /* ---------------- Pestaña: Bitácora ---------------- */
-const ACCIONES = {
-  'usuario.crear': 'Creó un usuario',
-  'usuario.editar': 'Editó un usuario',
-  'usuario.reset_password': 'Restableció una contraseña',
-  'usuario.ver_password': 'Consultó una contraseña',
-  'usuario.cambiar_password': 'Cambió una contraseña',
-  'permisos.actualizar': 'Cambió permisos',
+const SECCIONES = {
+  usuario: { label: 'Usuarios', acciones: {
+    'usuario.crear': 'Creó un usuario', 'usuario.editar': 'Editó un usuario', 'usuario.reset_password': 'Restableció una contraseña',
+    'usuario.ver_password': 'Consultó una contraseña', 'usuario.cambiar_password': 'Cambió una contraseña' } },
+  permisos: { label: 'Permisos', acciones: { 'permisos.actualizar': 'Cambió permisos' } },
+  reserva: { label: 'Reservas y cotizaciones', acciones: {
+    'reserva.crear': 'Creó una reserva/cotización', 'reserva.crear_publica': 'Reserva enviada por un cliente', 'reserva.editar': 'Editó una reserva',
+    'reserva.eliminar': 'Eliminó una reserva', 'reserva.aceptar_cotizacion': 'Aceptó una cotización', 'reserva.convertir_cotizacion': 'Convirtió a cotización',
+    'reserva.descuento': 'Cambió un descuento', 'reserva.precios': 'Cambió precios', 'reserva.accesorios': 'Modificó accesorios',
+    'reserva.finalizar': 'Finalizó una reserva', 'reserva.posponer_fin': 'Pospuso el fin', 'reserva.reactivar': 'Reactivó una reserva' } },
+  pago: { label: 'Pagos y recibos', acciones: { 'pago.recibo_crear': 'Generó un recibo', 'pago.recibo_eliminar': 'Eliminó un recibo' } },
+  inventario: { label: 'Inventario', acciones: {
+    'inventario.producto_crear': 'Agregó un producto', 'inventario.producto_editar': 'Editó un producto', 'inventario.producto_eliminar': 'Eliminó un producto',
+    'inventario.accesorio_crear': 'Agregó un accesorio', 'inventario.accesorio_editar': 'Editó un accesorio', 'inventario.accesorio_eliminar': 'Eliminó un accesorio' } },
+  bitacora: { label: 'Bitácora', acciones: { 'bitacora.limpiar': 'Limpió la bitácora' } },
+  formato: { label: 'Formatos', acciones: { 'formato.guardar': 'Guardó un formato' } },
+  checklist: { label: 'Checklists', acciones: {
+    'checklist.crear': 'Creó un checklist', 'checklist.editar': 'Editó un checklist', 'checklist.eliminar': 'Eliminó un checklist',
+    'checklist.plantilla_crear': 'Creó una plantilla', 'checklist.plantilla_editar': 'Editó una plantilla', 'checklist.plantilla_eliminar': 'Eliminó una plantilla' } },
 };
+const ACCIONES = Object.assign({}, ...Object.values(SECCIONES).map((s) => s.acciones));
+const seccionDe = (accion) => String(accion || '').split('.')[0];
 function describir(it) {
   const d = it.detalle || {};
   if (it.accion === 'usuario.crear') return `${d.email} (${rolLabel(d.role)})`;
   if (it.accion === 'usuario.editar') return `${d.email}: ${Object.entries(d.cambios || {}).map(([k, v]) => `${k} → ${v}`).join(', ')}`;
-  if (it.accion === 'usuario.reset_password') return d.email;
-  if (it.accion === 'usuario.ver_password') return d.email;
-  if (it.accion === 'usuario.cambiar_password') return d.email;
+  if (['usuario.reset_password', 'usuario.ver_password', 'usuario.cambiar_password'].includes(it.accion)) return d.email;
   if (it.accion === 'permisos.actualizar') return (d.cambios || []).map((c) => `${rolLabel(c.rol)}: ${c.permiso} ${c.a ? 'activado' : 'desactivado'}`).join('; ');
+  if (it.accion === 'bitacora.limpiar') return `${d.quitadas} movimientos (${d.alcance === 'todo' ? 'todo' : 'por día'})`;
+  if (d.ruta) return [d.nombre, d.id && `ID …${String(d.id).slice(-6)}`].filter(Boolean).join(' · ') || '—';
   return JSON.stringify(d);
 }
 function TabBitacora() {
   const [items, setItems] = useState([]);
   const [error, setError] = useState('');
-  useEffect(() => { api('/permisos/bitacora').then((d) => setItems(d.items)).catch((e) => setError(e.message)); }, []);
+  const [seccion, setSeccion] = useState('');
+  const [accion, setAccion] = useState('');
+  const [dia, setDia] = useState(''); // YYYY-MM-DD (vacío = todos los días)
+  const cargar = useCallback(() => api('/permisos/bitacora').then((d) => setItems(d.items)).catch((e) => setError(e.message)), []);
+  useEffect(() => { cargar(); }, [cargar]);
+  const diaDe = (v) => { const d = new Date(v); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const limpiar = async (cuerpo, mensaje) => {
+    if (!await pedirConfirmacion(mensaje, { peligro: true })) return;
+    try {
+      const r = await api('/permisos/bitacora', { method: 'DELETE', body: JSON.stringify(cuerpo) });
+      setError('');
+      await cargar();
+      setAviso(`Se eliminaron ${r.quitadas} movimientos.`);
+    } catch (e) { setError(e.message); }
+  };
+  const limpiarDia = () => {
+    const [y, m, d] = dia.split('-').map(Number);
+    limpiar({ desde: new Date(y, m - 1, d).toISOString(), hasta: new Date(y, m - 1, d + 1).toISOString() },
+      `Se eliminarán todos los movimientos del ${d}/${m}/${y}. No se puede deshacer. ¿Eliminar?`);
+  };
+  const [aviso, setAviso] = useState('');
+  const opSecciones = [{ value: '', label: 'Todas las secciones' }, ...Object.entries(SECCIONES).map(([k, s]) => ({ value: k, label: s.label }))];
+  const opAcciones = [{ value: '', label: 'Todas las acciones' }, ...Object.entries(seccion ? SECCIONES[seccion].acciones : ACCIONES).map(([k, l]) => ({ value: k, label: l }))];
+  const visibles = items.filter((it) => (!seccion || seccionDe(it.accion) === seccion) && (!accion || it.accion === accion) && (!dia || diaDe(it.fecha) === dia));
   return (
     <div className="rl-card">
-      <div className="rl-toolbar"><h3>Bitácora de cambios</h3></div>
+      <div className="rl-toolbar">
+        <h3>Bitácora de cambios</h3>
+        <div className="rl-bitacora-filtros">
+          <SelectField value={seccion} onChange={(v) => { setSeccion(v); setAccion(''); }} options={opSecciones} aria-label="Sección" size="sm" />
+          <SelectField value={accion} onChange={setAccion} options={opAcciones} aria-label="Tipo de acción" size="sm" />
+          <DateField value={dia} onChange={setDia} placeholder="Todos los días" aria-label="Día" size="sm" />
+        </div>
+      </div>
+      <div className="rl-bitacora-limpiar">
+        <button type="button" className="rl-btn sec sm" disabled={!dia} onClick={limpiarDia}>Limpiar este día</button>
+        <button type="button" className="rl-btn danger sm" disabled={!items.length} onClick={() => limpiar({ todo: true }, 'Se eliminará TODA la bitácora. No se puede deshacer. ¿Eliminar?')}>Limpiar todo</button>
+        {aviso && <span className="rl-bitacora-aviso">{aviso}</span>}
+      </div>
       {error && <div className="rl-msg err">{error}</div>}
-      <div className="rl-table-wrap">
+      <div className="rl-table-wrap rl-bitacora-scroll">
         <table className="rl-table">
           <thead><tr><th>Fecha</th><th>Quién</th><th>Acción</th><th>Detalle</th></tr></thead>
           <tbody>
-            {items.map((it, i) => (
+            {visibles.map((it, i) => (
               <tr key={i}><td>{fecha(it.fecha)}</td><td>{it.actor}</td><td>{ACCIONES[it.accion] || it.accion}</td><td>{describir(it)}</td></tr>
             ))}
-            {items.length === 0 && <tr><td colSpan="4" style={{ textAlign: 'center', color: '#6b7280' }}>Aún no hay movimientos.</td></tr>}
+            {visibles.length === 0 && <tr><td colSpan="4" style={{ textAlign: 'center', color: '#6b7280' }}>{items.length ? 'No hay movimientos con ese filtro.' : 'Aún no hay movimientos.'}</td></tr>}
           </tbody>
         </table>
       </div>
