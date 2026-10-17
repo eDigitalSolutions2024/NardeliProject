@@ -5,14 +5,16 @@ import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import dayjs from 'dayjs';
 import './Dashboard.css';
+import './Calendario.css'; // incluye estilos de .modal-overlay/.modal-content que usa este archivo
 import API_BASE_URL, { authHeaders } from '../api';
 // imports nuevos arriba
 import { animate, stagger } from 'animejs';
 import SearchField from './ui/SearchField';
 import DateField from './ui/DateField';
 import SelectField from './ui/SelectField';
-import { LuCalendarDays, LuPartyPopper, LuCalendarCheck, LuFileClock, LuFileText, LuFileDown, LuPencil, LuCheck, LuTrash2, LuHourglass, LuInbox, LuBadgeDollarSign, LuUser, LuPackage, LuGift, LuLayoutDashboard, LuUsers, LuCalendar, LuTrendingUp, LuWarehouse, LuCirclePlus, LuShieldCheck, LuLogOut, LuMenu } from 'react-icons/lu';
+import { LuCalendarDays, LuPartyPopper, LuCalendarCheck, LuFileClock, LuFileText, LuFileDown, LuPencil, LuCheck, LuTrash2, LuHourglass, LuInbox, LuBadgeDollarSign, LuUser, LuPackage, LuGift, LuLayoutDashboard, LuUsers, LuCalendar, LuTrendingUp, LuWarehouse, LuCirclePlus, LuShieldCheck, LuLogOut, LuMenu, LuSun, LuMoon } from 'react-icons/lu';
 import { getStoredUser } from '../session';
+import { useTema, TEMA_OSCURO_ACTIVO } from '../utils/tema';
 
 const Calendario = lazy(() => import('./Calendario'));
 const FormProducto = lazy(() => import('./FormProducto'));
@@ -106,6 +108,7 @@ const Dashboard = ({ onLogout }) => {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [showDropdown, setShowDropdown] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [tema, alternarTema] = useTema();
   const [inventarioTick, setInventarioTick] = useState(0);
   const [accesorioTick, setAccesorioTick] = useState(0);
   const [inventarioTab, setInventarioTab] = useState('producto'); // 'producto' | 'accesorio'
@@ -728,7 +731,7 @@ const actividadFiltrada = actividad
 
             {/* Modal de edición de cotización */}
             {showEditCot && cotEdit && (
-              <div className="modal-overlay">
+              <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) cerrarModalCot(); }}>
                 <div className="modal-content nd-modal">
                   <h2>Editar Cotización</h2>
                   <form onSubmit={actualizarCotizacion} className="nd-form">
@@ -914,6 +917,9 @@ const actividadFiltrada = actividad
             </h1>
           </div>
           <div className="header-right">
+            {TEMA_OSCURO_ACTIVO && <button className="tema-toggle" onClick={alternarTema} title={tema === 'oscuro' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'} aria-label="Cambiar tema">
+              {tema === 'oscuro' ? <LuSun /> : <LuMoon />}
+            </button>}
             <div className="user-info">
               <span className="user-avatar"><LuUser /></span>
               <span className="user-name">{user?.fullname || user?.email}</span>

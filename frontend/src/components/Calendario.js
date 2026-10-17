@@ -403,7 +403,7 @@ const convertirACotizacion = async (id) => {
 
 
         {mostrarModal && reservaEditando && (
-          <div className="modal-overlay">
+          <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) cerrarModal(); }}>
             <div className="modal-content nd-modal">
               <h2>Editar Reserva</h2>
               <form onSubmit={actualizarReserva} className="nd-form">
