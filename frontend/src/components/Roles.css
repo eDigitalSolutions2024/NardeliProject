@@ -149,3 +149,13 @@
 .rl-pw-current { display: flex; align-items: center; gap: 0.4rem; min-height: 36px; }
 .rl-pwsec .rl-hint { margin: 0.2rem 0 0.8rem; }
 .rl-modal { max-height: 92vh; }
+
+/* Bitácora: altura limitada con scroll interno y encabezado fijo */
+.rl-bitacora-scroll { max-height: 480px; overflow-y: auto; }
+.rl-bitacora-scroll thead th { position: sticky; top: 0; z-index: 1; background: #f4e6f7; }
+.rl-bitacora-filtros { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-left: auto; }
+.rl-bitacora-filtros .ui-field { min-width: 210px; }
+.rl-bitacora-limpiar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin: 0.25rem 0 0.75rem; }
+.rl-bitacora-aviso { color: #6b7280; font-size: 0.85rem; }
+.rl-btn.danger { background: linear-gradient(135deg, #e5533d, #b3261e); color: #fff; border: none; }
+.rl-btn:disabled { opacity: 0.5; cursor: not-allowed; }

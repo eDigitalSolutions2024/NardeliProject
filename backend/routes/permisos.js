@@ -58,7 +58,18 @@ router.put('/', requirePermission('usuarios.gestionar'), async (req, res) => {
 });
 
 router.get('/bitacora', requirePermission('usuarios.gestionar'), async (_req, res) => {
-  res.json({ ok: true, items: await bitacora.listar(100) });
+  res.json({ ok: true, items: await bitacora.listar(500) });
+});
+
+router.delete('/bitacora', requirePermission('usuarios.gestionar'), async (req, res) => {
+  try {
+    const { todo, desde, hasta } = req.body || {};
+    const quitadas = await bitacora.limpiar({ todo: todo === true, desde, hasta });
+    await bitacora.registrar(req.user, 'bitacora.limpiar', { quitadas, alcance: todo === true ? 'todo' : `${desde} a ${hasta}` });
+    res.json({ ok: true, quitadas });
+  } catch (e) {
+    res.status(400).json({ ok: false, msg: e.message || 'No se pudo limpiar la bitácora' });
+  }
 });
 
 module.exports = router;

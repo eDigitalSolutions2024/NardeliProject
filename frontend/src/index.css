@@ -21,3 +21,41 @@ code {
 .nd-swal-popup .swal2-input { border-radius: 12px !important; border-color: #e2d6e8 !important; }
 .nd-swal-popup .swal2-input:focus { border-color: #7b247f !important; box-shadow: 0 0 0 3px rgba(123, 36, 127, 0.14) !important; }
 [data-sonner-toast] { border-radius: 14px !important; font-family: inherit !important; box-shadow: 0 16px 34px -14px rgba(73, 22, 86, 0.4) !important; }
+
+/* Botones que abren o descargan un PDF: siempre rojos */
+.btn-pdf-rojo, button.btn-pdf-rojo, a.btn-pdf-rojo { background: linear-gradient(135deg, #e5533d, #b3261e) !important; color: #fff !important; border: none !important; box-shadow: 0 10px 20px -12px #b3261e !important; }
+.btn-pdf-rojo:hover:not(:disabled) { filter: brightness(1.08); }
+
+/* ===== Animaciones ligeras (solo transform/opacity, sin librerías) ===== */
+:root { --ease-suave: cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* Transiciones coherentes al pasar el mouse / enfocar */
+button, a.nd-btn, .nd-btn, .rl-btn, .cd-btn, .nav-item, .rl-tab, .nd-seg-btn, input, textarea, select {
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.2s ease, transform 0.18s var(--ease-suave), filter 0.18s ease, opacity 0.18s ease;
+}
+button:not(:disabled):active, .nd-btn:active, .rl-btn:active, .cd-btn:active { transform: scale(0.97); }
+.nd-btn:not(:disabled):hover, .rl-btn:not(:disabled):hover { transform: translateY(-1px); }
+
+/* Ventanas emergentes: fondo con fundido y tarjeta con escala */
+.modal-overlay, .rl-modal-bg, .tp-modal-overlay { animation: fx-fundido 0.2s ease backwards; }
+.modal-content, .rl-modal, .tp-modal-card { animation: fx-modal 0.28s var(--ease-suave) backwards; }
+@keyframes fx-fundido { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fx-modal { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
+
+/* Tablas: las primeras filas entran escalonadas */
+tbody tr { animation: fx-fila 0.3s var(--ease-suave) backwards; }
+tbody tr:nth-child(2) { animation-delay: 0.03s; } tbody tr:nth-child(3) { animation-delay: 0.06s; }
+tbody tr:nth-child(4) { animation-delay: 0.09s; } tbody tr:nth-child(5) { animation-delay: 0.12s; }
+tbody tr:nth-child(n+6) { animation-delay: 0.15s; }
+@keyframes fx-fila { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* Esqueleto de carga */
+.sk-carga { display: grid; gap: 14px; padding: 24px; max-width: 900px; }
+.sk { display: block; border-radius: 12px; background: linear-gradient(90deg, #efe4f3 25%, #f8f1fa 45%, #efe4f3 65%); background-size: 200% 100%; animation: fx-brillo 1.3s linear infinite; }
+.sk-titulo { height: 28px; width: 38%; } .sk-fila { height: 64px; } .sk-fila.corta { width: 70%; }
+@keyframes fx-brillo { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay, .rl-modal-bg, .tp-modal-overlay, .modal-content, .rl-modal, .tp-modal-card, tbody tr, .sk { animation: none !important; }
+  button, .nd-btn, .rl-btn, .cd-btn { transition: none !important; }
+}

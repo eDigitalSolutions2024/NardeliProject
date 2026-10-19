@@ -54,6 +54,7 @@ app.use(cors({
 
 app.use(express.json({ limit: '20mb' })); // firma de encuestas y fotos de evidencia de Toro Checklist en base64 exceden el límite default de 100kb
 app.use(cookieParser());
+app.use(require('./utils/auditoria')); // bitácora de acciones
 
 // ✅ 5) Rutas
 app.get('/api/ping', (_req, res) => res.send('pong'));
