@@ -410,20 +410,29 @@ useEffect(() => {
     return m;
   }, [items]);
 
-  // Precio para UI: 1) inventario (MASTER)  2) utensilios (fallback)  3) 0
-const priceFor = (productId) => {
-  const id = String(productId);
+  // Precio para UI: 1) el que ya tiene esta reserva (precio congelado con el
+  // que se cotizó)  2) catálogo (solo para artículos nuevos que nunca se han
+  // agregado a esta reserva)  3) 0
+  //
+  // OJO: antes era al revés (catálogo primero) — eso hacía que con solo
+  // volver a guardar el carrito de una reserva ya existente (p. ej. para
+  // cambiar la cantidad de OTRO artículo), cualquier producto cuyo precio
+  // hubiera subido en el catálogo desde que se cotizó se resincronizaba
+  // solo, sin que nadie lo pidiera, cambiando el total que ya se le había
+  // dado al cliente. Si de verdad se quiere actualizar el precio de un
+  // artículo ya reservado, existe la acción dedicada "editar precio" por
+  // artículo — esto no debe pasar como efecto secundario de guardar.
+  const priceFor = (productId) => {
+    const id = String(productId);
 
-  // 🟢 primero: inventario
-  const i = invPriceById.get(id);
-  if (Number.isFinite(i) && i > 0) return i;
+    const r = reservedPriceById.get(id);
+    if (Number.isFinite(r) && r > 0) return r;
 
-  // 🟡 solo si no hay precio en inventario, toma el de la reserva
-  const r = reservedPriceById.get(id);
-  if (Number.isFinite(r) && r > 0) return r;
+    const i = invPriceById.get(id);
+    if (Number.isFinite(i) && i > 0) return i;
 
-  return 0;
-};
+    return 0;
+  };
 
 
   // 3) Cargar selección (BD o localStorage)

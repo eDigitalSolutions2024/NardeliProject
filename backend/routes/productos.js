@@ -39,7 +39,16 @@ router.post('/', requireStaff, upload.single('imagen'), async (req, res) => {
       cantidad: toNumber(body.cantidad, 0),   // <- stock
       precio: toNumber(body.precio, 0),
       descripcion: body.descripcion || '',
-      imagen: req.file ? `/uploads/${req.file.filename}` : (body.imagen || '')
+      imagen: req.file ? `/uploads/${req.file.filename}` : (body.imagen || ''),
+      historialCambios: [{
+        campo: 'creado',
+        etiqueta: 'Creado',
+        antes: null,
+        despues: null,
+        usuarioId: req.user?.sub || null,
+        usuarioNombre: req.user?.fullname || req.user?.email || 'Desconocido',
+        usuarioEmail: req.user?.email || ''
+      }]
     });
 
     const guardado = await nuevoProducto.save();
@@ -112,11 +121,24 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Etiquetas legibles para el historial de cambios del producto.
+const ETIQUETA_CAMPO = {
+  nombre: 'Nombre',
+  categoria: 'Categoría',
+  cantidad: 'Cantidad',
+  precio: 'Precio',
+  descripcion: 'Descripción',
+  imagen: 'Imagen'
+};
+
 // ====== UPDATE (con/sin nueva imagen) ======
 router.put('/:id', requireStaff, upload.single('imagen'), async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.isValidObjectId(id)) return res.status(400).json({ msg: 'ID inválido' });
+
+    const actual = await Producto.findById(id);
+    if (!actual) return res.status(404).json({ msg: 'Producto no encontrado' });
 
     const body = req.body || {};
     const update = {
@@ -131,11 +153,34 @@ router.put('/:id', requireStaff, upload.single('imagen'), async (req, res) => {
     // limpia undefined
     Object.keys(update).forEach(k => update[k] === undefined && delete update[k]);
 
-    const actualizado = await Producto.findByIdAndUpdate(id, update, {
-      new: true,
-      runValidators: true
-    });
-    if (!actualizado) return res.status(404).json({ msg: 'Producto no encontrado' });
+    // ===== Historial: solo registra los campos que de verdad cambiaron =====
+    const esNumerico = (campo) => campo === 'precio' || campo === 'cantidad';
+    const cambios = [];
+    for (const campo of Object.keys(update)) {
+      const antes = actual[campo];
+      const despues = update[campo];
+      const cambio = esNumerico(campo)
+        ? Number(antes) !== Number(despues)
+        : String(antes ?? '') !== String(despues ?? '');
+      if (cambio) {
+        cambios.push({
+          campo,
+          etiqueta: ETIQUETA_CAMPO[campo] || campo,
+          antes: antes ?? null,
+          despues: despues ?? null,
+          usuarioId: req.user?.sub || null,
+          usuarioNombre: req.user?.fullname || req.user?.email || 'Desconocido',
+          usuarioEmail: req.user?.email || ''
+        });
+      }
+    }
+
+    Object.assign(actual, update);
+    if (cambios.length) {
+      actual.historialCambios.push(...cambios);
+    }
+
+    const actualizado = await actual.save();
     return res.json(actualizado);
   } catch (error) {
     console.error(error);
