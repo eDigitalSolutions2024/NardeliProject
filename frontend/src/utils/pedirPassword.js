@@ -16,6 +16,8 @@ export async function pedirPasswordAdmin(mensaje) {
     cancelButtonText: 'Cancelar',
     confirmButtonColor: '#7b247f',
     inputValidator: (v) => (!v || !String(v).trim() ? 'Debes ingresar una contraseña' : undefined),
+    // El z-index se sube por CSS en index.css (`.swal2-container`), no aquí
+    // — Swal.fire() no tiene una opción "zIndex" real en esta versión.
   });
   return isConfirmed ? value : null;
 }
