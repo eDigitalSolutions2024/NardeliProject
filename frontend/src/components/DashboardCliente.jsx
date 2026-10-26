@@ -136,6 +136,12 @@ const [discountItems, setDiscountItems] = useState({}); // { [itemId]: true }
     [modeParam, userRole]
   );
 
+  // Vista de solo lectura (?soloLectura=1) — se usa para eventos que ya
+  // pasaron: se puede ver todo (precios, historial, recibos, invitaciones)
+  // pero no agregar/quitar artículos, cambiar precios/descuentos, ni crear
+  // recibos o invitaciones nuevas.
+  const soloLectura = useMemo(() => new URLSearchParams(search).get('soloLectura') === '1', [search]);
+
   // Cotizador: ve precios y subtotal, pero no edita precios ni aplica descuentos.
   const isCotizador = userRole === 'cotizador';
   const verPrecios = isAdmin || isCotizador;
@@ -1213,7 +1219,11 @@ function openEstadoCuentaPdf() {
       </div>
 
       <div className="cd-content" style={{ display: activeTab !== 'panel' ? 'none' : undefined }}>
-        <div className="cd-main-col">
+        <div
+          className="cd-main-col"
+          style={soloLectura ? { pointerEvents: 'none', opacity: 0.6 } : undefined}
+          title={soloLectura ? 'Evento pasado: solo consulta, no se pueden agregar ni quitar artículos' : undefined}
+        >
         {/* Inventario */}
         <div className="cd-card">
           {loading ? (
@@ -1402,6 +1412,7 @@ function openEstadoCuentaPdf() {
                         <input
                           type="checkbox"
                           checked={!!discountItems[idStr]}
+                          disabled={soloLectura}
                           onChange={(e) =>
                             setDiscountItems(prev => ({
                               ...prev,
@@ -1416,7 +1427,9 @@ function openEstadoCuentaPdf() {
 
                   <div className="d-flex" style={{ display:'flex', alignItems:'center', gap:8 }}>
                     {verPrecios && <strong>${sub.toFixed(2)}</strong>}
-                    <button className="del" onClick={() => setQty(item, 0)}>Quitar</button>
+                    {!soloLectura && (
+                      <button className="del" onClick={() => setQty(item, 0)}>Quitar</button>
+                    )}
                   </div>
                 </div>
               );
@@ -1447,6 +1460,7 @@ function openEstadoCuentaPdf() {
               <hr style={{ margin: '12px 0', borderColor: '#eee' }} />
 
               <h4 style={{ marginBottom: 8 }}>Descuento</h4>
+              {!soloLectura && (
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
                 <SelectField
                   value={descTipo}
@@ -1521,6 +1535,7 @@ function openEstadoCuentaPdf() {
                   Guardar descuento
                 </button>
               </div>
+              )}
 
               <div style={{ display: 'grid', rowGap: 6, marginBottom: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -1544,6 +1559,7 @@ function openEstadoCuentaPdf() {
             </>
           )}
 
+          {!soloLectura && (
           <button
             className="save"
             onMouseEnter={(e) => {
@@ -1560,8 +1576,9 @@ onMouseLeave={(e) => {
           >
             {saving ? 'Guardando…' : 'Finalizar Reserva'}
           </button>
+          )}
 
-          
+
 
           <button
               className="pdf"
@@ -1595,6 +1612,7 @@ onMouseLeave={(e) => {
               Descargar PDF
             </button>
 
+            {!soloLectura && (
             <button
             className="pdf pdf-saldo"
             style={{
@@ -1623,6 +1641,7 @@ onMouseLeave={(e) => {
           >
             {saving ? 'Guardando…' : 'Actualizar Saldo de la Reserva'}
           </button>
+            )}
 
           {fechaReserva && (
             <div style={{ marginTop: 12, maxWidth: 360 }}>
@@ -1636,6 +1655,7 @@ onMouseLeave={(e) => {
             </div>
           )}
 
+            {!soloLectura && (
             <button
               className="pdf"
               type="button"
@@ -1656,8 +1676,9 @@ onMouseLeave={(e) => {
             >
               Invitaciones QR
             </button>
+            )}
 
-            {isStaff && (
+            {isStaff && !soloLectura && (
               <button
                 className="pdf"
                 type="button"
@@ -1681,6 +1702,7 @@ onMouseLeave={(e) => {
 
           {isStaff && (
             <div style={{ marginTop: 8, display: 'block', flexDirection: 'column', gap: 6, }}>
+              {!soloLectura && (
               <button
                 className="pdf"
                 type="button"
@@ -1699,6 +1721,7 @@ onMouseLeave={(e) => {
               >
                 Generar recibo
               </button>
+              )}
 
               <button
                 className="pdf"
@@ -2188,17 +2211,19 @@ onMouseLeave={(e) => {
           {/* Columna monto + botón eliminar */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
             <span>{money(rc.amount)}</span>
-            <button
-              type="button"
-              className="del"
-              style={{ fontSize: 11, padding: '2px 8px' }}
-              onClick={(e) => {
-                e.stopPropagation();           // para que no dispare el doble click de abrir PDF
-                deleteReceiptById(rc._id);
-              }}
-            >
-              Eliminar
-            </button>
+            {!soloLectura && (
+              <button
+                type="button"
+                className="del"
+                style={{ fontSize: 11, padding: '2px 8px' }}
+                onClick={(e) => {
+                  e.stopPropagation();           // para que no dispare el doble click de abrir PDF
+                  deleteReceiptById(rc._id);
+                }}
+              >
+                Eliminar
+              </button>
+            )}
           </div>
         </div>
       ))}
