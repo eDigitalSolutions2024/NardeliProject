@@ -9,7 +9,7 @@ const HistorialSchema = new mongoose.Schema({
 
   tipo: {
     type: String,
-    enum: ['producto', 'descuento', 'campo', 'whatsapp', 'conversion'],
+    enum: ['producto', 'descuento', 'campo', 'whatsapp', 'conversion', 'precio', 'pago', 'formato', 'accesorios', 'estado', 'invitacion', 'checklist'],
     required: true
   },
 
@@ -25,7 +25,18 @@ const HistorialSchema = new mongoose.Schema({
       'alert_sent',
       'alert_error',
       'evento_a_cotizacion',
-      'cotizacion_a_evento'
+      'cotizacion_a_evento',
+      'price_update',
+      'price_denied',
+      'receipt_add',
+      'receipt_remove',
+      'format_update',
+      'accessories_update',
+      'state_change',
+      'invite_add',
+      'invite_edit',
+      'invite_cancel',
+      'checklist_change'
     ],
     required: true
   },

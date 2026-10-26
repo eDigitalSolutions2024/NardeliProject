@@ -8,6 +8,7 @@ const JWT_SECRET = require('../utils/jwtSecret');
 const Reserva = require('../models/Reservas');
 const Receipt = require('../models/Receipt');
 const { streamReceiptPdf } = require('../services/receiptPdf');
+const { quienDe, registrarCambio } = require('../utils/historialReserva');
 
 // Solo personal (admin/asistente) puede cobrar, generar o borrar recibos.
 const { requirePermission } = require('../utils/permisos');
@@ -161,6 +162,7 @@ issuedAt
  saldo
 }});
 
+    await registrarCambio(orderId, { tipo: 'pago', accion: 'receipt_add', etiqueta: `Recibo ${rc.folio}: $${Number(rc.amount).toFixed(2)} (${rc.paymentMethod})`, valorDespues: Number(rc.amount) }, quienDe(req));
     return res.status(201).json({ ok: true, receipt: rc });
   } catch (e) {
     console.error(e);
@@ -193,6 +195,9 @@ router.delete('/receipts/:id', requireEliminar, async (req, res) => {
       return res.status(404).json({ ok: false, msg: 'Recibo no encontrado' });
     }
 
+    if (rc.orderId) {
+      await registrarCambio(rc.orderId, { tipo: 'pago', accion: 'receipt_remove', etiqueta: `Recibo ${rc.folio} eliminado: $${Number(rc.amount).toFixed(2)} (${rc.paymentMethod})`, valorAntes: Number(rc.amount) }, quienDe(req));
+    }
     return res.json({
       ok: true,
       msg: 'Recibo eliminado correctamente',

@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const JWT_SECRET = require('../utils/jwtSecret');
 const { permisosDeRol } = require('../utils/permisos');
+const bitacora = require('../utils/bitacora');
 
 router.post('/login', async (req, res) => {
   try {
@@ -16,10 +17,12 @@ router.post('/login', async (req, res) => {
     const usuario = await Usuario.findOne({ email });
 
     if (!usuario) {
+      await bitacora.registrar({ email }, 'sesion.fallida', { motivo: 'El usuario no existe' });
       return res.status(401).json({ success: false, message: 'Usuario inválidos' });
     }
 
     if (usuario.activo === false) {
+      await bitacora.registrar({ email }, 'sesion.fallida', { motivo: 'Cuenta desactivada' });
       return res.status(403).json({ success: false, message: 'Tu cuenta está desactivada. Contacta al administrador.' });
     }
     if (!usuario.password) {
@@ -28,6 +31,7 @@ router.post('/login', async (req, res) => {
 
     const passwordValida = await bcrypt.compare(password, usuario.password); // ← compara plain vs HASH
     if (!passwordValida) {
+      await bitacora.registrar({ email }, 'sesion.fallida', { motivo: 'Contraseña incorrecta' });
       return res.status(401).json({ success: false, message: ' contraseña inválidos' });
     }
 
@@ -40,6 +44,7 @@ router.post('/login', async (req, res) => {
 
     usuario.lastLoginAt = new Date();
     await usuario.save();
+    await bitacora.registrar({ email: usuario.email }, 'sesion.inicio', { rol: usuario.role });
 
     return res.json({
       success: true,

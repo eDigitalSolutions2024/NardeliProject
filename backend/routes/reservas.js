@@ -68,6 +68,8 @@ function auth(req, res, next) {
 // borrar, aplicar descuentos, aceptar cotizaciones, etc.) — NO usar en rutas
 // que los clientes deben poder alcanzar por su link directo (ej. GET /:id).
 const { requirePermission, usuarioOpcional } = require('../utils/permisos');
+const bitacora = require('../utils/bitacora');
+const { quienDe, registrarCambio } = require('../utils/historialReserva');
 // Permiso validado contra la base (rol y estado actuales); ver utils/permisos.js
 const requireStaff = requirePermission('eventos.gestionar');
 const requireListar = requirePermission('eventos.gestionar', 'clientes.ver', 'calendario.ver', 'cotizaciones.ver_todas');
@@ -338,6 +340,7 @@ router.post('/public', async (req, res) => {
       cliente, correo: correo.toLowerCase().trim(), tipoEvento, fecha: fechaNorm,
       horaInicio, horaFin, telefono, cantidadPersonas, descripcion
     }).save();
+    await registrarCambio(nueva._id, { tipo: 'campo', accion: 'field_update', campo: 'creacion', etiqueta: 'Reserva enviada por el cliente (formulario público)' }, { id: null, email: String(correo || '').toLowerCase().trim(), role: 'cliente' });
 
     const emailResult = await ensureUserAndMaybeSendPassword({ email: correo, fullname: cliente });
     return res.status(201).json({ msg: 'Reserva creada', reserva: nueva, userNotice: emailResult });
@@ -582,6 +585,7 @@ router.post('/', async (req, res) => {
       : undefined;
 
     const guardada = await new Reserva({ ...req.body, tipoReserva, ...(creadoPor ? { creadoPor } : {}) }).save();
+    await registrarCambio(guardada._id, { tipo: 'campo', accion: 'field_update', campo: 'creacion', etiqueta: tipoReserva === 'cotizacion' ? 'Cotización creada' : 'Reserva creada' }, quienDe(req));
 
     // Se usó la contraseña de administrador para tomar esta fecha: las
     // cotizaciones con las que chocó pierden su prioridad de 24h (siguen
@@ -708,6 +712,21 @@ router.get('/', requireListar, async (req, res) => {
   }
 });
 
+
+// Comprueba la contraseña de administrador ANTES de dejar editar un precio (no cambia nada).
+router.post('/verificar-clave-admin', requireEditarReserva, async (req, res) => {
+  if (await validarPasswordAdmin(req.body?.adminPassword)) return res.json({ ok: true });
+  await bitacora.registrar(req.user, 'precio.clave_incorrecta', {
+    reservaId: String(req.body?.reservaId || ''),
+    folio: String(req.body?.reservaId || '').slice(-8).toUpperCase(),
+    articulo: String(req.body?.articulo || ''),
+    etapa: 'al entrar a editar',
+  });
+  if (mongoose.isValidObjectId(req.body?.reservaId)) {
+    await registrarCambio(req.body.reservaId, { tipo: 'precio', accion: 'price_denied', producto: { id: '', nombre: String(req.body?.articulo || '') }, etiqueta: `Intento de editar el precio de ${String(req.body?.articulo || 'un artículo')} con clave incorrecta` }, quienDe(req));
+  }
+  return res.status(401).json({ ok: false, msg: 'Contraseña de administrador incorrecta' });
+});
 
 router.post('/disponibilidad', async (req, res) => {
   try {
@@ -1288,8 +1307,8 @@ router.put('/:id', requireEditarReserva, async (req, res) => {
       await liberarHoldDeCotizaciones(cotizacionesForzadas, extraerUsuarioToken(req));
     }
 
-    // ===== Historial + WhatsApp solo si YA era evento antes del cambio =====
-       if (prev.tipoReserva === 'evento' && cambios.length > 0) {
+    // ===== Historial: eventos y cotizaciones. WhatsApp: solo si YA era evento antes del cambio =====
+    if (cambios.length > 0) {
       const _u = extraerUsuarioToken(req);
       // Guardar historial de campos
       await HistorialReserva.insertMany(
@@ -1307,6 +1326,7 @@ router.put('/:id', requireEditarReserva, async (req, res) => {
         }))
       );
 
+      if (prev.tipoReserva === 'evento') {
       const payload = construirPayloadTemplateCambioEvento(
         prev.toObject(),
         actualizada.toObject(),
@@ -1339,6 +1359,7 @@ router.put('/:id', requireEditarReserva, async (req, res) => {
           error: err.message,
           usuario: req.user?.sub || null
         });
+      }
       }
     }
 
@@ -1486,8 +1507,8 @@ router.put('/:id/utensilios', soloEditaSusCotizaciones, async (req, res) => {
       }
     }
 
-    // ===== HISTORIAL: solo si ya es evento =====
-    if (reservaActual.tipoReserva === 'evento') {
+    // ===== HISTORIAL: eventos y cotizaciones =====
+    {
       const prev = reservaActual.utensilios || [];
       const next = items || [];
 
@@ -1550,10 +1571,14 @@ router.put('/:id/utensilios', soloEditaSusCotizaciones, async (req, res) => {
       }
 
       if (cambios.length > 0) {
+        const _uProd = quienDe(req);
         await HistorialReserva.insertMany(
           cambios.map(c => ({
             reservaId: reservaActual._id,
-            ...c
+            ...c,
+            usuario: _uProd.id,
+            usuarioEmail: _uProd.email,
+            usuarioRole: _uProd.role
           }))
         );
       }
@@ -1566,6 +1591,8 @@ router.put('/:id/utensilios', soloEditaSusCotizaciones, async (req, res) => {
 
     const saneados = [];
     const idsParaPrecio = [];
+    const preciosCambiados = [];   // precios que cambiaron CON la clave de administrador
+    const preciosIgnorados = [];   // intentos de cambiar un precio SIN la clave (se conserva el precio vigente)
 
     for (const it of items) {
       const itemId = it.itemId || it.id || it._id;
@@ -1610,6 +1637,24 @@ router.put('/:id/utensilios', soloEditaSusCotizaciones, async (req, res) => {
           }
         ])
       );
+    }
+
+    // Un precio distinto del vigente (o del inventario, en líneas nuevas) solo se acepta con la contraseña de administrador.
+    {
+      const claveOk = validarPasswordAdmin(req.body?.adminPassword);
+      for (const s of saneados) {
+        if (s._precioInput == null || s._precioInput === '') continue;
+        const entrada = Number(s._precioInput);
+        if (!Number.isFinite(entrada)) continue;
+        const key = s.itemId ? String(s.itemId) : null;
+        const prevLinea = key ? prevById.get(key) : null;
+        const inv = key ? invById.get(key) : null;
+        const base = prevLinea && Number(prevLinea.precio) > 0 ? Number(prevLinea.precio) : (inv && inv.precio > 0 ? inv.precio : null);
+        if (base == null || entrada === base) continue;
+        if (claveOk) { preciosCambiados.push({ id: key, nombre: s.nombre, antes: base, despues: entrada }); continue; }
+        s._precioInput = undefined; // conserva el precio vigente
+        preciosIgnorados.push({ id: key, nombre: s.nombre, antes: base, despues: entrada });
+      }
     }
 
     const snapshot=saneados.map(s=>{
@@ -1804,6 +1849,29 @@ if (reservaActual.tipoReserva === 'evento') {
   }
 }
 
+    {
+      const _uPrecio = quienDe(req);
+      for (const c of preciosCambiados) {
+        await registrarCambio(id, { tipo: 'precio', accion: 'price_update', producto: { id: c.id || '', nombre: c.nombre }, etiqueta: `Precio de ${c.nombre}`, valorAntes: c.antes, valorDespues: c.despues }, _uPrecio);
+        await bitacora.registrar(req.user || { email: _uPrecio.email }, 'precio.cambiar', { reservaId: id, folio: String(id).slice(-8).toUpperCase(), articulo: c.nombre, anterior: c.antes, nuevo: c.despues, via: 'guardar artículos' });
+      }
+      for (const c of preciosIgnorados) {
+        await registrarCambio(id, { tipo: 'precio', accion: 'price_denied', producto: { id: c.id || '', nombre: c.nombre }, etiqueta: `Intento de cambiar el precio de ${c.nombre} sin clave (se conservó el vigente)`, valorAntes: c.antes, valorDespues: c.despues }, _uPrecio);
+        await bitacora.registrar({ email: _uPrecio.email || 'Desconocido' }, 'precio.clave_incorrecta', { reservaId: id, folio: String(id).slice(-8).toUpperCase(), articulo: c.nombre, anterior: c.antes, nuevo: c.despues, via: 'guardar artículos' });
+      }
+      // marcas de "aplicar descuento" por producto
+      if (hasDiscountItems) {
+        const antes = new Map((reservaActual.utensilios || []).map(u => [String(u.itemId || u._id), u]));
+        for (const u of (reservaActual.utensilios || [])) {
+          const k = String(u.itemId || u._id);
+          const ahora = !!discountItems[k];
+          if (!!u.aplicarDescuento !== ahora) {
+            await registrarCambio(id, { tipo: 'descuento', accion: ahora ? 'discount_add' : 'discount_remove', etiqueta: `Descuento ${ahora ? 'aplicado a' : 'quitado de'} ${u.nombre}` }, _uPrecio);
+          }
+        }
+        void antes;
+      }
+    }
     return res.json({ ok: true, reserva: updated });
   } catch (e) {
     console.error(e);
@@ -1819,7 +1887,16 @@ router.patch('/:id/utensilios/:lineId', soloEditaSusCotizaciones, async (req, re
     }
     const set = {};
     if (req.body.cantidad != null) set['utensilios.$.cantidad'] = Number(req.body.cantidad);
-    if (req.body.precio   != null) set['utensilios.$.precio']   = Number(req.body.precio);
+    let precioLineaCambiado = false;
+    if (req.body.precio != null) {
+      if (validarPasswordAdmin(req.body.adminPassword)) {
+        set['utensilios.$.precio'] = Number(req.body.precio);
+        precioLineaCambiado = true;
+      } else {
+        await registrarCambio(id, { tipo: 'precio', accion: 'price_denied', etiqueta: `Intento de cambiar un precio sin clave (${req.body.nombre || 'artículo'})`, valorDespues: Number(req.body.precio) }, quienDe(req));
+        await bitacora.registrar(req.user || { email: quienDe(req).email || 'Desconocido' }, 'precio.clave_incorrecta', { reservaId: id, folio: String(id).slice(-8).toUpperCase(), articulo: req.body.nombre || '', nuevo: Number(req.body.precio), via: 'línea de artículo' });
+      }
+    }
     if (req.body.nombre)           set['utensilios.$.nombre']   = req.body.nombre;
     if (req.body.categoria)        set['utensilios.$.categoria']= String(req.body.categoria).toLowerCase();
     if (req.body.unidad)           set['utensilios.$.unidad']   = req.body.unidad;
@@ -1833,6 +1910,12 @@ router.patch('/:id/utensilios/:lineId', soloEditaSusCotizaciones, async (req, re
     ).select('utensilios');
 
     if (!r) return res.status(404).json({ msg: 'Reserva o línea no encontrada' });
+    if (precioLineaCambiado) {
+      const _uL = quienDe(req);
+      const linea = (r.utensilios || []).find((u) => String(u._id) === String(lineId));
+      await registrarCambio(id, { tipo: 'precio', accion: 'price_update', producto: { id: String(lineId), nombre: linea?.nombre || '' }, etiqueta: `Precio de ${linea?.nombre || 'artículo'}`, valorDespues: Number(req.body.precio) }, _uL);
+      await bitacora.registrar(req.user || { email: _uL.email || 'Desconocido' }, 'precio.cambiar', { reservaId: id, folio: String(id).slice(-8).toUpperCase(), articulo: linea?.nombre || '', nuevo: Number(req.body.precio), via: 'línea de artículo' });
+    }
     res.json(r.utensilios);
   } catch (e) {
     console.error(e);
@@ -1848,7 +1931,9 @@ router.get('/:id/utensilios', async (req, res) => {
   res.json(r.utensilios || []);
 });
 
-router.patch('/:id/utensilios/:itemId/precio', requireStaff, async (req, res) => {
+// Cambiar el precio de un artículo en una reserva: lo puede hacer personal y cotizador (este último solo en sus
+// cotizaciones), pero SIEMPRE con la contraseña de administrador. Todo intento queda en la bitácora.
+router.patch('/:id/utensilios/:itemId/precio', requireEditarReserva, soloEditaSusCotizaciones, async (req, res) => {
   try {
     const { id, itemId } = req.params;
     if (!mongoose.isValidObjectId(id) || !mongoose.isValidObjectId(itemId)) {
@@ -1857,12 +1942,35 @@ router.patch('/:id/utensilios/:itemId/precio', requireStaff, async (req, res) =>
     const p = Number((req.body && req.body.precio) ?? req.query.precio);
     if (!Number.isFinite(p) || p < 0) return res.status(400).json({ msg: 'Precio inválido' });
 
+    const previa = await Reserva.findById(id).select('nombre cliente tipoReserva utensilios').lean();
+    if (!previa) return res.status(404).json({ msg: 'Reserva no encontrada' });
+    const lineaPrevia = (previa.utensilios || []).find((u) => String(u.itemId) === String(itemId));
+    const contexto = {
+      reservaId: id,
+      folio: String(id).slice(-8).toUpperCase(),
+      cliente: previa.nombre || previa.cliente || '',
+      tipo: previa.tipoReserva || '',
+      articulo: lineaPrevia?.nombre || req.body?.nombre || '',
+      anterior: lineaPrevia ? Number(lineaPrevia.precio || 0) : null,
+      nuevo: p,
+    };
+
+    if (!(await validarPasswordAdmin(req.body?.adminPassword))) {
+      await bitacora.registrar(req.user, 'precio.clave_incorrecta', contexto);
+      await registrarCambio(id, { tipo: 'precio', accion: 'price_denied', producto: { id: String(itemId), nombre: contexto.articulo }, etiqueta: `Intento de cambiar el precio de ${contexto.articulo} con clave incorrecta`, valorAntes: contexto.anterior, valorDespues: p }, quienDe(req));
+      return res.status(401).json({ msg: 'Se requiere la contraseña de administrador para cambiar un precio', requierePassword: true });
+    }
+
     const updated = await Reserva.findOneAndUpdate(
       { _id: id, 'utensilios.itemId': itemId },
       { $set: { 'utensilios.$.precio': p } },
       { new: true }
     ).lean();
-    if (updated) return res.json({ ok: true, utensilios: updated.utensilios });
+    if (updated) {
+      await bitacora.registrar(req.user, 'precio.cambiar', contexto);
+      await registrarCambio(id, { tipo: 'precio', accion: 'price_update', producto: { id: String(itemId), nombre: contexto.articulo }, etiqueta: `Precio de ${contexto.articulo}`, valorAntes: contexto.anterior, valorDespues: p }, quienDe(req));
+      return res.json({ ok: true, utensilios: updated.utensilios });
+    }
 
     const prod = await Producto.findById(itemId).select('nombre categoria unidad imagen descripcion').lean();
     const nuevaLinea = {
@@ -1877,6 +1985,8 @@ router.patch('/:id/utensilios/:itemId/precio', requireStaff, async (req, res) =>
     };
     const afterPush = await Reserva.findByIdAndUpdate(id, { $push: { utensilios: nuevaLinea } }, { new: true }).lean();
     if (!afterPush) return res.status(404).json({ msg: 'Reserva no encontrada' });
+    await bitacora.registrar(req.user, 'precio.cambiar', contexto);
+    await registrarCambio(id, { tipo: 'precio', accion: 'price_update', producto: { id: String(itemId), nombre: contexto.articulo }, etiqueta: `Precio de ${contexto.articulo}`, valorAntes: contexto.anterior, valorDespues: p }, quienDe(req));
     return res.json({ ok: true, utensilios: afterPush.utensilios });
   } catch (e) {
     console.error(e);
@@ -2002,8 +2112,8 @@ router.put('/:id/descuento', requireStaff, async (req, res) => {
 
     await r.save();
 
-    // ===== Historial: solo si ya es evento =====
-    if (r.tipoReserva === 'evento' && prevDesc !== v) {
+    // ===== Historial: eventos y cotizaciones =====
+    if (prevDesc !== v) {
       const _uDesc = extraerUsuarioToken(req);
       await HistorialReserva.create({
         reservaId: r._id,
@@ -2206,7 +2316,21 @@ router.patch('/:id/precios', requireStaff, async (req, res) => {
     }
 
     r.precios = r.precios || { moneda: 'MXN' };
+    const descAntes = Number(r.precios?.descuento?.valor || 0);
+    const tipoAntes = r.precios?.descuento?.tipo || 'monto';
     r.precios.descuento = { tipo, valor, motivo: String(nuevoDesc.motivo || '') };
+
+    {
+      const _uMarcas = quienDe(req);
+      if (discountItems && typeof discountItems === 'object') {
+        for (const u of (r.utensilios || [])) {
+          const ahora = !!discountItems[String(u.itemId || u._id)];
+          if (!!u.aplicarDescuento !== ahora) {
+            await registrarCambio(r._id, { tipo: 'descuento', accion: ahora ? 'discount_add' : 'discount_remove', etiqueta: `Descuento ${ahora ? 'aplicado a' : 'quitado de'} ${u.nombre}` }, _uMarcas);
+          }
+        }
+      }
+    }
 
     // Igual que PUT /:id/utensilios: persiste qué productos llevan el
     // descuento. Si no viene discountItems (llamada legada), se respetan
@@ -2244,6 +2368,9 @@ const total = Math.max(0, subTotal - descuento);
     r.precios.total = total;
 
     await r.save();
+    if (descAntes !== valor || tipoAntes !== tipo) {
+      await registrarCambio(r._id, { tipo: 'descuento', accion: valor > 0 ? 'discount_add' : 'discount_remove', etiqueta: `Descuento ${tipoAntes === 'porcentaje' ? descAntes + '%' : '$' + descAntes} → ${tipo === 'porcentaje' ? valor + '%' : '$' + valor}`, descuentoAntes: descAntes, descuentoDespues: valor }, quienDe(req));
+    }
     return res.json({ ok: true, precios: r.precios, subTotal, descuento, total });
   } catch (e) {
     console.error('PATCH /reservas/:id/precios', e);
@@ -2302,6 +2429,7 @@ router.put('/:id/resumen-accesorios', soloEditaSusCotizaciones, async (req, res)
     reserva.resumenSeleccion.accesorios = accesorios;
 
     await reserva.save();
+    await registrarCambio(reserva._id, { tipo: 'accesorios', accion: 'accessories_update', etiqueta: `Accesorios actualizados: ${accesorios.map(a => `${a.nombre} x${a.cantidad}`).join(', ') || 'ninguno'}` }, quienDe(req));
     res.json({ ok: true, resumenSeleccion: reserva.resumenSeleccion });
   } catch (e) {
     console.error('PUT /reservas/:id/resumen-accesorios', e);
