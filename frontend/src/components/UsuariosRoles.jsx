@@ -1,5 +1,6 @@
 import PasswordInput from './PasswordInput';
 import { pedirConfirmacion } from '../utils/avisos';
+import { pedirPasswordAdmin } from '../utils/pedirPassword';
 import { LuPencil, LuKeyRound, LuBan, LuCheck, LuCopy, LuLock } from 'react-icons/lu';
 import SelectField from './ui/SelectField';
 import DateField from './ui/DateField';
@@ -418,7 +419,15 @@ const SECCIONES = {
   inventario: { label: 'Inventario', acciones: {
     'inventario.producto_crear': 'Agregó un producto', 'inventario.producto_editar': 'Editó un producto', 'inventario.producto_eliminar': 'Eliminó un producto',
     'inventario.accesorio_crear': 'Agregó un accesorio', 'inventario.accesorio_editar': 'Editó un accesorio', 'inventario.accesorio_eliminar': 'Eliminó un accesorio' } },
-  bitacora: { label: 'Bitácora', acciones: { 'bitacora.limpiar': 'Limpió la bitácora' } },
+  precio: { label: 'Precios', acciones: { 'precio.cambiar': 'Cambió un precio', 'precio.clave_incorrecta': 'Intentó cambiar un precio con clave incorrecta' } },
+  sesion: { label: 'Sesiones', acciones: { 'sesion.inicio': 'Inició sesión', 'sesion.fallida': 'Intento de sesión fallido' } },
+  seguridad: { label: 'Seguridad', acciones: { 'seguridad.rechazado': 'Acción rechazada (clave o permiso)' } },
+  bitacora: { label: 'Bitácora', acciones: { 'bitacora.limpiar': 'Limpió la bitácora', 'bitacora.clave_incorrecta': 'Intentó limpiar la bitácora con clave incorrecta' } },
+  invitacion: { label: 'Invitaciones', acciones: {
+    'invitacion.generar_portal': 'Generó el enlace de invitaciones', 'invitacion.generar_empresa': 'Generó acceso QR para empresa',
+    'invitacion.editar': 'Editó una invitación', 'invitacion.cancelar': 'Canceló una invitación',
+    'invitacion.crear_cliente': 'Invitación creada por el cliente', 'invitacion.editar_cliente': 'Invitación editada por el cliente',
+    'invitacion.cancelar_cliente': 'Invitación cancelada por el cliente' } },
   formato: { label: 'Formatos', acciones: { 'formato.guardar': 'Guardó un formato' } },
   checklist: { label: 'Checklists', acciones: {
     'checklist.crear': 'Creó un checklist', 'checklist.editar': 'Editó un checklist', 'checklist.eliminar': 'Eliminó un checklist',
@@ -432,6 +441,13 @@ function describir(it) {
   if (it.accion === 'usuario.editar') return `${d.email}: ${Object.entries(d.cambios || {}).map(([k, v]) => `${k} → ${v}`).join(', ')}`;
   if (['usuario.reset_password', 'usuario.ver_password', 'usuario.cambiar_password'].includes(it.accion)) return d.email;
   if (it.accion === 'permisos.actualizar') return (d.cambios || []).map((c) => `${rolLabel(c.rol)}: ${c.permiso} ${c.a ? 'activado' : 'desactivado'}`).join('; ');
+  const $ = (n) => (n == null ? '—' : `$${Number(n).toFixed(2)}`);
+  if (it.accion === 'precio.cambiar') return `${d.articulo || 'Artículo'}: ${$(d.anterior)} → ${$(d.nuevo)} · ${d.cliente || 'sin cliente'} (${d.tipo || ''} #${d.folio || ''})`;
+  if (it.accion === 'precio.clave_incorrecta') return `${d.articulo || 'Artículo'}: intentó ${$(d.anterior)} → ${$(d.nuevo)} · ${d.cliente || 'sin cliente'} (#${d.folio || ''})`;
+  if (it.accion === 'sesion.inicio') return d.rol ? `Rol: ${d.rol}` : '—';
+  if (it.accion === 'sesion.fallida') return d.motivo || '—';
+  if (it.accion === 'seguridad.rechazado') return `${ACCIONES[d.accion] || d.accion} · ${d.motivo || `error ${d.estado}`}`;
+  if (it.accion === 'bitacora.clave_incorrecta') return `Alcance: ${d.alcance === 'todo' ? 'todo' : 'por día'}`;
   if (it.accion === 'bitacora.limpiar') return `${d.quitadas} movimientos (${d.alcance === 'todo' ? 'todo' : 'por día'})`;
   if (d.ruta) return [d.nombre, d.id && `ID …${String(d.id).slice(-6)}`].filter(Boolean).join(' · ') || '—';
   return JSON.stringify(d);
@@ -447,8 +463,10 @@ function TabBitacora() {
   const diaDe = (v) => { const d = new Date(v); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const limpiar = async (cuerpo, mensaje) => {
     if (!await pedirConfirmacion(mensaje, { peligro: true })) return;
+    const adminPassword = await pedirPasswordAdmin('Para limpiar la bitácora ingresa la contraseña de administrador:');
+    if (adminPassword === null) return; // canceló
     try {
-      const r = await api('/permisos/bitacora', { method: 'DELETE', body: JSON.stringify(cuerpo) });
+      const r = await api('/permisos/bitacora', { method: 'DELETE', body: JSON.stringify({ ...cuerpo, adminPassword }) });
       setError('');
       await cargar();
       setAviso(`Se eliminaron ${r.quitadas} movimientos.`);

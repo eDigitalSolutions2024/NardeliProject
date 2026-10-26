@@ -1,4 +1,4 @@
-import { LuArrowLeft } from 'react-icons/lu';
+import { LuArrowLeft, LuTag, LuPackage, LuPercent, LuReceipt, LuPencil, LuFileText, LuGift, LuRefreshCw, LuMessageCircle, LuShieldAlert, LuHistory, LuX, LuPlus } from 'react-icons/lu';
 import { aviso, pedirConfirmacion, pedirValor } from '../utils/avisos';
 import SelectField from './ui/SelectField';
 import SearchField from './ui/SearchField';
@@ -721,6 +721,63 @@ const saldoRestante = useMemo(() => {
   }
 };
 
+  // ===== Vista del historial: tipo visual, filtro y fecha agrupada =====
+  const [filtroHist, setFiltroHist] = useState('todos');
+  const GRUPOS_HIST = [
+    { id: 'todos', label: 'Todo' },
+    { id: 'precio', label: 'Precios' },
+    { id: 'producto', label: 'Productos' },
+    { id: 'descuento', label: 'Descuentos' },
+    { id: 'pago', label: 'Pagos' },
+    { id: 'campo', label: 'Datos' },
+    { id: 'otros', label: 'Otros' },
+  ];
+  const grupoDe = (h) => (['precio', 'producto', 'descuento', 'pago', 'campo'].includes(h.tipo) ? h.tipo : 'otros');
+  const visualHist = (h) => {
+    if (h.accion === 'price_denied') return { Icono: LuShieldAlert, tono: 'rojo' };
+    switch (h.tipo) {
+      case 'precio': return { Icono: LuTag, tono: 'dorado' };
+      case 'producto': return { Icono: h.accion === 'add' ? LuPlus : LuPackage, tono: 'morado' };
+      case 'descuento': return { Icono: LuPercent, tono: 'verde' };
+      case 'pago': return { Icono: LuReceipt, tono: 'verde' };
+      case 'formato': return { Icono: LuFileText, tono: 'azul' };
+      case 'accesorios': return { Icono: LuGift, tono: 'morado' };
+      case 'conversion': return { Icono: LuRefreshCw, tono: 'azul' };
+      case 'estado': return { Icono: LuRefreshCw, tono: 'azul' };
+      case 'invitacion': return { Icono: LuGift, tono: 'azul' };
+      case 'checklist': return { Icono: LuFileText, tono: 'azul' };
+      case 'whatsapp': return { Icono: LuMessageCircle, tono: h.accion === 'alert_error' ? 'rojo' : 'verde' };
+      default: return { Icono: LuPencil, tono: 'gris' };
+    }
+  };
+  // Cambio "antes → después" para mostrarlo en chips (si aplica)
+  const chipsHist = (h) => {
+    const dinero = (n) => `$${Number(n ?? 0).toFixed(2)}`;
+    if (h.tipo === 'precio' && h.accion === 'price_update') return [dinero(h.valorAntes), dinero(h.valorDespues)];
+    if (h.tipo === 'descuento') return [dinero(h.descuentoAntes), dinero(h.descuentoDespues)];
+    if (h.tipo === 'producto' && h.accion === 'update' && !h.etiqueta) return [`${h.cantidadAntes ?? '?'} pza`, `${h.cantidadDespues ?? '?'} pza`];
+    if (h.tipo === 'campo' && h.campo !== 'creacion' && (h.valorAntes != null || h.valorDespues != null)) return [String(h.valorAntes ?? '—'), String(h.valorDespues ?? '—')];
+    return null;
+  };
+  const tituloHist = (h) => {
+    if (h.tipo === 'precio' && h.accion === 'price_update') return h.etiqueta || 'Precio modificado';
+    if (h.tipo === 'campo') return h.etiqueta || h.campo || 'Dato modificado';
+    if (h.tipo === 'producto' && h.etiqueta) return h.etiqueta;
+    if (h.tipo === 'producto') {
+      const n = h.producto?.nombre || '';
+      return h.accion === 'add' ? `Producto agregado: ${n}` : h.accion === 'remove' ? `Producto quitado: ${n}` : `Cantidad cambiada: ${n}`;
+    }
+    if (h.tipo === 'descuento') return h.accion === 'discount_remove' ? 'Descuento quitado' : 'Descuento modificado';
+    return formatearCambio(h);
+  };
+  const diaHist = (f) => {
+    const d = new Date(f); const hoy = new Date(); const ayer = new Date(); ayer.setDate(hoy.getDate() - 1);
+    const mismo = (a, b) => a.toDateString() === b.toDateString();
+    if (mismo(d, hoy)) return 'Hoy';
+    if (mismo(d, ayer)) return 'Ayer';
+    return d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  };
+
   const formatearCambio = (item) => {
   if (item.tipo === 'conversion') {
     if (item.accion === 'evento_a_cotizacion') return 'Convertido de evento a cotización';
@@ -740,7 +797,16 @@ const saldoRestante = useMemo(() => {
   }
 
   if (item.tipo === 'descuento') {
-    return `Descuento actualizado: $${item.descuentoAntes ?? 0} → $${item.descuentoDespues ?? 0}`;
+    return item.etiqueta || `Descuento actualizado: $${item.descuentoAntes ?? 0} → $${item.descuentoDespues ?? 0}`;
+  }
+
+  if (item.tipo === 'precio') {
+    if (item.accion === 'price_update') return `${item.etiqueta || 'Precio'}: $${Number(item.valorAntes ?? 0).toFixed(2)} → $${Number(item.valorDespues ?? 0).toFixed(2)}`;
+    return item.etiqueta || 'Intento de cambio de precio rechazado';
+  }
+
+  if (['pago', 'formato', 'accesorios', 'estado', 'invitacion', 'checklist'].includes(item.tipo)) {
+    return item.etiqueta || 'Cambio registrado';
   }
 
   if (item.tipo === 'whatsapp') {
@@ -810,9 +876,29 @@ const actualizarReserva = async () => {
 
   // ====== Editar precio (solo admin) — modifica SOLO el snapshot de utensilios
   const editarPrecio = async (item) => {
-    if (!isAdmin) return;
+    if (!isAdmin && !isCotizador) return;
     if (!reservaId) { aviso('No hay reservaId'); return; }
 
+    // 1) La contraseña de administrador se pide desde que se entra a editar (la valida el servidor).
+    const adminPassword = await pedirPasswordAdmin(`Para editar el precio de "${item.nombre}" ingresa la contraseña de administrador:`);
+    if (adminPassword === null) return; // canceló
+    try {
+      const chk = await fetch(`${API_BASE_URL}/reservas/verificar-clave-admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ adminPassword, reservaId, articulo: item.nombre })
+      });
+      if (!chk.ok) {
+        const j = await chk.json().catch(() => ({}));
+        aviso(j?.msg || 'Contraseña de administrador incorrecta');
+        return;
+      }
+    } catch {
+      aviso('No se pudo verificar la contraseña. Revisa tu conexión.');
+      return;
+    }
+
+    // 2) Nuevo precio
     const actual = priceFor(item.id);
     const input = await pedirValor(`Nuevo precio para "${item.nombre}"`, (Number.isFinite(actual) ? actual : 0).toFixed(2));
     if (input === null) return;
@@ -823,6 +909,12 @@ const actualizarReserva = async () => {
       return;
     }
 
+    // 3) Confirmación antes de guardar
+    const antes = Number.isFinite(actual) ? actual : 0;
+    if (value === antes) { aviso('El precio nuevo es igual al actual; no se cambió nada.'); return; }
+    if (!await pedirConfirmacion(`¿Seguro que quieres cambiar el precio de "${item.nombre}" de $${antes.toFixed(2)} a $${value.toFixed(2)}? Este cambio queda registrado con tu nombre.`, { peligro: true, titulo: 'Confirmar cambio de precio' })) return;
+
+    // 4) Guardar (el servidor vuelve a validar la contraseña)
     const token = localStorage.getItem('token') || '';
 
     try {
@@ -834,7 +926,7 @@ const actualizarReserva = async () => {
             'Content-Type': 'application/json',
             ...(token ? { Authorization: `Bearer ${token}` } : {})
           },
-          body: JSON.stringify({ precio: value, nombre: item.nombre })
+          body: JSON.stringify({ precio: value, nombre: item.nombre, adminPassword })
         }
       );
 
@@ -1234,9 +1326,9 @@ function openEstadoCuentaPdf() {
                       <h4 className="item-title" style={{ display:'flex', alignItems:'center', gap:8 }}>
                         {it.nombre}
                         {isCotizador && !isAdmin && <span className="item-price"> ${precioNum.toFixed(2)}</span>}
-                        {isAdmin && (
+                        {(isAdmin || isCotizador) && (
                           <>
-                            <span className="item-price"> ${precioNum.toFixed(2)}</span>
+                            {isAdmin && <span className="item-price"> ${precioNum.toFixed(2)}</span>}
                             <button
                               type="button"
                               className="edit-price-btn"
@@ -2046,36 +2138,70 @@ onMouseLeave={(e) => {
         </div>
       )}
 
-      {showHistorial && (
-  <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowHistorial(false); }}>
-    <div className="modal-content">
-      <h2>Historial de cambios</h2>
+      {showHistorial && (() => {
+        const lista = historial.filter((h) => filtroHist === 'todos' || grupoDe(h) === filtroHist);
+        const porDia = [];
+        lista.forEach((h) => {
+          const dia = diaHist(h.fecha);
+          const ultimo = porDia[porDia.length - 1];
+          if (ultimo && ultimo.dia === dia) ultimo.items.push(h); else porDia.push({ dia, items: [h] });
+        });
+        return (
+          <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowHistorial(false); }}>
+            <div className="modal-content hc-modal" role="dialog" aria-label="Historial de cambios">
+              <div className="hc-head">
+                <span className="hc-head-ico"><LuHistory /></span>
+                <div className="hc-head-txt">
+                  <h2>Historial de cambios</h2>
+                  <p>{historial.length} {historial.length === 1 ? 'movimiento' : 'movimientos'} en esta reserva · quién, cuándo y qué</p>
+                </div>
+                <button type="button" className="hc-x" onClick={() => setShowHistorial(false)} aria-label="Cerrar"><LuX /></button>
+              </div>
 
-      {historial.length === 0 && <p>No hay cambios registrados.</p>}
+              <div className="hc-filtros">
+                {GRUPOS_HIST.map((g) => (
+                  <button key={g.id} type="button" className={`hc-chip ${filtroHist === g.id ? 'on' : ''}`} onClick={() => setFiltroHist(g.id)}>{g.label}</button>
+                ))}
+              </div>
 
-      {historial.map((h) => (
-        <div key={h._id} className="historial-item">
-          <strong>{formatearCambio(h)}</strong>
-
-          {(h.usuarioRole || h.usuarioEmail) && (
-            <div style={{ fontSize: '12px', color: '#444', marginTop: 3 }}>
-              Por: <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{h.usuarioRole || 'usuario'}</span>
-              {h.usuarioEmail ? ` — ${h.usuarioEmail}` : ''}
+              <div className="hc-body">
+                {lista.length === 0 && <p className="hc-vacio">{historial.length ? 'No hay cambios de este tipo.' : 'Todavía no hay cambios registrados.'}</p>}
+                {porDia.map((g) => (
+                  <section key={g.dia} className="hc-dia">
+                    <h3>{g.dia}</h3>
+                    {g.items.map((h) => {
+                      const { Icono, tono } = visualHist(h);
+                      const chips = chipsHist(h);
+                      const quien = h.usuarioEmail || 'Sistema';
+                      return (
+                        <article key={h._id} className={`hc-item hc-${tono}`}>
+                          <span className="hc-ico"><Icono /></span>
+                          <div className="hc-cuerpo">
+                            <div className="hc-titulo">{tituloHist(h)}</div>
+                            {chips && (
+                              <div className="hc-cambio">
+                                <span className="hc-antes">{chips[0]}</span>
+                                <span className="hc-flecha">→</span>
+                                <span className="hc-despues">{chips[1]}</span>
+                              </div>
+                            )}
+                            <div className="hc-meta">
+                              <span className="hc-avatar">{quien.charAt(0).toUpperCase()}</span>
+                              <span className="hc-quien">{quien}</span>
+                              {h.usuarioRole && <span className="hc-rol">{h.usuarioRole}</span>}
+                              <span className="hc-hora">{new Date(h.fecha).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </section>
+                ))}
+              </div>
             </div>
-          )}
-
-          <div style={{ fontSize: '12px', color: '#666', marginTop: 2 }}>
-            {new Date(h.fecha).toLocaleString('es-MX')}
           </div>
-        </div>
-      ))}
-
-      <button onClick={() => setShowHistorial(false)}>
-        Cerrar
-      </button>
-    </div>
-  </div>
-)}
+        );
+      })()}
 
 
       {/* MODAL: Historial de Recibos (solo staff) */}

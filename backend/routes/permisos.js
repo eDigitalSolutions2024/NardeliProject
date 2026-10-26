@@ -5,6 +5,7 @@ const {
   requirePermission, requireSesion,
 } = require('../utils/permisos');
 const bitacora = require('../utils/bitacora');
+const { validarClaveAdmin } = require('../utils/claveAdmin');
 
 // Permisos del usuario con sesión (el frontend arma el menú con esto).
 // Permite pasar aunque deba cambiar contraseña, para poder redirigirlo.
@@ -63,7 +64,12 @@ router.get('/bitacora', requirePermission('usuarios.gestionar'), async (_req, re
 
 router.delete('/bitacora', requirePermission('usuarios.gestionar'), async (req, res) => {
   try {
-    const { todo, desde, hasta } = req.body || {};
+    const { todo, desde, hasta, adminPassword } = req.body || {};
+    // Borrar la bitácora es delicado: exige la contraseña de administrador y deja constancia del intento.
+    if (!validarClaveAdmin(adminPassword)) {
+      await bitacora.registrar(req.user, 'bitacora.clave_incorrecta', { alcance: todo === true ? 'todo' : `${desde} a ${hasta}` });
+      return res.status(401).json({ ok: false, msg: 'Contraseña de administrador incorrecta' });
+    }
     const quitadas = await bitacora.limpiar({ todo: todo === true, desde, hasta });
     await bitacora.registrar(req.user, 'bitacora.limpiar', { quitadas, alcance: todo === true ? 'todo' : `${desde} a ${hasta}` });
     res.json({ ok: true, quitadas });

@@ -1,4 +1,5 @@
 const express = require('express');
+const { quienDe, registrarCambio } = require('../utils/historialReserva');
 const router = express.Router();
 const mongoose = require('mongoose');
 const FormatoReserva = require('../models/FormatoReserva');
@@ -37,6 +38,7 @@ router.put('/:reservaId/formatos/:tipo', async (req, res) => {
       { $set: { data: req.body, updatedAt: new Date() } },
       { upsert: true, new: true }
     );
+    await registrarCambio(reservaId, { tipo: 'formato', accion: 'format_update', etiqueta: `Formato guardado: ${tipo}` }, quienDe(req));
     return res.json({ ok: true, formato: saved });
   } catch (e) {
     console.error('PUT /formatos/:tipo', e);
