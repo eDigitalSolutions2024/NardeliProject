@@ -3,6 +3,8 @@ import { pedirConfirmacion } from '../utils/avisos';
 import { pedirPasswordAdmin } from '../utils/pedirPassword';
 import { LuPencil, LuKeyRound, LuBan, LuCheck, LuCopy, LuLock } from 'react-icons/lu';
 import SelectField from './ui/SelectField';
+import MostrarMas from './ui/MostrarMas';
+import useMostrarMas from './ui/useMostrarMas';
 import DateField from './ui/DateField';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import API_BASE_URL from '../api';
@@ -209,6 +211,7 @@ function ModalUsuario({ usuario, esUnoMismo, onClose, onSaved }) {
 /* ---------------- Pestaña: Usuarios ---------------- */
 function TabUsuarios({ currentUser }) {
   const [items, setItems] = useState([]);
+  const mUsr = useMostrarMas(items); // en teléfono: de 5 en 5
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
@@ -274,7 +277,7 @@ function TabUsuarios({ currentUser }) {
               <tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Último acceso</th><th></th></tr>
             </thead>
             <tbody>
-              {items.map((u) => {
+              {mUsr.visibles.map((u) => {
                 const yo = String(u.id) === miId;
                 return (
                   <tr key={u.id} className={u.activo ? '' : 'off'}>
@@ -306,6 +309,7 @@ function TabUsuarios({ currentUser }) {
               {items.length === 0 && <tr><td colSpan="6" style={{ textAlign: 'center', color: '#6b7280' }}>Sin usuarios.</td></tr>}
             </tbody>
           </table>
+          <MostrarMas m={mUsr} />
         </div>
       )}
 
@@ -481,6 +485,7 @@ function TabBitacora() {
   const opSecciones = [{ value: '', label: 'Todas las secciones' }, ...Object.entries(SECCIONES).map(([k, s]) => ({ value: k, label: s.label }))];
   const opAcciones = [{ value: '', label: 'Todas las acciones' }, ...Object.entries(seccion ? SECCIONES[seccion].acciones : ACCIONES).map(([k, l]) => ({ value: k, label: l }))];
   const visibles = items.filter((it) => (!seccion || seccionDe(it.accion) === seccion) && (!accion || it.accion === accion) && (!dia || diaDe(it.fecha) === dia));
+  const mBit = useMostrarMas(visibles); // en teléfono: de 5 en 5
   return (
     <div className="rl-card">
       <div className="rl-toolbar">
@@ -501,12 +506,13 @@ function TabBitacora() {
         <table className="rl-table">
           <thead><tr><th>Fecha</th><th>Quién</th><th>Acción</th><th>Detalle</th></tr></thead>
           <tbody>
-            {visibles.map((it, i) => (
+            {mBit.visibles.map((it, i) => (
               <tr key={i}><td>{fecha(it.fecha)}</td><td>{it.actor}</td><td>{ACCIONES[it.accion] || it.accion}</td><td>{describir(it)}</td></tr>
             ))}
             {visibles.length === 0 && <tr><td colSpan="4" style={{ textAlign: 'center', color: '#6b7280' }}>{items.length ? 'No hay movimientos con ese filtro.' : 'Aún no hay movimientos.'}</td></tr>}
           </tbody>
         </table>
+        <MostrarMas m={mBit} />
       </div>
     </div>
   );

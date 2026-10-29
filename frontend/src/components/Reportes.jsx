@@ -1,3 +1,5 @@
+import MostrarMas from './ui/MostrarMas';
+import useMostrarMas from './ui/useMostrarMas';
 import { LuCalendarCheck, LuCircleCheck, LuCircleDot, LuHourglass, LuCoins, LuBadgeDollarSign, LuReceipt, LuTrendingUp, LuEye, LuFileDown, LuChevronLeft, LuChevronRight, LuInbox } from 'react-icons/lu';
 import SelectField from './ui/SelectField';
 import DateField from './ui/DateField';
@@ -155,6 +157,7 @@ export default function Reportes() {
     window.open(`/cliente/dashboard?${qs}`, '_blank', 'noopener,noreferrer');
   };
 
+ const mRep = useMostrarMas(items || []); // en teléfono: 5 por tanda dentro de cada página
  const exportExcel = () => {
   if (!items || items.length === 0) return;
 
@@ -385,7 +388,7 @@ export default function Reportes() {
                 <tr><td colSpan="10" className="empty"><LuInbox /> Sin resultados</td></tr>
               )}
 
-              {(items || []).map((x) => (
+              {mRep.visibles.map((x) => (
                 <tr key={x._id}>
                   <td><strong>{x.shortId || '—'}</strong></td>
                   <td>{x.cliente || '—'}</td>
@@ -408,6 +411,7 @@ export default function Reportes() {
               ))}
             </tbody>
           </table>
+          <MostrarMas m={mRep} />
         </div>
 
         {/* Paginación */}

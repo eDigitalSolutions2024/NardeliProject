@@ -5,6 +5,8 @@ import SearchField from './ui/SearchField';
 import { pedirPasswordAdmin } from '../utils/pedirPassword';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTema } from '../utils/tema';
+import MostrarMas from './ui/MostrarMas';
+import useMostrarMas from './ui/useMostrarMas';
 import './Dashboard.css'; // estilos compartidos nd-* (pestañas, botones); ya no vienen de Dashboard al cargar por partes
 import './DashboardCliente.css';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
@@ -568,6 +570,8 @@ setDiscountItems(descuentosIniciales);
       return passCat && hayTerm;
     });
   }, [items, q, cat]);
+  const mProd = useMostrarMas(filtrados); // en teléfono: de 5 en 5
+  const mAcc = useMostrarMas(accesorios);
 
   const setQty = (item, qty) => {
     const stock = items.find(p => p.id === item.id)?.stock ?? 0;
@@ -1337,7 +1341,7 @@ function openEstadoCuentaPdf() {
             <div className="empty">No hay coincidencias con tu búsqueda.</div>
           ) : (
             <div className="inventory-grid">
-              {filtrados.map((it) => {
+              {mProd.visibles.map((it) => {
                 const sel = seleccion[it.id];
                 const qty = sel?.qty || 0;
                 const stock = items.find(p => p.id === it.id)?.stock ?? 0;
@@ -1412,6 +1416,7 @@ function openEstadoCuentaPdf() {
               })}
             </div>
           )}
+          <MostrarMas m={mProd} />
         </div>
 
         {/* ACCESORIOS */}
@@ -1423,7 +1428,7 @@ function openEstadoCuentaPdf() {
             <div className="empty">No hay accesorios disponibles.</div>
           ) : (
             <div className="inventory-grid">
-              {accesorios.map(acc => {
+              {mAcc.visibles.map(acc => {
                 const qty = selAccesorios[acc._id] || 0;
                 const stock = Number(acc.stock ?? 0);
                 const agotado = stock <= 0;
@@ -1470,6 +1475,7 @@ function openEstadoCuentaPdf() {
               })}
             </div>
           )}
+          <MostrarMas m={mAcc} />
         </div>
         </div>
 

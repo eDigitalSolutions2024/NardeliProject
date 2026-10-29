@@ -1,3 +1,5 @@
+import MostrarMas from './ui/MostrarMas';
+import useMostrarMas from './ui/useMostrarMas';
 import { aviso } from '../utils/avisos';
 import SearchField from './ui/SearchField';
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -222,6 +224,7 @@ const filtered = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, page]);
+  const mCli = useMostrarMas(paginated); // en teléfono: 5 por tanda dentro de cada página
 
   useEffect(() => {
     setPage(1);
@@ -332,7 +335,7 @@ const filtered = useMemo(() => {
               </tr>
             )}
 
-            {paginated.map((r, idx) => (
+            {mCli.visibles.map((r, idx) => (
               <tr key={r._uid}>
                 <td>{(page - 1) * PAGE_SIZE + idx + 1}</td>
                 <td>
@@ -425,6 +428,7 @@ const filtered = useMemo(() => {
             ))}
           </tbody>
         </table>
+        <MostrarMas m={mCli} />
       </div>
 
       <div className="pagination">

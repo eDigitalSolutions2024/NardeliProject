@@ -10,6 +10,8 @@ import API_BASE_URL, { authHeaders } from '../api';
 // imports nuevos arriba
 import { animate, stagger } from 'animejs';
 import SearchField from './ui/SearchField';
+import MostrarMas from './ui/MostrarMas';
+import useMostrarMas from './ui/useMostrarMas';
 import DateField from './ui/DateField';
 import SelectField from './ui/SelectField';
 import { LuCalendarDays, LuPartyPopper, LuCalendarCheck, LuFileClock, LuFileText, LuFileDown, LuPencil, LuCheck, LuTrash2, LuHourglass, LuInbox, LuBadgeDollarSign, LuUser, LuPackage, LuGift, LuLayoutDashboard, LuUsers, LuCalendar, LuTrendingUp, LuWarehouse, LuCirclePlus, LuShieldCheck, LuLogOut, LuMenu, LuSun, LuMoon } from 'react-icons/lu';
@@ -726,6 +728,9 @@ const actividadFiltrada = actividad
     animate('.sidebar-nav .nav-item', { opacity: [0, 1], translateX: [-16, 0], delay: stagger(55, { start: 150 }), duration: 520, ease: 'outCubic' });
   }, []);
 
+  const mCot = useMostrarMas(actividadFiltrada); // en teléfono: de 5 en 5
+  const mPas = useMostrarMas(pasadosFiltrados);
+
   const renderContent = () => {
     switch (activeSection) {
       case 'usuarios':
@@ -861,7 +866,7 @@ const actividadFiltrada = actividad
                     </div>
                   )}
 
-                  {actividadFiltrada.map(a => {
+                  {mCot.visibles.map(a => {
                     const holdActivo = tieneHoldActivo(a);
                     return (
                       <div key={a.id} className={`activity-item${holdActivo ? ' activity-item-hold' : ''}`}>
@@ -899,6 +904,7 @@ const actividadFiltrada = actividad
                       </div>
                     );
                   })}
+                  <MostrarMas m={mCot} />
                 </div>
               ) : (
                 <div className="activity-list">
@@ -916,7 +922,7 @@ const actividadFiltrada = actividad
                     </div>
                   )}
 
-                  {pasadosFiltrados.map(a => (
+                  {mPas.visibles.map(a => (
                     <div key={a.id} className="activity-item">
                       <span className="activity-icon">{a.icon}</span>
                       <div className="activity-details">
@@ -951,6 +957,7 @@ const actividadFiltrada = actividad
                       </div>
                     </div>
                   ))}
+                  <MostrarMas m={mPas} />
                 </div>
               )}
             </div>
@@ -1107,6 +1114,9 @@ const actividadFiltrada = actividad
 
   return (
     <div className="dashboard-container">
+      {/* Fondo oscuro del menú en teléfono (se toca para cerrar) */}
+      {sidebarOpen && <div className="nd-backdrop" onClick={() => setSidebarOpen(false)} aria-hidden="true" />}
+
       {/* Sidebar */}
       <div className={`sidebar ${sidebarOpen ? '' : 'collapsed'}`}>
         <div className='hamburger-wrapper'>
@@ -1132,6 +1142,8 @@ const actividadFiltrada = actividad
                 aria-current={activeSection === item.id ? 'page' : undefined}
                 onClick={() => {
                   setActiveSection(item.id);
+                  // en teléfono el menú se cierra solo al elegir una sección
+                  if (window.matchMedia?.('(max-width: 768px)').matches) setSidebarOpen(false);
                 }}
               >
                 <span className="nav-icon">{item.icon}</span>
@@ -1177,6 +1189,7 @@ const actividadFiltrada = actividad
 
         <header className="main-header">
           <div className="header-left">
+            <button className="nd-menu-btn" onClick={() => setSidebarOpen(true)} aria-label="Abrir menú" title="Menú"><LuMenu /></button>
             <h1 className="page-title">
               {menuItems.find(item => item.id === activeSection)?.label || 'Dashboard'}
             </h1>
