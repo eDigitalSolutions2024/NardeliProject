@@ -529,3 +529,10 @@ html:has(.cliente-dashboard), html:has(.cliente-dashboard) body { background: #f
   .clientes-container .clientes-table td.acciones .cl-btn-text { display: inline !important; }
   .clientes-container .clientes-table td.acciones .btn-pdf-rojo { box-shadow: 0 8px 16px -10px #b3261e !important; }
 }
+
+/* Dashboard (teléfono): las dos pestañas "Cotizaciones pendientes / Eventos pasados" van lado a lado */
+@media (max-width: 640px) {
+  .main-content .nd-tabs { display: grid !important; grid-template-columns: 1fr 1fr; gap: 0.4rem; width: 100%; }
+  .main-content .nd-tab { justify-content: center; padding: 0.55rem 0.4rem !important; font-size: 0.78rem; gap: 0.35rem; min-width: 0; text-align: center; }
+  .main-content .nd-tab .nd-count, .main-content .nd-tab span:last-child { font-size: 0.7rem; padding: 1px 7px; }
+}
