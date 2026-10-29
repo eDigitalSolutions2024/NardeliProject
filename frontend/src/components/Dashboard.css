@@ -871,3 +871,47 @@
 .header-right { display: flex; align-items: center; gap: 0.6rem; }
 .tema-toggle { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid #eadcf2; background: #faf5ff; color: #6b2c5e; font-size: 1.15rem; cursor: pointer; }
 .tema-toggle:hover { background: #f1def5; transform: rotate(-12deg); }
+
+/* ===== Ventanas emergentes: siempre por encima del encabezado y del menú ===== */
+.content-area:has(.modal-overlay) { z-index: 1300; }
+
+/* ===== Teléfono: menú lateral como panel deslizable ===== */
+.nd-menu-btn { display: none; }
+.nd-backdrop { display: none; }
+@media (max-width: 768px) {
+  .dashboard-container { flex-direction: row; height: 100dvh; }
+  .main-content { width: 100%; min-width: 0; flex: 1; }
+
+  .sidebar, .sidebar.collapsed {
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 1200;
+    width: min(82vw, 300px) !important; height: 100dvh !important;
+    flex-direction: column !important; overflow-x: hidden; overflow-y: auto;
+    padding-top: 0.6rem; transform: translateX(-104%);
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: none;
+  }
+  .sidebar:not(.collapsed) { transform: none; box-shadow: 8px 0 30px rgba(20, 5, 28, 0.45); }
+  .sidebar-header { min-width: 0; }
+  .sidebar-nav { flex-direction: column !important; padding: 0.75rem 0.7rem !important; gap: 4px; overflow: visible; }
+  .nav-item { min-width: 0; flex-direction: row !important; padding: 0.8rem 1rem !important; border-radius: 10px !important; gap: 0.9rem !important; justify-content: flex-start; }
+  .nav-item.active { box-shadow: 0 8px 18px -12px rgba(0, 0, 0, 0.5) !important; }
+  .sidebar-header { padding: 0.4rem 1rem 0.8rem !important; }
+  .sidebar .sidebar-mark.dorado { width: 54px; height: 46px; margin-bottom: 0.3rem; }
+  .sidebar .sidebar-brand { font-size: 1.5rem; margin: 0; }
+  .sidebar .nav-item { padding: 0.62rem 1rem !important; }
+  .sidebar-footer { position: sticky; bottom: 0; background: #4a1857; padding: 0.6rem 0.7rem !important; }
+  .logout-btn { border-radius: 10px !important; gap: 0.9rem !important; padding: 0.8rem 1rem !important; }
+
+  /* el menú abierto muestra textos completos (el modo "solo íconos" es para escritorio) */
+  .sidebar .nav-label, .sidebar .sidebar-brand, .sidebar .sidebar-subtitle { display: block !important; }
+  .sidebar .nav-group { display: block; }
+
+  .nd-backdrop { display: block; position: fixed; inset: 0; z-index: 1150; background: rgba(15, 5, 22, 0.55); animation: fx-fundido 0.2s ease backwards; }
+  .nd-menu-btn { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; margin-right: 0.6rem; border: 1px solid #eadcf2; border-radius: 12px; background: #faf5ff; color: #6b2c5e; font-size: 1.25rem; cursor: pointer; }
+  .header-left { display: flex; align-items: center; min-width: 0; }
+  .page-title { font-size: 1.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ventanas: casi a pantalla completa, con scroll interno */
+  .modal-overlay { padding: 0.6rem; }
+  .modal-overlay > .modal-content { max-height: calc(100dvh - 1.2rem); padding: 1.2rem; border-radius: 16px; }
+}

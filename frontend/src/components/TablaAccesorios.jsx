@@ -1,6 +1,8 @@
 import { aviso, pedirConfirmacion } from '../utils/avisos';
 import { LuGift, LuPencil, LuTrash2, LuInbox, LuX } from 'react-icons/lu';
 import SearchField from './ui/SearchField';
+import MostrarMas from './ui/MostrarMas';
+import useMostrarMas from './ui/useMostrarMas';
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import './TablaProductos.css';
@@ -150,6 +152,8 @@ export default function TablaAccesorios({ refresh = 0 }) {
     );
   }, [accesorios, busqueda]);
 
+  const mAcc = useMostrarMas(accesoriosFiltrados); // en teléfono: de 5 en 5
+
   return (
     <div className="tp-card">
       <div className="tp-header">
@@ -189,7 +193,7 @@ export default function TablaAccesorios({ refresh = 0 }) {
               </tr>
             </thead>
             <tbody>
-              {accesoriosFiltrados.map((acc) => (
+              {mAcc.visibles.map((acc) => (
                 <tr key={acc._id}>
                   <td>
                     {acc.imagen ? (
@@ -241,6 +245,7 @@ export default function TablaAccesorios({ refresh = 0 }) {
               )}
             </tbody>
           </table>
+          <MostrarMas m={mAcc} />
         </div>
       )}
 

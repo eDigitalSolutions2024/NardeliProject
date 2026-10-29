@@ -1,6 +1,8 @@
 import { aviso, pedirConfirmacion } from '../utils/avisos';
 import { LuImage, LuPencil, LuTrash2, LuInbox, LuX } from 'react-icons/lu';
 import SearchField from './ui/SearchField';
+import MostrarMas from './ui/MostrarMas';
+import useMostrarMas from './ui/useMostrarMas';
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import './TablaProductos.css';
@@ -136,6 +138,8 @@ export default function TablaProductos({ refresh = 0 } ) {
     );
   }, [productos, busqueda]);
 
+  const mProd = useMostrarMas(productosFiltrados); // en teléfono: de 5 en 5
+
   return (
     <div className="tp-card">
       <div className="tp-header">
@@ -175,7 +179,7 @@ export default function TablaProductos({ refresh = 0 } ) {
               </tr>
             </thead>
             <tbody>
-              {productosFiltrados.map((producto) => (
+              {mProd.visibles.map((producto) => (
                 <tr key={producto._id}>
                   <td>
                     {producto.imagen ? (
@@ -227,6 +231,7 @@ export default function TablaProductos({ refresh = 0 } ) {
               )}
             </tbody>
           </table>
+          <MostrarMas m={mProd} />
         </div>
       )}
 

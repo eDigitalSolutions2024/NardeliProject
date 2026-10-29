@@ -342,3 +342,44 @@
 .hc-rol { padding: 1px 8px; border-radius: 999px; background: #f4e6f7; color: #6b2c5e; font-weight: 700; text-transform: capitalize; }
 .hc-hora { margin-left: auto; color: #8a7a92; font-variant-numeric: tabular-nums; }
 @media (max-width: 520px) { .hc-hora { margin-left: 0; } }
+
+/* ===== Panel del Cliente: responsive (una columna en pantallas chicas) ===== */
+@media (max-width: 960px) {
+  /* esta regla va al final para ganarle al mínimo de 330 px de la columna derecha */
+  .cd-content { grid-template-columns: minmax(0, 1fr); }
+  .cd-main-col, .summary { min-width: 0; max-width: 100%; box-sizing: border-box; }
+}
+
+@media (max-width: 640px) {
+  .cliente-dashboard { padding: 12px; }
+
+  /* encabezado: título arriba, botón y etiqueta sin apretarse */
+  .cd-header { padding: 16px 16px 18px; border-radius: 18px; gap: 0.7rem; }
+  .cd-header-text { min-width: 0; flex-basis: 100%; }
+  .cd-header .badge { margin-left: 0; }
+
+  /* pestañas: se reparten el ancho */
+  .cliente-dashboard .nd-seg { display: flex; width: 100%; }
+  .cliente-dashboard .nd-seg-btn { flex: 1; justify-content: center; padding: 9px 8px; font-size: 0.82rem; }
+
+  /* buscador a todo lo ancho; categoría y limpiar comparten la segunda línea */
+  .cd-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem; }
+  .cd-toolbar > :first-child { grid-column: 1 / -1; min-width: 0; width: 100%; }
+  .cd-toolbar .ui-field { min-width: 0; width: 100%; }
+  .cd-toolbar .ui-search { min-width: 0; }
+  .cd-btn-clear { white-space: nowrap; padding: 0 0.8rem; }
+
+  /* tarjetas de producto y de resumen: más aire y sin cortes */
+  .cd-card { padding: 12px; }
+  .item-card { padding: 10px; }
+  .item-title { gap: 4px 8px; }
+  .sel-item { gap: 8px; padding: 10px; }
+
+  /* el resumen: botones de acción a lo ancho, descuentos en una columna */
+  .summary { padding: 14px; }
+  .summary .cd-select, .summary .cd-input { flex: 1 1 100%; width: 100%; }
+  .cliente-dashboard button.pdf, .cliente-dashboard button.save { width: 100%; }
+  .cliente-dashboard button.pdf.pdf-saldo { width: 100%; margin-left: 0 !important; }
+  .summary button.pdf, .summary button.save { display: block; margin-left: 0 !important; margin-right: 0 !important; }
+  .cliente-dashboard .nd-seg-btn { min-width: 0; padding: 9px 4px; }
+}

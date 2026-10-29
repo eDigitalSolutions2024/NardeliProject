@@ -1,3 +1,5 @@
+import MostrarMas from './ui/MostrarMas';
+import useMostrarMas from './ui/useMostrarMas';
 import { aviso, pedirConfirmacion } from '../utils/avisos';
 import TimeField from './ui/TimeField';
 import DateField from './ui/DateField';
@@ -280,6 +282,8 @@ const convertirACotizacion = async (id) => {
     window.open(`/cliente/dashboard?${qs}`, '_blank', 'noopener,noreferrer');
   };
 
+  const mEv = useMostrarMas(eventosFiltrados); // en teléfono: de 5 en 5
+
   return (
     <div className="calendario-container">
       {/* Panel de Próximos Eventos */}
@@ -343,7 +347,7 @@ const convertirACotizacion = async (id) => {
       </div>
     </div>
   ) : (
-    eventosFiltrados.map((evento) => (
+    mEv.visibles.map((evento) => (
       <div
         key={evento.id}
         className={`evento-card evento-${evento.tipo}`}
@@ -399,6 +403,7 @@ const convertirACotizacion = async (id) => {
       </div>
     ))
   )}
+  <MostrarMas m={mEv} />
 </div>
 
 
