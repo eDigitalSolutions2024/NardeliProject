@@ -28,18 +28,23 @@ async function fetchAndCache(url, params) {
 
 // Descarga todo lo necesario para poder trabajar sin conexión: eventos
 // activos, su detalle/utensilios/totales/recibos/dashboard, sus checklists
-// (lista + detalle de cada uno) y el catálogo de productos. No incluye
-// invitaciones (su endpoint de listado es un POST que crea el portal si no
-// existe — no es seguro llamarlo automáticamente en segundo plano; se
-// cachean solas cuando alguien abre esa pantalla con conexión).
+// (lista + detalle de cada uno), las cotizaciones pendientes (con su
+// dashboard/detalle, más ligero porque todavía no tienen recibos ni
+// checklists) y el catálogo de productos. No incluye invitaciones (su
+// endpoint de listado es un POST que crea el portal si no existe — no es
+// seguro llamarlo automáticamente en segundo plano; se cachean solas cuando
+// alguien abre esa pantalla con conexión).
 export async function downloadInitialCopy(onProgress) {
   const eventos = await fetchAndCache('/app/reservas');
   await fetchAndCache('/reservas', { tipo: 'evento' });
+  const cotizaciones = await fetchAndCache('/app/reservas', { tipo: 'cotizacion' });
 
   const ids = Array.isArray(eventos) ? eventos.map((e) => e?._id).filter(Boolean) : [];
+  const idsCot = Array.isArray(cotizaciones) ? cotizaciones.map((c) => c?._id).filter(Boolean) : [];
   const STEPS_PER_EVENT = 5; // dashboard, detalle, utensilios, totales, receipts (+ checklists aparte)
-  const total = ids.length * STEPS_PER_EVENT + 2; // + lista de eventos + productos
-  let done = 1; // ya contamos /app/reservas
+  const STEPS_PER_COTIZACION = 2; // dashboard, detalle
+  const total = ids.length * STEPS_PER_EVENT + idsCot.length * STEPS_PER_COTIZACION + 3; // + lista eventos + lista cotizaciones + productos
+  let done = 2; // ya contamos /app/reservas (eventos) y /app/reservas?tipo=cotizacion
   onProgress?.({ done, total });
 
   for (const id of ids) {
@@ -59,9 +64,16 @@ export async function downloadInitialCopy(onProgress) {
     }
   }
 
+  for (const id of idsCot) {
+    await fetchAndCache(`/app/dashboard/${id}`);
+    await fetchAndCache(`/reservas/${id}`);
+    done += STEPS_PER_COTIZACION;
+    onProgress?.({ done, total });
+  }
+
   await fetchAndCache('/productos');
   done += 1;
   onProgress?.({ done, total });
 
-  return { eventCount: ids.length };
+  return { eventCount: ids.length, cotizacionCount: idsCot.length };
 }

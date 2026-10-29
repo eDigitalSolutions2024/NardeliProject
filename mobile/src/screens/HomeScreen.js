@@ -17,6 +17,12 @@ const MENU = [
     subtitle: 'Agenda y detalle de cada evento',
   },
   {
+    key: 'Cotizaciones',
+    icon: 'document-text',
+    title: 'Cotizaciones',
+    subtitle: 'Propuestas aún no aceptadas',
+  },
+  {
     key: 'Clientes',
     icon: 'people',
     title: 'Clientes',
@@ -64,18 +70,16 @@ function MenuCard({ icon, title, subtitle, onPress, badge }) {
 
 export default function HomeScreen({ navigation }) {
   const { user, logout } = useAuth();
-  const { isOnline, pendingCount, errorCount, conflictCount } = useOffline();
+  const { pendingCount, errorCount, conflictCount } = useOffline();
   const firstName = (user?.fullname || '').split(' ')[0];
   const syncBadge = pendingCount + errorCount + conflictCount;
 
+  // El aviso de sin-conexión/sincronización ahora vive en GlobalOfflineBanner
+  // (montado en App.js, arriba de toda la navegación) — se ve igual en
+  // cualquier pantalla, no solo aquí, así que ya no se repite en Home.
+
   return (
     <View style={styles.root}>
-      {!isOnline && (
-        <View style={styles.offlineBanner}>
-          <Ionicons name="cloud-offline-outline" size={16} color="#fff" />
-          <Text style={styles.offlineBannerText}>Sin conexión — trabajando con la copia local</Text>
-        </View>
-      )}
       <LinearGradient
         colors={[colors.primaryDark, colors.primary]}
         start={{ x: 0, y: 0 }}
@@ -128,15 +132,6 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1 },
-  offlineBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: colors.danger,
-    paddingVertical: 6,
-  },
-  offlineBannerText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   hero: {
     borderBottomLeftRadius: radius.xl,
     borderBottomRightRadius: radius.xl,

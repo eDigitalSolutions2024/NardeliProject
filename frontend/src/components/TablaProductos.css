@@ -167,10 +167,9 @@
 
 .tp-desc {
   color: var(--tp-muted);
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  max-width: 320px;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .tp-badge {

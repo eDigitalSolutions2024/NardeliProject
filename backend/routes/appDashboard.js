@@ -51,31 +51,50 @@ function conInfoFin(reservaDoc) {
   return reserva;
 }
 
+// ?tipo=cotizacion trae las cotizaciones pendientes (para el tab de
+// Cotizaciones de la app); sin ese query param se comporta igual que
+// siempre y trae solo eventos confirmados/finalizados.
 router.get('/reservas', async (req, res) => {
   try {
-    const hoy = new Date();
+    const esCotizaciones = req.query.tipo === 'cotizacion';
 
-    hoy.setHours(
-      0,
-      0,
-      0,
-      0
-    );
+    let filtro;
+    if (esCotizaciones) {
+      // Las cotizaciones son propuestas, no hay "fecha límite" como en un
+      // evento ya confirmado — se listan todas las que no están canceladas
+      // ni ya se aceptaron (esas pasan a ser evento y salen por el otro lado).
+      filtro = {
+        tipoReserva: 'cotizacion',
+        estado: { $ne: 'cancelada' },
+        'cotizacion.aceptada': { $ne: true },
+      };
+    } else {
+      const hoy = new Date();
 
-    const limiteInferior = new Date(hoy);
+      hoy.setHours(
+        0,
+        0,
+        0,
+        0
+      );
 
-    limiteInferior.setDate(
-      limiteInferior.getDate() - 2
-    );
+      const limiteInferior = new Date(hoy);
 
-    const reservas =
-      await Reserva.find({
+      limiteInferior.setDate(
+        limiteInferior.getDate() - 2
+      );
+
+      filtro = {
         tipoReserva: 'evento',
         estado: { $in: ['confirmada', 'finalizado'] },
         fecha: {
           $gte: limiteInferior,
         },
-      })
+      };
+    }
+
+    const reservas =
+      await Reserva.find(filtro)
         .sort({
           fecha: 1,
         })

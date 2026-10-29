@@ -440,6 +440,17 @@ useEffect(() => {
     return 0;
   };
 
+  // Precio de catálogo puro (sin el congelado de la reserva) — se usa SOLO
+  // para el precio que se muestra junto a cada artículo en la lista de
+  // inventario (lado izquierdo), que debe reflejar siempre lo que hay hoy
+  // en la BD de productos, aunque ese artículo ya esté en esta reserva con
+  // un precio distinto. El precio ya congelado solo se usa en el resumen
+  // de selección y en "Editar precio" (que edita justo ese congelado).
+  const catalogPriceFor = (productId) => {
+    const i = invPriceById.get(String(productId));
+    return Number.isFinite(i) && i > 0 ? i : 0;
+  };
+
 
   // 3) Cargar selección (BD o localStorage)
   useEffect(() => {
@@ -1331,7 +1342,7 @@ function openEstadoCuentaPdf() {
                 const qty = sel?.qty || 0;
                 const stock = items.find(p => p.id === it.id)?.stock ?? 0;
                 const agotado = stock <= 0;
-                const precioNum = priceFor(it.id);
+                const precioNum = catalogPriceFor(it.id);
 
                 return (
                   <div key={it.id} className="item-card">
