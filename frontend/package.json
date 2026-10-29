@@ -10,7 +10,6 @@
     "animejs": "^4.5.0",
     "axios": "^1.11.0",
     "dayjs": "^1.11.13",
-    "frontend": "file:",
     "jwt-decode": "^4.0.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.1.0",
