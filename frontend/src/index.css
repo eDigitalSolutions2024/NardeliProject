@@ -13,6 +13,16 @@ code {
 }
 
 /* Avisos y confirmaciones del sistema (sweetalert2 / sonner) con la marca */
+/* SweetAlert2 trae su .swal2-container en z-index:1060, por debajo de
+   varios modales propios de la app (hasta 10000 en algunos lugares) — eso
+   hacía que un diálogo de confirmación quedara atrapado detrás del modal
+   que estaba abierto, invisible, y el clic "pasara" al overlay de ese
+   modal (cerrándolo) en vez de llegar al botón de SweetAlert2. Su propio
+   CSS usa :where(.swal2-container) a propósito (especificidad cero) para
+   que esta regla, con especificidad normal, lo gane sin necesitar
+   !important ni opciones de JS (Swal.fire({zIndex}) no existe en esta
+   versión, solo se puede subir por CSS). */
+.swal2-container { z-index: 20000; }
 .nd-swal-popup { border-radius: 20px !important; padding: 1.6rem 1.4rem !important; font-family: inherit; }
 .nd-swal-popup .swal2-title { color: #491656 !important; font-size: 1.4rem !important; font-weight: 800 !important; }
 .nd-swal-popup .swal2-html-container { color: #5b4a63 !important; font-size: 0.98rem !important; }

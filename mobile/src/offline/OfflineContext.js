@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
-import { isOnline as checkOnline, subscribeConnectivity } from './connectivity';
+import { isOnline as checkOnline, subscribeConnectivity, forceCheck, openNetworkSettings } from './connectivity';
 import { countByStatus, getErrorMutations, retryMutation, deleteMutation } from './mutationQueue';
 import { countPendingConflicts } from './conflictStore';
 import { processQueue } from './syncEngine';
@@ -93,6 +93,18 @@ export function OfflineProvider({ children }) {
 
   const listErrors = useCallback(() => getErrorMutations(), []);
 
+  // Chequeo real (no el último valor en caché) para cuando alguien ve "sin
+  // conexión" y quiere confirmar si ya se arregló, en vez de esperar a que
+  // el sistema operativo avise solo (a veces tarda en notar la transición).
+  const forceCheckConnection = useCallback(async () => {
+    const nowOnline = await forceCheck();
+    setOnline(nowOnline);
+    if (nowOnline) {
+      runQueueSync().then(() => downloadNow());
+    }
+    return nowOnline;
+  }, [runQueueSync, downloadNow]);
+
   useEffect(() => {
     // Sin sesión todavía (o restaurándola desde AsyncStorage): no hay token
     // para llamar a la API, así que no arrancamos nada de sync/descarga.
@@ -153,6 +165,8 @@ export function OfflineProvider({ children }) {
     lastQueueSync,
     forceSync,
     downloadNow,
+    forceCheckConnection,
+    openNetworkSettings,
     refreshCounts,
     retryError,
     discardError,

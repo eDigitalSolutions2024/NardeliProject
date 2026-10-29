@@ -31,6 +31,9 @@ const BASE = {
   reverseButtons: true,
   focusCancel: false,
   customClass: { popup: 'nd-swal-popup' },
+  // El z-index (para que no quede detrás de otros modales de la app) se
+  // sube por CSS en index.css (`.swal2-container`) — Swal.fire() no tiene
+  // una opción "zIndex" real en esta versión, la ignora en silencio.
 };
 
 // Devuelve true si la persona confirma.

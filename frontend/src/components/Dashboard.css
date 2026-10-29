@@ -566,6 +566,13 @@
 .nd-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 0.9rem; flex-wrap: wrap; margin-bottom: 1.1rem; }
 .nd-panel-head h2 { display: flex; align-items: center; gap: 0.6rem; margin: 0; font-size: 1.3rem; color: #491656; }
 .nd-count { min-width: 28px; padding: 2px 10px; border-radius: 999px; background: #f1def5; color: #6b2c5e; font-size: 0.82rem; font-weight: 800; text-align: center; }
+
+/* Tabs del panel (Cotizaciones pendientes / Eventos pasados) */
+.nd-tabs { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.nd-tab { display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 1rem; border: 1px solid #efe6f3; border-radius: 12px; background: #faf6fb; color: #8a7a92; font-size: 0.95rem; font-weight: 700; font-family: inherit; cursor: pointer; transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease; }
+.nd-tab:hover { background: #f1def5; color: #6b2c5e; }
+.nd-tab-active, .nd-tab-active:hover { background: #491656; border-color: #491656; color: #fff; }
+.nd-tab-active .nd-count { background: rgba(255, 255, 255, 0.22); color: #fff; }
 .nd-toolbar { display: flex; gap: 0.55rem; align-items: center; flex-wrap: wrap; }
 .nd-loading { font-size: 0.82rem; color: #8a7a92; }
 .nd-input { height: 38px; padding: 0 0.7rem; border: 1px solid #e2d6e8; border-radius: 10px; background: #fff; color: #333; font-size: 0.9rem; font-family: inherit; }

@@ -123,7 +123,17 @@ const Dashboard = ({ onLogout }) => {
     proximosEventos: 0,
   });
   const [actividad, setActividad] = useState([]); // cotizaciones pendientes
+  const [pasados, setPasados] = useState([]); // eventos ya pasados (solo lectura salvo admin)
 
+  // Qué lista se muestra en el panel principal: cotizaciones pendientes o
+  // eventos que ya pasaron. Son dos tabs del mismo panel, no secciones
+  // distintas del menú lateral.
+  const [vistaDashboard, setVistaDashboard] = useState('cotizaciones');
+  const [searchPasados, setSearchPasados] = useState('');
+
+  // === Modal edición de evento pasado (solo admin, con contraseña) ===
+  const [showEditEventoPasado, setShowEditEventoPasado] = useState(false);
+  const [eventoPasadoEdit, setEventoPasadoEdit] = useState(null);
 
   const [searchActividad, setSearchActividad] = useState('');
   const [filtroFechaActividad, setFiltroFechaActividad] = useState(''); // "YYYY-MM-DD"
@@ -344,9 +354,28 @@ const Dashboard = ({ onLogout }) => {
         })
       );
 
+      // Eventos que ya pasaron — solo para consulta, el más reciente primero.
+      const yaPasaron = eventos
+        .filter(r => getFecha(r) < hoy0)
+        .sort((a, b) => getFecha(b) - getFecha(a));
 
-       
-
+      setPasados(
+        yaPasaron.map(r => ({
+          id: r._id,
+          folio: (r.shortId || r.folio || '').toUpperCase(),
+          titulo: `${r.tipoEvento || 'Evento'} - ${getCliente(r)}`,
+          subtitulo: `Fue el ${dayjs(getFecha(r)).format('DD [de] MMMM [de] YYYY')}`,
+          icon: <LuPartyPopper />,
+          pdfUrl: buildPdfUrl(r._id),
+          cliente: getCliente(r),
+          tipoEvento: r.tipoEvento || '',
+          ymd: r.fechaLocal || String(r.fecha).slice(0, 10),
+          horaInicio: r.horaInicio || '',
+          horaFin: r.horaFin || r.horaInicio || '',
+          cantidadPersonas: r.cantidadPersonas || 0,
+          descripcion: r.descripcion || '',
+        }))
+      );
 
 
     } catch (e) {
@@ -441,20 +470,28 @@ const Dashboard = ({ onLogout }) => {
 
       // Candado blando de 24h: la fecha/horario a la que se está moviendo
       // esta cotización choca con otra cotización reciente. Se pide la
-      // contraseña de un administrador para forzar el cambio.
-      if (r.status === 401) {
+      // contraseña de un administrador para forzar el cambio. Si vuelve a
+      // dar 401 después de mandar una contraseña, significa que esa
+      // contraseña estaba mal (el backend responde igual en ambos casos) —
+      // se lo decimos claro y se deja reintentar, en vez de repetir el
+      // mismo mensaje como si nada hubiera pasado.
+      let yaIntentoConPassword = false;
+      while (r.status === 401) {
         const err = await r.json().catch(() => ({}));
-        if (err.requierePassword) {
-          const adminPassword = await pedirPasswordAdmin(
-            err.msg || 'Ya existe una cotización reciente para esa fecha. Ingresa la contraseña de un administrador para continuar:'
-          );
-          if (adminPassword === null) return; // canceló
-          if (!adminPassword.trim()) {
-            aviso('Debes ingresar una contraseña.');
-            return;
-          }
-          r = await enviar(adminPassword);
+        if (!err.requierePassword) break;
+
+        const mensaje = yaIntentoConPassword
+          ? `Contraseña incorrecta. ${err.msg || 'Ingresa la contraseña de un administrador para continuar.'}`
+          : (err.msg || 'Ya existe una cotización reciente para esa fecha. Ingresa la contraseña de un administrador para continuar.');
+
+        const adminPassword = await pedirPasswordAdmin(mensaje);
+        if (adminPassword === null) return; // canceló
+        if (!adminPassword.trim()) {
+          aviso('Debes ingresar una contraseña.', 'warning');
+          continue;
         }
+        r = await enviar(adminPassword);
+        yaIntentoConPassword = true;
       }
 
       if (!r.ok) {
@@ -486,19 +523,25 @@ const Dashboard = ({ onLogout }) => {
 
       // Candado blando de 24h: ya existe otra cotización reciente para esa
       // fecha. Se pide contraseña de administrador para forzar la conversión.
-      if (resp.status === 401) {
+      // Si vuelve a dar 401 después de mandar una contraseña, es que estaba
+      // mal — se avisa claro y se deja reintentar.
+      let yaIntentoConPassword = false;
+      while (resp.status === 401) {
         const err = await resp.json().catch(() => ({}));
-        if (err.requierePassword) {
-          const adminPassword = await pedirPasswordAdmin(
-            err.msg || 'Ya existe una cotización reciente para esa fecha. Ingresa la contraseña de un administrador para continuar:'
-          );
-          if (adminPassword === null) return; // canceló
-          if (!adminPassword.trim()) {
-            aviso('Debes ingresar una contraseña.');
-            return;
-          }
-          resp = await enviar(adminPassword);
+        if (!err.requierePassword) break;
+
+        const mensaje = yaIntentoConPassword
+          ? `Contraseña incorrecta. ${err.msg || 'Ingresa la contraseña de un administrador para continuar.'}`
+          : (err.msg || 'Ya existe una cotización reciente para esa fecha. Ingresa la contraseña de un administrador para continuar.');
+
+        const adminPassword = await pedirPasswordAdmin(mensaje);
+        if (adminPassword === null) return; // canceló
+        if (!adminPassword.trim()) {
+          aviso('Debes ingresar una contraseña.', 'warning');
+          continue;
         }
+        resp = await enviar(adminPassword);
+        yaIntentoConPassword = true;
       }
 
       if (!resp.ok) {
@@ -521,6 +564,100 @@ const Dashboard = ({ onLogout }) => {
     if (!cotEdit?.id) return;
     const qs = new URLSearchParams({ reservaId: cotEdit.id, mode: 'admin' }).toString();
     window.open(`/cliente/dashboard?${qs}`, '_blank', 'noopener,noreferrer');
+  };
+
+  // Panel del Cliente para un evento pasado — cualquier staff puede entrar a
+  // consultar (historial de recibos, historial de cambios, artículos), pero
+  // en modo solo lectura: no se pueden agregar/quitar artículos, cambiar
+  // precios/descuentos, ni crear recibos o invitaciones nuevas.
+  const abrirPanelClientePasado = (id) => {
+    if (!id) return;
+    const qs = new URLSearchParams({ reservaId: id, mode: 'admin', soloLectura: '1' }).toString();
+    window.open(`/cliente/dashboard?${qs}`, '_blank', 'noopener,noreferrer');
+  };
+
+  // === Edición de evento pasado (solo admin, el backend exige contraseña
+  // porque la fecha ya pasó) ===
+  const abrirModalEditarEventoPasado = (a) => {
+    setEventoPasadoEdit({
+      id: a.id,
+      cliente: a.cliente,
+      tipo: a.tipoEvento,
+      fecha: new Date(`${a.ymd}T12:00:00`),
+      horaInicio: toHHmm(a.horaInicio),
+      horaFin: toHHmm(a.horaFin || a.horaInicio),
+      invitados: a.cantidadPersonas,
+      descripcion: a.descripcion || '',
+    });
+    setShowEditEventoPasado(true);
+  };
+
+  const cerrarModalEventoPasado = () => {
+    setEventoPasadoEdit(null);
+    setShowEditEventoPasado(false);
+  };
+
+  const onChangeEventoPasado = (e) => {
+    const { name, value } = e.target;
+    setEventoPasadoEdit(prev => ({ ...prev, [name]: value }));
+  };
+
+  const actualizarEventoPasado = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        cliente: eventoPasadoEdit.cliente,
+        tipoEvento: eventoPasadoEdit.tipo,
+        fecha: dayjs(eventoPasadoEdit.fecha).format('YYYY-MM-DD'),
+        horaInicio: toHHmm(eventoPasadoEdit.horaInicio),
+        horaFin: toHHmm(eventoPasadoEdit.horaFin),
+        cantidadPersonas: Number(eventoPasadoEdit.invitados || 0),
+        descripcion: eventoPasadoEdit.descripcion || '',
+        tipoReserva: 'evento',
+      };
+
+      const enviar = (adminPassword) => fetch(`${API_BASE_URL}/reservas/${eventoPasadoEdit.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify(adminPassword ? { ...payload, adminPassword } : payload),
+      });
+
+      let r = await enviar();
+
+      // El evento ya pasó: el backend siempre exige la contraseña de
+      // administrador para editarlo, sin importar qué campo cambie.
+      let yaIntentoConPassword = false;
+      while (r.status === 401) {
+        const err = await r.json().catch(() => ({}));
+        if (!err.requierePassword) break;
+
+        const mensaje = yaIntentoConPassword
+          ? `Contraseña incorrecta. ${err.msg || 'Ingresa la contraseña de un administrador para continuar.'}`
+          : (err.msg || 'Este evento ya pasó. Ingresa la contraseña de un administrador para editarlo.');
+
+        const adminPassword = await pedirPasswordAdmin(mensaje);
+        if (adminPassword === null) return; // canceló
+        if (!adminPassword.trim()) {
+          aviso('Debes ingresar una contraseña.', 'warning');
+          continue;
+        }
+        r = await enviar(adminPassword);
+        yaIntentoConPassword = true;
+      }
+
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        aviso(err?.msg || 'No se pudo actualizar el evento');
+        return;
+      }
+
+      cerrarModalEventoPasado();
+      await cargarDashboardData();
+      aviso('Evento actualizado correctamente');
+    } catch (err) {
+      console.error('actualizarEventoPasado error:', err);
+      aviso('Error de conexión');
+    }
   };
 
  const normalizeFolio = (s) =>
@@ -560,6 +697,16 @@ const actividadFiltrada = actividad
     }
   });
 
+  // Ya viene ordenada del más reciente al más viejo desde cargarDashboardData.
+  const pasadosFiltrados = pasados.filter(a => {
+    const q = String(searchPasados || '').trim();
+    if (!q) return true;
+    const qNorm = normalizeFolio(q);
+    const texto = `${a.titulo || ''} ${a.subtitulo || ''} ${a.cliente || ''}`.toLowerCase();
+    const folio = normalizeFolio(a.folio);
+    return texto.includes(q.toLowerCase()) || (folio && folio.includes(qNorm));
+  });
+
   // Las cotizaciones entran escalonadas la primera vez que cargan.
   useEffect(() => {
     const lista = listaRef.current;
@@ -582,6 +729,7 @@ const actividadFiltrada = actividad
   }, []);
 
   const mCot = useMostrarMas(actividadFiltrada); // en teléfono: de 5 en 5
+  const mPas = useMostrarMas(pasadosFiltrados);
 
   const renderContent = () => {
     switch (activeSection) {
@@ -645,93 +793,173 @@ const actividadFiltrada = actividad
               )}
             </div>
 
-            {/* Cotizaciones pendientes */}
+            {/* Cotizaciones pendientes / Eventos pasados */}
             <div className="nd-panel recent-activity">
               <div className="nd-panel-head">
-                <h2>
-                  Cotizaciones pendientes
-                  <span className="nd-count">{actividadFiltrada.length}</span>
-                </h2>
-
-                <div className="nd-toolbar">
-                  {loadingDash && <span className="nd-loading">Actualizando…</span>}
-
-                  <SearchField
-                    value={searchActividad}
-                    onChange={setSearchActividad}
-                    placeholder="Buscar por cliente, fecha o texto..."
-                  />
-
-                  <DateField
-                    value={filtroFechaActividad}
-                    onChange={setFiltroFechaActividad}
-                    placeholder="Fecha del evento"
-                  />
-
-                  <SelectField
-                    value={ordenActividad}
-                    onChange={setOrdenActividad}
-                    options={ORDEN_COTIZACIONES}
-                    aria-label="Ordenar por"
-                  />
+                <div className="nd-tabs">
+                  <button
+                    type="button"
+                    className={`nd-tab${vistaDashboard === 'cotizaciones' ? ' nd-tab-active' : ''}`}
+                    onClick={() => setVistaDashboard('cotizaciones')}
+                  >
+                    Cotizaciones pendientes
+                    <span className="nd-count">{actividadFiltrada.length}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`nd-tab${vistaDashboard === 'pasados' ? ' nd-tab-active' : ''}`}
+                    onClick={() => setVistaDashboard('pasados')}
+                  >
+                    Eventos pasados
+                    <span className="nd-count">{pasadosFiltrados.length}</span>
+                  </button>
                 </div>
-              </div>
 
-              <div className="activity-list" ref={listaRef}>
-                {actividadFiltrada.length === 0 && (
-                  <div className="activity-item nd-empty">
-                    <span className="activity-icon"><LuInbox /></span>
-                    <div className="activity-details">
-                      <p><strong>Sin cotizaciones pendientes</strong></p>
-                      <small>
-                        {actividad.length === 0
-                          ? 'Cuando registres cotizaciones aparecerán aquí.'
-                          : 'No hay resultados para ese criterio de búsqueda.'}
-                      </small>
-                    </div>
+                {vistaDashboard === 'cotizaciones' ? (
+                  <div className="nd-toolbar">
+                    {loadingDash && <span className="nd-loading">Actualizando…</span>}
+
+                    <SearchField
+                      value={searchActividad}
+                      onChange={setSearchActividad}
+                      placeholder="Buscar por cliente, fecha o texto..."
+                    />
+
+                    <DateField
+                      value={filtroFechaActividad}
+                      onChange={setFiltroFechaActividad}
+                      placeholder="Fecha del evento"
+                    />
+
+                    <SelectField
+                      value={ordenActividad}
+                      onChange={setOrdenActividad}
+                      options={ORDEN_COTIZACIONES}
+                      aria-label="Ordenar por"
+                    />
+                  </div>
+                ) : (
+                  <div className="nd-toolbar">
+                    {loadingDash && <span className="nd-loading">Actualizando…</span>}
+                    <SearchField
+                      value={searchPasados}
+                      onChange={setSearchPasados}
+                      placeholder="Buscar por cliente, fecha o texto..."
+                    />
                   </div>
                 )}
+              </div>
 
-                {mCot.visibles.map(a => {
-                  const holdActivo = tieneHoldActivo(a);
-                  return (
-                    <div key={a.id} className={`activity-item${holdActivo ? ' activity-item-hold' : ''}`}>
+              {vistaDashboard === 'cotizaciones' ? (
+                <div className="activity-list" ref={listaRef}>
+                  {actividadFiltrada.length === 0 && (
+                    <div className="activity-item nd-empty">
+                      <span className="activity-icon"><LuInbox /></span>
+                      <div className="activity-details">
+                        <p><strong>Sin cotizaciones pendientes</strong></p>
+                        <small>
+                          {actividad.length === 0
+                            ? 'Cuando registres cotizaciones aparecerán aquí.'
+                            : 'No hay resultados para ese criterio de búsqueda.'}
+                        </small>
+                      </div>
+                    </div>
+                  )}
+
+                  {mCot.visibles.map(a => {
+                    const holdActivo = tieneHoldActivo(a);
+                    return (
+                      <div key={a.id} className={`activity-item${holdActivo ? ' activity-item-hold' : ''}`}>
+                        <span className="activity-icon">{a.icon}</span>
+                        <div className="activity-details">
+                          <p>
+                            <strong>{a.titulo}</strong>
+                            {a.folio && <span className="nd-folio">#{a.folio}</span>}
+                            {holdActivo && (
+                              <span className="hold-badge" title="Esta fecha todavía tiene prioridad de 24h: se necesita contraseña de admin para tomarla">
+                                <LuHourglass /> prioridad 24h
+                              </span>
+                            )}
+                          </p>
+                          <small><LuCalendarDays /> {a.subtitulo}</small>
+                          <div className="activity-actions">
+                            <button className="nd-btn nd-btn-ghost" onClick={() => abrirModalEditarCot(a)}>
+                              <LuPencil /> Editar
+                            </button>
+                            <button className="nd-btn nd-btn-primary" onClick={() => convertirACEvento(a.id)}>
+                              <LuCheck /> Convertir a Evento
+                            </button>
+                            {a.pdfUrl && (
+                              <a className="nd-btn nd-btn-ghost btn-pdf-rojo" href={a.pdfUrl} target="_blank" rel="noreferrer">
+                                <LuFileDown /> Ver PDF
+                              </a>
+                            )}
+                            {can('eventos.eliminar') && (
+                              <button className="nd-btn nd-btn-danger" onClick={() => eliminarCotizacion(a.id)} title="Eliminar cotización">
+                                <LuTrash2 /> Eliminar
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <MostrarMas m={mCot} />
+                </div>
+              ) : (
+                <div className="activity-list">
+                  {pasadosFiltrados.length === 0 && (
+                    <div className="activity-item nd-empty">
+                      <span className="activity-icon"><LuInbox /></span>
+                      <div className="activity-details">
+                        <p><strong>Sin eventos pasados</strong></p>
+                        <small>
+                          {pasados.length === 0
+                            ? 'Aquí van apareciendo los eventos conforme pasa su fecha.'
+                            : 'No hay resultados para ese criterio de búsqueda.'}
+                        </small>
+                      </div>
+                    </div>
+                  )}
+
+                  {mPas.visibles.map(a => (
+                    <div key={a.id} className="activity-item">
                       <span className="activity-icon">{a.icon}</span>
                       <div className="activity-details">
                         <p>
                           <strong>{a.titulo}</strong>
                           {a.folio && <span className="nd-folio">#{a.folio}</span>}
-                          {holdActivo && (
-                            <span className="hold-badge" title="Esta fecha todavía tiene prioridad de 24h: se necesita contraseña de admin para tomarla">
-                              <LuHourglass /> prioridad 24h
-                            </span>
-                          )}
                         </p>
-                        <small><LuCalendarDays /> {a.subtitulo}</small>
+                        <small><LuCalendarDays /> {a.subtitulo} · {a.horaInicio}–{a.horaFin} · {a.cantidadPersonas} personas</small>
                         <div className="activity-actions">
-                          <button className="nd-btn nd-btn-ghost" onClick={() => abrirModalEditarCot(a)}>
-                            <LuPencil /> Editar
+                          <button
+                            className="nd-btn nd-btn-ghost"
+                            onClick={() => abrirPanelClientePasado(a.id)}
+                            title="Ver historial de recibos, historial de cambios y artículos (solo consulta)"
+                          >
+                            <LuFileText /> Ver detalle
                           </button>
-                          <button className="nd-btn nd-btn-primary" onClick={() => convertirACEvento(a.id)}>
-                            <LuCheck /> Convertir a Evento
-                          </button>
+                          {isAdmin && (
+                            <button
+                              className="nd-btn nd-btn-ghost"
+                              onClick={() => abrirModalEditarEventoPasado(a)}
+                              title="Solo admin, pide contraseña porque el evento ya pasó"
+                            >
+                              <LuPencil /> Editar
+                            </button>
+                          )}
                           {a.pdfUrl && (
                             <a className="nd-btn nd-btn-ghost btn-pdf-rojo" href={a.pdfUrl} target="_blank" rel="noreferrer">
                               <LuFileDown /> Ver PDF
                             </a>
                           )}
-                          {can('eventos.eliminar') && (
-                            <button className="nd-btn nd-btn-danger" onClick={() => eliminarCotizacion(a.id)} title="Eliminar cotización">
-                              <LuTrash2 /> Eliminar
-                            </button>
-                          )}
                         </div>
                       </div>
                     </div>
-                  );
-                })}
-                <MostrarMas m={mCot} />
-              </div>
+                  ))}
+                  <MostrarMas m={mPas} />
+                </div>
+              )}
             </div>
 
             {/* Modal de edición de cotización */}
@@ -769,6 +997,45 @@ const actividadFiltrada = actividad
                     </div>
                   </div>
                 </form>
+                </div>
+              </div>
+            )}
+
+            {/* Modal de edición de evento pasado (solo admin + contraseña) */}
+            {showEditEventoPasado && eventoPasadoEdit && (
+              <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) cerrarModalEventoPasado(); }}>
+                <div className="modal-content nd-modal">
+                  <h2>Editar evento pasado</h2>
+                  <p className="nd-tc-note" style={{ marginTop: -8, marginBottom: 12 }}>
+                    Este evento ya pasó — al guardar se te va a pedir la contraseña de administrador.
+                  </p>
+                  <form onSubmit={actualizarEventoPasado} className="nd-form">
+                    <div className="nd-grid-2">
+                      <label className="nd-field"><span>Cliente</span><input autoFocus type="text" name="cliente" placeholder="Nombre del cliente" value={eventoPasadoEdit.cliente} onChange={onChangeEventoPasado} required /></label>
+                      <label className="nd-field"><span>Tipo de evento</span><input type="text" name="tipo" placeholder="Tipo de evento" value={eventoPasadoEdit.tipo} onChange={onChangeEventoPasado} required /></label>
+                    </div>
+                    <div className="nd-field"><span>Fecha</span><DateField
+                        name="fecha"
+                        value={dayjs(eventoPasadoEdit.fecha).format('YYYY-MM-DD')}
+                        onChange={(v) => setEventoPasadoEdit(prev => ({ ...prev, fecha: new Date(`${v}T12:00:00`) }))}
+                        required
+                        clearable={false}
+                        style={{ width: '100%' }}
+                      /></div>
+                    <div className="nd-grid-2">
+                      <div className="nd-field"><span>Hora de inicio</span><TimeField name="horaInicio" value={toHHmm(eventoPasadoEdit.horaInicio)} onChange={(v) => onChangeEventoPasado({ target: { name: 'horaInicio', value: v } })} required clearable={false} style={{ width: '100%' }} /></div>
+                      <div className="nd-field"><span>Hora de fin</span><TimeField name="horaFin" value={toHHmm(eventoPasadoEdit.horaFin)} onChange={(v) => onChangeEventoPasado({ target: { name: 'horaFin', value: v } })} required clearable={false} style={{ width: '100%' }} /></div>
+                    </div>
+                    <label className="nd-field"><span>Invitados</span><input type="number" name="invitados" placeholder="Cantidad de personas" value={eventoPasadoEdit.invitados} onChange={onChangeEventoPasado} required /></label>
+                    <label className="nd-field"><span>Observaciones</span><textarea name="descripcion" placeholder="Observaciones" value={eventoPasadoEdit.descripcion} onChange={onChangeEventoPasado} /></label>
+
+                    <div className="nd-form-actions">
+                      <div className="nd-form-actions-main">
+                        <button type="button" className="nd-btn nd-btn-ghost" onClick={cerrarModalEventoPasado}>Cancelar</button>
+                        <button type="submit" className="nd-btn nd-btn-primary">Guardar</button>
+                      </div>
+                    </div>
+                  </form>
                 </div>
               </div>
             )}

@@ -9,6 +9,7 @@ import { colors } from '../theme';
 import LoginScreen from '../screens/LoginScreen';
 import HomeScreen from '../screens/HomeScreen';
 import EventsListScreen from '../screens/EventsListScreen';
+import CotizacionesListScreen from '../screens/CotizacionesListScreen';
 import EventDashboardScreen from '../screens/EventDashboardScreen';
 import ChecklistsScreen from '../screens/ChecklistsScreen';
 import ChecklistDetailScreen from '../screens/ChecklistDetailScreen';
@@ -79,6 +80,11 @@ export default function RootNavigator() {
                   </TouchableOpacity>
                 ),
               })}
+            />
+            <Stack.Screen
+              name="Cotizaciones"
+              component={CotizacionesListScreen}
+              options={{ title: 'Cotizaciones' }}
             />
             <Stack.Screen
               name="Clientes"

@@ -625,8 +625,8 @@ enviarWhatsApp(telefono, json);
   preferredCountries={['mx', 'us']}
   enableSearch={false}
   disableDropdown={false}
-  value={telefono}
-  onChange={setTelefono}
+  value={telefonoEnvio}
+  onChange={setTelefonoEnvio}
   countryCodeEditable={false}
   placeholder="Número de WhatsApp"
   inputStyle={{

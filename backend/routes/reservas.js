@@ -1224,6 +1224,22 @@ router.put('/:id', requireEditarReserva, async (req, res) => {
       return res.status(404).json({ msg: 'Reserva no encontrada' });
     }
 
+    // Un evento que ya pasó no se debe poder editar a la ligera: solo un
+    // admin, y solo con la contraseña de administrador (mismo candado que
+    // ya se usa para el hold de 24h) — sin importar qué campo se cambie.
+    const esEventoPasado = prev.tipoReserva === 'evento' && ymd(prev.fecha) < ymd(new Date());
+    if (esEventoPasado) {
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({ msg: 'Solo un administrador puede editar un evento que ya pasó.' });
+      }
+      if (!(await validarPasswordAdmin(req.body.adminPassword))) {
+        return res.status(401).json({
+          msg: 'Este evento ya pasó. Ingresa la contraseña de un administrador para editarlo.',
+          requierePassword: true
+        });
+      }
+    }
+
     // Un cotizador (sin permiso de gestionar eventos) solo edita SUS cotizaciones, y solo los
     // datos de la cotización: no puede convertirla en evento ni tocar precios, estado, etc.
     if (!req.permisos['eventos.gestionar']) {
