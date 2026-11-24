@@ -111,6 +111,7 @@ function drawLogoIfAny(doc, logoPath, x, y, w) {
 }
 
 /** ================== Totales / Pagos ================== */
+const TOTALS_LH = 14; // alto de cada fila de la caja de totales
 // Suma de recibos (pagos) para una reserva
 async function sumPaid(orderId) {
   const rows = await Receipt.aggregate([
@@ -125,8 +126,8 @@ function drawTotalsBox(
   doc,
   { x, y, w, subtotal, discount, total, paid, paidBeforeThis, remaining, currentPayment }
 ) {
-  const lh = 16;
-  let yCur = y + 10;
+  const lh = TOTALS_LH;
+  let yCur = y + 8;
 
   const row = (label, val, bold = false, color = '#111') => {
     doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(10).fillColor(color);
@@ -137,7 +138,7 @@ function drawTotalsBox(
 
   // ahora calculamos la altura según las filas que realmente mostraremos
   const rowsCount = 6 + (currentPayment ? 1 : 0); // 3 superiores + 1 anticipo + 3 inferiores
-  const h = rowsCount * lh + 16;
+  const h = rowsCount * lh + 14;
   doc.roundedRect(x, y, w, h, 8).lineWidth(1).strokeColor(THEME.border).stroke();
 
   row('Subtotal', money(subtotal));
@@ -149,7 +150,7 @@ function drawTotalsBox(
   );
   row('Total de la reserva', money(total), true);
 
-  yCur += 6; // pequeño espacio
+  yCur += 4; // pequeño espacio
 
   // 🔹 Anticipo de ESTE recibo
   if (currentPayment != null && !Number.isNaN(Number(currentPayment))) {
@@ -161,6 +162,76 @@ function drawTotalsBox(
   row('Saldo restante', money(remaining), true, remaining > 0 ? THEME.primaryDk : '#065f46');
 }
 
+
+/** ================== Desglose de productos ================== */
+// Dibuja la tabla Producto | Cant. | Precio unit. | Importe.
+// Si no cabe en la página, salta a una nueva (repitiendo franja lateral y encabezado).
+// Devuelve la nueva posición Y.
+function drawItemsTable(doc, { items, x, y, w, reserve = 0 }) {
+  const pageH = doc.page.height;
+  const bottomLimit = pageH - 70; // deja espacio al footer
+  const colQty = 50;
+  const colPrice = 80;
+  const colTotal = 90;
+  const colName = w - colQty - colPrice - colTotal;
+  const padX = 6;
+
+  const drawHeader = (yy) => {
+    doc.rect(x, yy, w, 16).fillColor(THEME.primaryDk).fill();
+    doc.font('Helvetica-Bold').fontSize(9).fillColor('#fff');
+    doc.text('Producto', x + padX, yy + 4, { width: colName - padX });
+    doc.text('Cant.', x + colName, yy + 4, { width: colQty - padX, align: 'right' });
+    doc.text('Precio unit.', x + colName + colQty, yy + 4, { width: colPrice - padX, align: 'right' });
+    doc.text('Importe', x + colName + colQty + colPrice, yy + 4, { width: colTotal - padX, align: 'right' });
+    return yy + 16;
+  };
+
+  doc.font('Helvetica-Bold').fontSize(10).fillColor(THEME.primaryDk).text('Desglose de productos:', x, y);
+  y += 16;
+  y = drawHeader(y);
+
+  let anyDiscount = false;
+  items.forEach((it, i) => {
+    const qty = Number(it.cantidad || 0);
+    const price = Number(it.precio || 0);
+    const nombre = String(it.nombre || '') + (it.aplicarDescuento ? ' *' : '');
+    if (it.aplicarDescuento) anyDiscount = true;
+
+    doc.font('Helvetica').fontSize(8.5);
+    const rowH = Math.max(14, doc.heightOfString(nombre, { width: colName - padX * 2 }) + 6);
+
+    // Las últimas 2 filas se reservan junto con los totales/firmas: así la caja
+    // de totales nunca se queda sola en otra hoja dejando un hueco en blanco.
+    const limit = i >= items.length - 2 ? bottomLimit - reserve : bottomLimit;
+    if (y + rowH > limit) {
+      doc.addPage();
+      drawSideTitle(doc, { text: 'EL TORO BRONCO REAL', x: 36, y: 36, h: doc.page.height - 72 });
+      y = drawHeader(40);
+    }
+
+    if (i % 2 === 1) doc.rect(x, y, w, rowH).fillColor('#f5f3ff').fill();
+    doc.font('Helvetica').fontSize(8.5).fillColor('#111');
+    doc.text(nombre, x + padX, y + 3.5, { width: colName - padX * 2 });
+    doc.text(String(qty), x + colName, y + 3.5, { width: colQty - padX, align: 'right' });
+    doc.text(money(price), x + colName + colQty, y + 3.5, { width: colPrice - padX, align: 'right' });
+    doc.text(money(price * qty), x + colName + colQty + colPrice, y + 3.5, { width: colTotal - padX, align: 'right' });
+    y += rowH;
+  });
+
+  doc
+    .moveTo(x, y)
+    .lineTo(x + w, y)
+    .strokeColor(THEME.border)
+    .lineWidth(1)
+    .stroke();
+  y += 4;
+
+  if (anyDiscount) {
+    doc.font('Helvetica').fontSize(8).fillColor(THEME.muted).text('* Producto al que se aplicó el descuento.', x, y);
+    y += 12;
+  }
+  return y + 8;
+}
 
 /** ================== Export principal ================== */
 async function streamReceiptPdf(res, receiptId) {
@@ -214,6 +285,13 @@ async function streamReceiptPdf(res, receiptId) {
     paidBeforeThis = Math.max(0, paid - amount); // útil para contextualizar este recibo
     remaining = Math.max(0, total - paid);
   }
+
+  // Desglose de productos: lo congelado en el snapshot de ESTE recibo; solo en
+  // recibos antiguos (sin snapshot) se usa la lista actual de la reserva.
+  const rawItems = snap ? snap.productos : reserva?.utensilios;
+  const items = (Array.isArray(rawItems) ? rawItems : []).filter(
+    (p) => p && Number(p.cantidad || 0) > 0
+  );
 
   // Documento
   const doc = new PDFDocument({
@@ -275,7 +353,7 @@ async function streamReceiptPdf(res, receiptId) {
 
   // Nombre
   drawLabeledLine(doc, { label: 'Nombre:', value: cliente, x: contentX, y, w: contentW });
-  y += 20;
+  y += 18;
 
   // Tipo de reservación
   drawLabeledLine(doc, {
@@ -285,7 +363,7 @@ async function streamReceiptPdf(res, receiptId) {
     y,
     w: contentW,
   });
-  y += 20;
+  y += 18;
 
   // Número de personas
   drawLabeledLine(doc, {
@@ -295,7 +373,7 @@ async function streamReceiptPdf(res, receiptId) {
     y,
     w: contentW,
   });
-  y += 20;
+  y += 18;
 
   // Hora de evento
   drawLabeledLine(doc, {
@@ -305,7 +383,7 @@ async function streamReceiptPdf(res, receiptId) {
     y,
     w: contentW,
   });
-  y += 20;
+  y += 18;
 
   // Anticipo
   if (esDolar) {
@@ -324,14 +402,14 @@ async function streamReceiptPdf(res, receiptId) {
     // Equivalente en MXN destacado
     doc.font('Helvetica-Bold').fontSize(10).fillColor(THEME.primaryDk).text('Equivalente en MXN:', contentX, y, { width: 150 });
     doc.font('Helvetica-Bold').fontSize(10).fillColor(THEME.primary).text(money(amount) + ' MXN', contentX + 158, y);
-    y += 20;
+    y += 18;
   } else {
     drawLabeledLine(doc, {
       label: 'Anticipo:',
       value: money(amount),
       x: contentX, y, w: contentW,
     });
-    y += 20;
+    y += 18;
   }
 
   // Teléfono
@@ -342,7 +420,7 @@ async function streamReceiptPdf(res, receiptId) {
     y,
     w: contentW,
   });
-  y += 20;
+  y += 18;
 
   // Fecha del evento
   drawLabeledLine(doc, {
@@ -413,7 +491,18 @@ async function streamReceiptPdf(res, receiptId) {
     .stroke();
   y += 14;
 
+  // ===== Desglose de productos =====
+  if (items.length) {
+    y = drawItemsTable(doc, { items, x: contentX, y, w: pageW - 36 - contentX, reserve: 196 });
+  }
+
   // ===== Caja de Totales =====
+  // Totales + firmas ocupan ~230pt; si no caben, pasan a una página nueva.
+  if (y + 186 > pageH - 56) {
+    doc.addPage();
+    drawSideTitle(doc, { text: 'EL TORO BRONCO REAL', x: 36, y: 36, h: pageH - 72 });
+    y = 40;
+  }
   const totalsBoxW = Math.min(340, pageW - contentX - 36);
   const totalsBoxX = pageW - 36 - totalsBoxW;
   const totalsBoxY = y;
@@ -433,30 +522,29 @@ async function streamReceiptPdf(res, receiptId) {
 
   // Altura del cuadro de totales (la misma que usamos dentro de drawTotalsBox)
   const rowsCount = 6 + (amount ? 1 : 0);
-const totalsBoxH = rowsCount * 16 + 16;
+const totalsBoxH = rowsCount * TOTALS_LH + 14;
 
-  // Firmas A CONTINUACIÓN del cuadro, no a la par
-  const leftW = totalsBoxX - contentX - 20;
-  let yLeft = totalsBoxY + totalsBoxH + 20; // un margen debajo del cuadro
+  // Firmas debajo del cuadro, una junto a la otra para ahorrar espacio
+  const sigY = totalsBoxY + totalsBoxH + 52; // espacio para firmar
+  const sigW = (pageW - 36 - contentX - 24) / 2;
 
   drawLabeledLine(doc, {
     label: 'Le atendió:',
     value: receipt.issuedBy || '—',
     x: contentX,
-    y: yLeft,
-    w: leftW,
+    y: sigY,
+    w: sigW,
+    labelW: 70,
   });
-  yLeft += 26;
 
   drawLabeledLine(doc, {
     label: 'Firma del cliente:',
     value: '',
-    x: contentX,
-    y: yLeft,
-    w: leftW,
+    x: contentX + sigW + 24,
+    y: sigY,
+    w: sigW,
+    labelW: 95,
   });
-
-
 
   // Footer contacto
   doc.font('Helvetica').fontSize(9).fillColor('#6b7280');

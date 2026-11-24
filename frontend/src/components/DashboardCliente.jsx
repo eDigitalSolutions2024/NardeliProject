@@ -1963,6 +1963,7 @@ onMouseLeave={(e) => {
           onClick={() => setShowReceiptModal(false)}
         >
           <div
+            className="rc-modal"
             style={{ background:'#fff', width:'min(760px, 96%)', borderRadius:12, padding:16, maxHeight:'82vh', overflow:'auto' }}
             onClick={(e)=>e.stopPropagation()}
           >
@@ -1971,13 +1972,13 @@ onMouseLeave={(e) => {
               <button className="del" onClick={() => setShowReceiptModal(false)}>Cerrar</button>
             </div>
 
-            <div className="small" style={{ marginBottom: 12, color:'#555' }}>
+            <div className="small rc-info" style={{ marginBottom: 12, color:'#555' }}>
               <div>Reserva: <strong>{reservaId || '—'}</strong></div>
               <div>Emisor: <strong>{me?.email || me?.name || 'sistema'}</strong></div>
               <div>Total actual (con descuento): <strong>${totalConDescuento.toFixed(2)}</strong></div>
             </div>
 
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <div className="rc-grid">
               <div>
                 <label>Cliente</label>
                 <input
@@ -2090,7 +2091,7 @@ onMouseLeave={(e) => {
               </div>
 
               <div style={{ gridColumn:'1 / -1' }}>
-                <label style={{ fontSize: '17px', fontWeight: '700' }}>Notas</label>
+                <label>Notas</label>
                 <input
                   className="cd-input"
                   value={receiptForm.notes}
@@ -2101,11 +2102,11 @@ onMouseLeave={(e) => {
             </div>
 
             <div style={{ marginTop: 14 }}>
-              <h4 style={{ marginBottom: 6 }}>Artículos del recibo</h4>
+              <h4 style={{ marginBottom: 8 }}>Artículos del recibo</h4>
               {Object.values(seleccion).length === 0 ? (
                 <div className="empty">No hay artículos seleccionados.</div>
               ) : (
-                <div style={{ border:'1px solid #eee', borderRadius:8, padding:10 }}>
+                <div className="rc-items" style={{ border:'1px solid #eee', borderRadius:8, padding:10 }}>
                   {Object.values(seleccion).map(({ item, qty }) => {
                     const p = priceFor(item.id);
                     return (

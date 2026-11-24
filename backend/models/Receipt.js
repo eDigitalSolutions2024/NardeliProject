@@ -3,7 +3,8 @@ const mongoose=require('mongoose');
 const snapshotProductSchema=new mongoose.Schema({
  nombre:String,
  cantidad:{type:Number,default:1},
- precio:{type:Number,default:0}
+ precio:{type:Number,default:0},
+ aplicarDescuento:{type:Boolean,default:false}
 },{_id:false});
 
 const snapshotSchema=new mongoose.Schema({

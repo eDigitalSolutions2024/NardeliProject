@@ -383,3 +383,46 @@
   .summary button.pdf, .summary button.save { display: block; margin-left: 0 !important; margin-right: 0 !important; }
   .cliente-dashboard .nd-seg-btn { min-width: 0; padding: 9px 4px; }
 }
+
+
+/* ===== Modal "Generar recibo": campos ordenados en 2 columnas ===== */
+.rc-modal .rc-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:14px 16px;
+  align-items:start;
+}
+.rc-modal .rc-grid > div{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:0;
+}
+.rc-modal .rc-grid label{
+  font-size:.85rem;
+  font-weight:600;
+  color:#374151;
+}
+.rc-modal .rc-grid .cd-input,
+.rc-modal .rc-grid .cd-select{
+  width:100%;
+  min-width:0;
+  box-sizing:border-box;
+}
+.rc-modal .rc-grid small{
+  display:block;
+  line-height:1.35;
+  color:#6b7280;
+}
+.rc-modal .rc-info{ line-height:1.5; }
+.rc-modal .rc-items{ display:flex; flex-direction:column; gap:8px; }
+.rc-modal .rc-items .sel-item{ gap:12px; }
+.rc-modal .rc-items .sel-item > div:first-child{ min-width:0; overflow-wrap:anywhere; }
+.rc-modal .rc-items .sel-item > div:last-child{ text-align:right; white-space:nowrap; }
+.rc-modal .rc-items > div:nth-last-child(-n+3){ padding:0 4px; }
+.rc-modal .rc-items > div:nth-last-child(3){ border-top:1px solid #eee; padding-top:10px; }
+@media (max-width:560px){
+  .rc-modal .rc-grid{ grid-template-columns:minmax(0, 1fr); }
+  .rc-modal .rc-items .sel-item{ flex-direction:column; align-items:flex-start; }
+  .rc-modal .rc-items .sel-item > div:last-child{ text-align:left; white-space:normal; }
+}

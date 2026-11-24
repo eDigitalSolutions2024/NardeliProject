@@ -93,6 +93,7 @@ cantidad:p.cantidad||1,
 unidad:p.unidad||'',
 categoria:p.categoria||'',
 precio:p.precio||0,
+aplicarDescuento:!!p.aplicarDescuento,
 descripcion:p.descripcion||'',
 fechaAgregado:
 p.fechaAgregado||

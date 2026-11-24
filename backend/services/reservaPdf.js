@@ -80,19 +80,18 @@ function sectionTitle(doc, text, x, y, icon = null) {
   doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(FONTS.h2);
   if (icon) {
     doc.save();
-    doc.circle(x, y + 8, 8).fill(COLORS.primary);
-    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(FONTS.small);
-    doc.text(icon, x - 3, y + 4);
+    doc.circle(x + 6, y + 8, 7).fill(COLORS.primary);
+    doc.circle(x + 6, y + 8, 2.5).fill('#ffffff');
     doc.restore();
     doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(FONTS.h2);
-    doc.text(text, x + 24, y);
+    doc.text(text, x + 22, y);
     const tw = doc.widthOfString(text);
-    doc.moveTo(x + 24, y + 18).lineTo(x + 24 + tw, y + 18)
+    doc.moveTo(x + 22, y + 19).lineTo(x + 22 + tw, y + 19)
       .strokeColor(COLORS.primary).lineWidth(2).stroke();
   } else {
     doc.text(text, x, y);
     const tw = doc.widthOfString(text);
-    doc.moveTo(x, y + 18).lineTo(x + tw, y + 18)
+    doc.moveTo(x, y + 19).lineTo(x + tw, y + 19)
       .strokeColor(COLORS.primary).lineWidth(2).stroke();
   }
   doc.fontSize(FONTS.base).fillColor(COLORS.text);
@@ -100,8 +99,9 @@ function sectionTitle(doc, text, x, y, icon = null) {
 
 function drawCard(doc, { x, y, width, height, padding = 14 }) {
   doc.save();
-  doc.rect(x + 2, y + 2, width, height).fill('#0000000A');
-  doc.roundedRect(x, y, width, height, 8).fill(COLORS.cardBg).strokeColor(COLORS.border).stroke();
+  doc.roundedRect(x + 1.5, y + 2, width, height, 8).fillOpacity(0.05).fill('#000000');
+  doc.fillOpacity(1);
+  doc.roundedRect(x, y, width, height, 8).lineWidth(0.8).fillAndStroke(COLORS.cardBg, COLORS.border);
   doc.restore();
   return {
     x: x + padding,
@@ -123,7 +123,7 @@ function labelValue(doc, { x, y, wLabel = 80, wValue = 180, label, value, boldVa
 
 /** === Tabla === **/
 const HEADER_H = 28;
-const ROW_H = 26;
+const ROW_H = 22;
 const PADX = 10;
 
 function drawTableHeader(doc, { x, y, widths, headers }) {
@@ -169,7 +169,7 @@ function drawTableRow(doc, { x, y, widths, values, zebra = false, isTotal = fals
   let cx = x;
   values.forEach((v, i) => {
     const align = i >= values.length - 2 ? 'right' : 'left';
-    doc.text(String(v ?? ''), cx + PADX, y + 6, {
+    doc.text(String(v ?? ''), cx + PADX, y + 5, {
       width: widths[i] - PADX * 2,
       align,
       lineBreak: false,
@@ -377,14 +377,14 @@ function streamReservaPDF(res, { reserva, productosById = new Map(), brand = {} 
 
   const c1 = drawCard(doc, { x: X, y: cardY, width: (CONTENT_W - 20) / 2, height: cardH });
   sectionTitle(doc, 'Cliente', c1.x, c1.y, '👤');
-  let y1 = c1.y + 22;
+  let y1 = c1.y + 28;
   y1 += labelValue(doc, { x: c1.x, y: y1, label: 'Nombre:', value: reserva?.cliente, wLabel: 65, wValue: c1.w - 65 - 8, boldValue: true }) + 6;
   y1 += labelValue(doc, { x: c1.x, y: y1, label: 'Correo:', value: reserva?.correo, wLabel: 65, wValue: c1.w - 65 - 8 }) + 6;
   y1 += labelValue(doc, { x: c1.x, y: y1, label: 'Teléfono:', value: reserva?.telefono, wLabel: 65, wValue: c1.w - 65 - 8 }) + 6;
 
   const c2 = drawCard(doc, { x: X + (CONTENT_W + 20) / 2, y: cardY, width: (CONTENT_W - 20) / 2, height: cardH });
   sectionTitle(doc, 'Evento', c2.x, c2.y, '🎉');
-  let y2 = c2.y + 22;
+  let y2 = c2.y + 28;
   const fechaTxt = reserva?.fecha
     ? new Date(reserva.fecha).toLocaleDateString('es-MX', { timeZone: TZ, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
     : '—';
@@ -446,18 +446,18 @@ doc.y = idCard.y + 72;
   /** Notas (si hay) **/
   if (reserva?.descripcion && String(reserva.descripcion).trim()) {
     const notes = String(reserva.descripcion).trim();
-    const h = Math.max(60, doc.heightOfString(notes, { width: CONTENT_W - 28 }) + 28);
+    const h = Math.max(60, doc.heightOfString(notes, { width: CONTENT_W - 28 }) + 36);
     const nCard = drawCard(doc, { x: X, y: doc.y, width: CONTENT_W, height: h });
     sectionTitle(doc, 'Notas', nCard.x, nCard.y, '📝');
     doc.font('Helvetica').fontSize(FONTS.base).fillColor(COLORS.text);
-    doc.text(notes, nCard.x, nCard.y + 20, { width: nCard.w, lineGap: 2 });
+    doc.text(notes, nCard.x, nCard.y + 28, { width: nCard.w, lineGap: 2 });
     doc.y = nCard.y + h - 12;
   }
 
   /** Tabla de utensilios **/
   doc.moveDown();
   sectionTitle(doc, 'Utensilios / Servicios', X, doc.y, '🍽️');
-  doc.y += 14;
+  doc.y += 10;
 
   const lista = Array.isArray(reserva?.utensilios) ? reserva.utensilios : [];
   const showPrices = lista.some((u) => Number.isFinite(precioFila(u, productosById)));
@@ -475,12 +475,14 @@ doc.y = idCard.y + 72;
 
   const tableStartY = drawTableHeader(doc, { x: X, y: doc.y, widths, headers });
   let y = tableStartY;
+  doc.y = tableStartY;
 
   function printHeaderOnNewPage() {
     doc.y = doc.page.margins.top;
     sectionTitle(doc, 'Utensilios / Servicios', X, doc.y, '🍽️');
-    doc.y += 14;
+    doc.y += 10;
     y = drawTableHeader(doc, { x: X, y: doc.y, widths, headers });
+    doc.y = y;
   }
 
   let subTotal = 0;
@@ -552,29 +554,31 @@ total = Math.max(0, subTotal - descuentoInfo.monto);
 
   if (descBullets.length > 0) {
     const descText = descBullets.join('\n');
-    const descH = Math.max(70, doc.heightOfString(descText, { width: CONTENT_W - 28 }) + 28);
+    const descH = Math.max(40, doc.heightOfString(descText, { width: CONTENT_W - 28 }) + 28 + 16);
     ensureSpace(doc, descH + 16, () => {});
     const dCard = drawCard(doc, { x: X, y: doc.y + 8, width: CONTENT_W, height: descH });
 
     // Título normal y texto tenue
     doc.font('Helvetica-Bold').fontSize(FONTS.medium).fillColor(COLORS.primary);
-    doc.text('Descripción de utensilios', dCard.x, dCard.y - 14, { lineBreak: false, ellipsis: true });
+    doc.text('Descripción de utensilios', dCard.x, dCard.y, { lineBreak: false, ellipsis: true });
 
     doc.font('Helvetica').fontSize(FONTS.small).fillColor(COLORS.textMuted);
-    doc.text(descText, dCard.x, dCard.y + 6, { width: dCard.w, lineGap: 2 });
+    doc.text(descText, dCard.x, dCard.y + 18, { width: dCard.w, lineGap: 2 });
 
     doc.y = dCard.y + descH + 8;
   }
 
   // === Totales (justo después de la descripción) ===
   const totalsWidths = widths.slice();
-  const labelColSpan = totalsWidths.length - 2;
-  const labelWidth = sum(totalsWidths.slice(0, labelColSpan));
-  const lastTwo = totalsWidths.slice(labelColSpan);
-  const merged = [labelWidth, ...lastTwo];
+  const n = totalsWidths.length;
+  const merged = [
+    sum(totalsWidths.slice(0, n - 3)),
+    totalsWidths[n - 3] + totalsWidths[n - 2],
+    totalsWidths[n - 1],
+  ];
 
   const subtotalRow = ['', 'SUBTOTAL', money(subTotal)];
-  ensureSpace(doc, ROW_H + 6, printHeaderOnNewPage);
+  ensureSpace(doc, ROW_H * 3 + 40, printHeaderOnNewPage);
   y = drawTableRow(doc, { x: X, y: doc.y + 6, widths: merged, values: subtotalRow });
 
   const descLabel = descuentoInfo.tipo === 'porcentaje'
@@ -611,13 +615,13 @@ total = Math.max(0, subTotal - descuentoInfo.monto);
   
 
   const infoText = [...bulletsBase].join('\n');
-  const infoH = Math.max(70, doc.heightOfString(infoText, { width: CONTENT_W - 24 }) + 26);
+  const infoH = Math.max(50, doc.heightOfString(infoText, { width: CONTENT_W - 24 }) + 26 + 16);
   ensureSpace(doc, infoH + 20, () => {});
   const infoCard = drawCard(doc, { x: X, y: doc.y, width: CONTENT_W, height: infoH });
   doc.fillColor(COLORS.primaryLight).font('Helvetica-Bold').fontSize(FONTS.medium);
-  doc.text('Información Importante', infoCard.x, infoCard.y - 15, { lineBreak: false, ellipsis: true });
+  doc.text('Información Importante', infoCard.x, infoCard.y, { lineBreak: false, ellipsis: true });
   doc.font('Helvetica').fontSize(FONTS.small).fillColor(COLORS.text);
-  doc.text(infoText, infoCard.x, infoCard.y + 5, { width: infoCard.w, lineGap: 2 });
+  doc.text(infoText, infoCard.x, infoCard.y + 18, { width: infoCard.w, lineGap: 2 });
 
   // === Contrato de accesorios en préstamo ===
   doc.y = infoCard.y + infoH + 14;
@@ -625,9 +629,9 @@ total = Math.max(0, subTotal - descuentoInfo.monto);
   const accSel = getAccesoriosSeleccionados(reserva);
   if (accSel.length > 0) {
     // Título
-    ensureSpace(doc, 40, () => {});
+    ensureSpace(doc, 28 + HEADER_H + ROW_H * 2 + 20, () => {});
     sectionTitle(doc, 'Accesorios en préstamo (Contrato)', X, doc.y, '🧾');
-    doc.y += 14;
+    doc.y += 10;
 
     // Tabla de accesorios
     const hasRepos = accSel.some(a => Number(a.precioReposicion) > 0);
@@ -644,11 +648,13 @@ total = Math.max(0, subTotal - descuentoInfo.monto);
     const printAccHeader = () => {
       doc.y = doc.page.margins.top;
       sectionTitle(doc, 'Accesorios en préstamo (Contrato)', X, doc.y, '🧾');
-      doc.y += 14;
+      doc.y += 10;
       yAcc = drawTableHeader(doc, { x: X, y: doc.y, widths: accWidths, headers: accHeaders });
+      doc.y = yAcc;
     };
 
     let yAcc = drawTableHeader(doc, { x: X, y: doc.y, widths: accWidths, headers: accHeaders });
+    doc.y = yAcc;
 
     accSel.forEach((a, i) => {
       const values = hasRepos
@@ -666,17 +672,15 @@ total = Math.max(0, subTotal - descuentoInfo.monto);
       'En caso de daño, pérdida o faltante, AUTORIZO el cobro del costo de reposición correspondiente ' +
       'según precios vigentes, así como cualquier gasto derivado de su sustitución o reparación.';
 
-    const contratoH = Math.max(70, doc.heightOfString(contratoText, { width: CONTENT_W - 24 }) + 26);
-    ensureSpace(doc, contratoH + 20, () => {});
+    const contratoH = Math.max(50, doc.heightOfString(contratoText, { width: CONTENT_W - 24 }) + 26 + 16);
+    ensureSpace(doc, contratoH + 8 + 16 + 85, () => {});
     const contratoCard = drawCard(doc, { x: X, y: doc.y + 8, width: CONTENT_W, height: contratoH });
     doc.font('Helvetica-Bold').fontSize(FONTS.medium).fillColor(COLORS.primary);
-    doc.text('Acuerdo de Responsabilidad', contratoCard.x, contratoCard.y - 15, { lineBreak: false, ellipsis: true });
+    doc.text('Acuerdo de Responsabilidad', contratoCard.x, contratoCard.y, { lineBreak: false, ellipsis: true });
     doc.font('Helvetica').fontSize(FONTS.base).fillColor(COLORS.text);
-    doc.text(contratoText, contratoCard.x, contratoCard.y + 5, { width: contratoCard.w, lineGap: 2 });
+    doc.text(contratoText, contratoCard.x, contratoCard.y + 18, { width: contratoCard.w, lineGap: 2 });
 
     // Bloque de firmas
-    const firmasH = 120;
-    ensureSpace(doc, firmasH + 10, () => {});
     const fy = contratoCard.y + contratoH + 16;
     const colW = (CONTENT_W - 40) / 2;
 
@@ -699,13 +703,13 @@ total = Math.max(0, subTotal - descuentoInfo.monto);
     // Fecha
     const fechaLblY = lineY + 34;
     const fechaW = 160;
-    doc.text(`Fecha: ${ymd(new Date())}`, clienteX, fechaLblY, { width: 40 });
+    doc.text('Fecha:', clienteX, fechaLblY, { width: 36, lineBreak: false });
     doc.moveTo(clienteX + 40, fechaLblY + 10).lineTo(clienteX + 40 + fechaW, fechaLblY + 10)
       .strokeColor(COLORS.border).lineWidth(1).stroke();
     doc.font('Helvetica').fontSize(FONTS.small).fillColor(COLORS.textMuted);
-    doc.text(`Sugerido: ${ymd(new Date())}`, clienteX + 42, fechaLblY + 12, { width: fechaW });
+    doc.text(`Sugerido: ${ymd(new Date())}`, clienteX + 42, fechaLblY + 12, { width: fechaW, lineBreak: false });
 
-    doc.y = fechaLblY + 36;
+    doc.y = Math.min(fechaLblY + 36, doc.page.height - doc.page.margins.bottom);
   }
 
   /** Pie **/
