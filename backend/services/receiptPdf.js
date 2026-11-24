@@ -170,19 +170,16 @@ function drawTotalsBox(
 function drawItemsTable(doc, { items, x, y, w, reserve = 0 }) {
   const pageH = doc.page.height;
   const bottomLimit = pageH - 70; // deja espacio al footer
-  const colQty = 50;
-  const colPrice = 80;
-  const colTotal = 90;
-  const colName = w - colQty - colPrice - colTotal;
+  // Solo Producto + Importe (sin cantidad ni precio unitario)
+  const colTotal = 130;
+  const colName = w - colTotal;
   const padX = 6;
 
   const drawHeader = (yy) => {
     doc.rect(x, yy, w, 16).fillColor(THEME.primaryDk).fill();
     doc.font('Helvetica-Bold').fontSize(9).fillColor('#fff');
     doc.text('Producto', x + padX, yy + 4, { width: colName - padX });
-    doc.text('Cant.', x + colName, yy + 4, { width: colQty - padX, align: 'right' });
-    doc.text('Precio unit.', x + colName + colQty, yy + 4, { width: colPrice - padX, align: 'right' });
-    doc.text('Importe', x + colName + colQty + colPrice, yy + 4, { width: colTotal - padX, align: 'right' });
+    doc.text('Importe', x + colName, yy + 4, { width: colTotal - padX, align: 'right' });
     return yy + 16;
   };
 
@@ -212,9 +209,7 @@ function drawItemsTable(doc, { items, x, y, w, reserve = 0 }) {
     if (i % 2 === 1) doc.rect(x, y, w, rowH).fillColor('#f5f3ff').fill();
     doc.font('Helvetica').fontSize(8.5).fillColor('#111');
     doc.text(nombre, x + padX, y + 3.5, { width: colName - padX * 2 });
-    doc.text(String(qty), x + colName, y + 3.5, { width: colQty - padX, align: 'right' });
-    doc.text(money(price), x + colName + colQty, y + 3.5, { width: colPrice - padX, align: 'right' });
-    doc.text(money(price * qty), x + colName + colQty + colPrice, y + 3.5, { width: colTotal - padX, align: 'right' });
+    doc.text(money(price * qty), x + colName, y + 3.5, { width: colTotal - padX, align: 'right' });
     y += rowH;
   });
 
